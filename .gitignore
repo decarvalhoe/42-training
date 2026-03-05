@@ -17,6 +17,7 @@ Thumbs.db
 # Personnelle (ne pas partager)
 .env
 secrets.txt
+backup.txt
 
 # Mais on garde les backups datés
 !backups/*.json
