@@ -1,0 +1,50 @@
+{
+  "session": {
+    "date_start": "2026-03-05",
+    "current_date": "2026-03-05",
+    "level": 0,
+    "time_spent_minutes": 30
+  },
+  "progress": {
+    "current_exercise": "Exercice 2: Manipulation fichiers",
+    "current_step": "2.3 - Mettre du texte dans un fichier",
+    "completed": [
+      "pwd - Afficher le répertoire actuel",
+      "ls -la - Lister avec détails",
+      "mkdir - Créer un dossier",
+      "mv - Renommer un dossier",
+      "cd - Naviguer",
+      "cd ~ - Retour home",
+      "touch - Créer fichier vide"
+    ],
+    "in_progress": [
+      "echo avec redirection >"
+    ],
+    "todo": [
+      "cat - Lire fichier",
+      "cp - Copier",
+      "rm - Supprimer",
+      "pipes |",
+      "grep - Chercher",
+      "find - Trouver fichiers",
+      "chmod - Permissions"
+    ]
+  },
+  "mistakes": [
+    {
+      "command": "echo \"Bonjour 42!\"",
+      "issue": "Oublié la redirection >",
+      "learned": "echo seul affiche à l'écran, echo > écrit dans fichier"
+    },
+    {
+      "command": "ls 42_training",
+      "issue": "Utilisé ls au lieu de cd",
+      "learned": "ls = voir, cd = entrer"
+    }
+  ],
+  "next_command": "echo \"Bonjour 42!\" > hello.txt",
+  "current_directory": "/home/decarvalhoe/42_training",
+  "files_created": [
+    "/home/decarvalhoe/42_training/hello.txt"
+  ]
+}

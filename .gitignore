@@ -1,0 +1,22 @@
+# Backups temporaires
+*.backup
+*.tmp
+*.swp
+
+# Logs
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Personnelle (ne pas partager)
+.env
+secrets.txt
+
+# Mais on garde les backups datés
+!backups/*.json
