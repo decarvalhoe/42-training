@@ -6,7 +6,7 @@
 
 Après des années dans des rôles de leadership technique (Chef de Projet, Ingénieur CSV Pharma, Tech Lead, Solution Architect, Business Analyst, IT Manufacturing), je n'ai plus codé directement. J'ai géré des équipes, conçu des architectures, validé des systèmes critiques, mais le code "hands-on" est devenu distant.
 
-Aujourd'hui, j'utilise des agents IA (Claude, Copilot, etc.) pour mes projets personnels, mais je veux retrouver cette connexion directe avec le code - ce plaisir de créer ligne par ligne, sans intermédiaire.
+Aujourd'hui, j'utilise des agents IA (Claude, Copilot, Cursor, etc.) pour créer des applications professionnelles complexes, gérer de l'infrastructure via CLI, faire des audits automatisés (projet RBOK et autres à venir). Mais pour la Piscine 42, je veux retrouver cette connexion directe avec le code - ce plaisir de créer ligne par ligne, sans intermédiaire.
 
 Ce repo contient mon système d'apprentissage pour retrouver l'autonomie complète avant la Piscine 42, et surtout pour le plaisir de coder à nouveau.
 
@@ -55,18 +55,18 @@ cat REPRENDRE_SESSION.md  # Pour reprendre avec Claude
 - [ ] Pipes et redirections
 - [ ] Permissions (chmod)
 
-### 📅 Planning
+### 📅 Planning (Progression Accélérée!)
 
 | Période | Focus | Status |
 |---------|-------|--------|
-| Mars-Avril 2026 | Bash/Terminal | 🔄 En cours |
-| Mai-Juin 2026 | Scripts Bash | ⏳ À venir |
-| Juillet-Août 2026 | C basics | ⏳ À venir |
-| Sept-Oct 2026 | C avancé + pointeurs | ⏳ À venir |
-| Nov-Déc 2026 | Algorithmes | ⏳ À venir |
-| Jan-Mars 2027 | Projets 42 style | ⏳ À venir |
-| Avril-Mai 2027 | Norminette + Exam prep | ⏳ À venir |
-| **22 Juin 2027** | **PISCINE!** | 🎯 Goal |
+| Mars 2026 - Semaine 1-2 | Bash/Terminal basics | 🔄 En cours |
+| Mars 2026 - Semaine 3-4 | Scripts Bash avancés | ⏳ À venir |
+| Avril 2026 - Semaine 1-2 | Vim + Git mastery | ⏳ À venir |
+| Avril 2026 - Semaine 3-4 | C basics (variables, boucles) | ⏳ À venir |
+| Mai 2026 - Semaine 1-2 | C pointeurs & mémoire | ⏳ À venir |
+| Mai 2026 - Semaine 3-4 | C avancé + Norminette | ⏳ À venir |
+| Juin 2026 - Semaine 1-2 | Révisions intensives | ⏳ À venir |
+| **22 Juin 2026** | **PISCINE 42 LAUSANNE!** | 🎯 Goal |
 
 ## 🧠 Méthode d'apprentissage
 
