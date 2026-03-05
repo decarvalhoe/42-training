@@ -4,7 +4,11 @@
 
 ## 📊 Contexte
 
-Après des années à utiliser des agents IA (Claude, Copilot, etc.), j'ai perdu mes compétences de codage "bare metal". Ce repo contient mon système d'apprentissage pour retrouver l'autonomie complète avant la Piscine.
+Après des années dans des rôles de leadership technique (Chef de Projet, Ingénieur CSV Pharma, Tech Lead, Solution Architect, Business Analyst, IT Manufacturing), je n'ai plus codé directement. J'ai géré des équipes, conçu des architectures, validé des systèmes critiques, mais le code "hands-on" est devenu distant.
+
+Aujourd'hui, j'utilise des agents IA (Claude, Copilot, etc.) pour mes projets personnels, mais je veux retrouver cette connexion directe avec le code - ce plaisir de créer ligne par ligne, sans intermédiaire.
+
+Ce repo contient mon système d'apprentissage pour retrouver l'autonomie complète avant la Piscine 42, et surtout pour le plaisir de coder à nouveau.
 
 ## 🚀 Quick Start
 

@@ -3,7 +3,9 @@
     "date_start": "2026-03-05",
     "current_date": "2026-03-05",
     "level": 0,
-    "time_spent_minutes": 30
+    "time_spent_minutes": 30,
+    "background": "Senior roles: Tech Lead, Solution Architect, CSV Pharma, IT Manufacturing",
+    "motivation": "Retrouver le plaisir du code direct + networking 42"
   },
   "progress": {
     "current_exercise": "Exercice 2: Manipulation fichiers",

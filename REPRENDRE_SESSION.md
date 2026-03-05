@@ -42,7 +42,8 @@ echo "Bonjour 42!" > hello.txt
 
 ```
 Je suis Eric, en préparation pour la Piscine 42 Lausanne (juin 2026).
-Je réapprends bash/Linux depuis ZÉRO car j'ai perdu mes skills (trop d'agents IA).
+Je réapprends bash/Linux depuis ZÉRO après des années en roles senior (Tech Lead, Solution Architect, CSV Pharma).
+Je veux retrouver le plaisir de coder directement, sans agents IA.
 
 CONTEXTE:
 - J'étais à l'Exercice 2, étape 2.3
