@@ -11,7 +11,7 @@
   },
   "progress": {
     "current_exercise": "Exercice 2: Manipulation fichiers",
-    "current_step": "2.3 - Mettre du texte dans un fichier",
+    "current_step": "2.4 - Copier et supprimer fichiers",
     "completed": [
       "pwd - Afficher le répertoire actuel",
       "ls -la - Lister avec détails",
@@ -19,10 +19,13 @@
       "mv - Renommer un dossier",
       "cd - Naviguer",
       "cd ~ - Retour home",
-      "touch - Créer fichier vide"
+      "touch - Créer fichier vide",
+      "echo avec redirection >",
+      "echo avec >> pour ajouter",
+      "cat - Lire fichier"
     ],
     "in_progress": [
-      "echo avec redirection >"
+      "cp - Copier fichiers"
     ],
     "todo": [
       "cat - Lire fichier",
