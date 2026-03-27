@@ -77,7 +77,10 @@ def score_answer(question: DefenseQuestion, answer: str) -> tuple[float, str]:
     answer_lower = answer.lower().strip()
 
     if len(answer_lower) < 10:
-        return 0.0, "Your answer is too brief. Try explaining in your own words what this concept means and how you would use it."
+        return (
+            0.0,
+            "Your answer is too brief. Try explaining in your own words what this concept means and how you would use it.",
+        )
 
     # Check for keyword presence (partial credit)
     matched = [kw for kw in question.expected_keywords if kw.lower() in answer_lower]
@@ -89,8 +92,7 @@ def score_answer(question: DefenseQuestion, answer: str) -> tuple[float, str]:
         for marker in ["because", "parce que", "car ", "donc ", "so ", "means ", "permet ", "sert a", "signifie"]
     )
     uses_example = any(
-        marker in answer_lower
-        for marker in ["for example", "par exemple", "e.g.", "like ", "comme ", "si on", "if we"]
+        marker in answer_lower for marker in ["for example", "par exemple", "e.g.", "like ", "comme ", "si on", "if we"]
     )
 
     # Composite score

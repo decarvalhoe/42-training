@@ -24,8 +24,20 @@ _CURRICULUM = {
             "summary": "Linux-first recovery track.",
             "why_it_matters": "Command fluency.",
             "modules": [
-                {"id": "shell-basics", "title": "Navigation", "phase": "foundation", "skills": ["pwd", "ls"], "deliverable": "Navigate."},
-                {"id": "shell-streams", "title": "Pipes", "phase": "foundation", "skills": ["pipe"], "deliverable": "Pipe."},
+                {
+                    "id": "shell-basics",
+                    "title": "Navigation",
+                    "phase": "foundation",
+                    "skills": ["pwd", "ls"],
+                    "deliverable": "Navigate.",
+                },
+                {
+                    "id": "shell-streams",
+                    "title": "Pipes",
+                    "phase": "foundation",
+                    "skills": ["pipe"],
+                    "deliverable": "Pipe.",
+                },
             ],
         },
         {
@@ -34,7 +46,13 @@ _CURRICULUM = {
             "summary": "Low-level rigor.",
             "why_it_matters": "Memory discipline.",
             "modules": [
-                {"id": "c-basics", "title": "Syntax", "phase": "foundation", "skills": ["variables"], "deliverable": "Compile."},
+                {
+                    "id": "c-basics",
+                    "title": "Syntax",
+                    "phase": "foundation",
+                    "skills": ["variables"],
+                    "deliverable": "Compile.",
+                },
             ],
         },
     ],
@@ -269,7 +287,7 @@ class TestGetProgression:
 
 class TestUpdateProgression:
     def test_update_active_course(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_course": "c"})
         assert r.status_code == 200
@@ -277,42 +295,42 @@ class TestUpdateProgression:
         assert len(written) == 1
 
     def test_update_active_module(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_module": "shell-streams"})
         assert r.status_code == 200
         assert r.json()["learning_plan"]["active_module"] == "shell-streams"
 
     def test_update_pace_mode(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"pace_mode": "intensive"})
         assert r.status_code == 200
         assert r.json()["learning_plan"]["pace_mode"] == "intensive"
 
     def test_update_current_exercise(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"current_exercise": "Ex3"})
         assert r.status_code == 200
         assert r.json()["progress"]["current_exercise"] == "Ex3"
 
     def test_update_current_step(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"current_step": "3.2"})
         assert r.status_code == 200
         assert r.json()["progress"]["current_step"] == "3.2"
 
     def test_update_next_command(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"next_command": "cd /tmp"})
         assert r.status_code == 200
         assert r.json()["next_command"] == "cd /tmp"
 
     def test_update_multiple_fields(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post(
                 "/api/v1/progression",
@@ -326,7 +344,7 @@ class TestUpdateProgression:
 
     def test_update_empty_payload(self) -> None:
         """Empty payload should still succeed — no fields modified."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={})
         assert r.status_code == 200
@@ -334,7 +352,7 @@ class TestUpdateProgression:
 
     def test_update_preserves_existing_fields(self) -> None:
         """Updating one field should not erase others."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_course": "c"})
         data = r.json()
@@ -343,7 +361,7 @@ class TestUpdateProgression:
 
     def test_update_writes_to_persistence(self) -> None:
         """Verify write_progression is called exactly once."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, written = _patch_repo()
         with p_cur, p_load, p_write:
             client.post("/api/v1/progression", json={"active_course": "c"})
         assert len(written) == 1
@@ -452,7 +470,7 @@ class TestEdgeCases:
 
     def test_progression_missing_learning_plan(self) -> None:
         """POST should create learning_plan if absent in progression."""
-        p_cur, p_load, p_write, prog, written = _patch_repo(progression={"progress": {}})
+        p_cur, p_load, p_write, _prog, _written = _patch_repo(progression={"progress": {}})
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_course": "c"})
         assert r.status_code == 200
@@ -460,7 +478,7 @@ class TestEdgeCases:
 
     def test_progression_missing_progress_block(self) -> None:
         """POST should create progress block if absent."""
-        p_cur, p_load, p_write, prog, written = _patch_repo(progression={"learning_plan": {}})
+        p_cur, p_load, p_write, _prog, _written = _patch_repo(progression={"learning_plan": {}})
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"current_exercise": "Ex1"})
         assert r.status_code == 200

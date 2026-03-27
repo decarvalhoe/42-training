@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import cast
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -165,15 +166,15 @@ def _get_module_statuses(progression: dict[str, object]) -> dict[str, dict[str, 
 
 def _check_prerequisites(module_id: str, track: dict[str, object], progression: dict[str, object]) -> list[str]:
     """Return list of prerequisite module IDs that are not completed/skipped."""
-    modules = track.get("modules", [])
-    module_ids = [m["id"] for m in modules]
+    modules: list[dict[str, object]] = track.get("modules", [])  # type: ignore[assignment]
+    module_ids: list[str] = [str(m["id"]) for m in modules]
     if module_id not in module_ids:
         return []
     idx = module_ids.index(module_id)
     if idx == 0:
         return []
     statuses = _get_module_statuses(progression)
-    missing = []
+    missing: list[str] = []
     for prev_id in module_ids[:idx]:
         prev_status = statuses.get(prev_id, {})
         if isinstance(prev_status, dict) and prev_status.get("status") in ("completed", "skipped"):
@@ -230,7 +231,7 @@ def module_start(module_id: str, payload: ModuleStartRequest | None = None) -> M
             message="Module already in progress",
         )
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     statuses[module_id] = {"status": "in_progress", "started_at": now}
     write_progression(progression_data)
 
@@ -255,7 +256,7 @@ def module_complete(module_id: str, payload: ModuleCompleteRequest | None = None
             detail=f"Module '{module_id}' must be in_progress to complete (current: {current.get('status', 'not_started') if isinstance(current, dict) else 'not_started'})",
         )
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     current["status"] = "completed"
     current["completed_at"] = now
     statuses[module_id] = current
@@ -275,7 +276,7 @@ def module_skip(module_id: str, payload: ModuleSkipRequest | None = None) -> Mod
     progression_data = load_progression()
     statuses = _get_module_statuses(progression_data)
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     entry: dict[str, object] = {"status": "skipped", "skipped_at": now}
     if payload and payload.reason:
         entry["skip_reason"] = payload.reason
@@ -340,7 +341,7 @@ def _find_module_in_curriculum(module_id: str) -> dict[str, object] | None:
     for track in curriculum.get("tracks", []):
         for module in track.get("modules", []):
             if module["id"] == module_id:
-                return module
+                return dict(module)
     return None
 
 
@@ -350,7 +351,7 @@ def submit_checkpoint(payload: CheckpointSubmission) -> CheckpointRecord:
     if module is None:
         raise HTTPException(status_code=404, detail=f"Module '{payload.module_id}' not found")
 
-    exit_criteria: list[str] = module.get("exit_criteria", [])
+    exit_criteria = cast(list[str], module.get("exit_criteria", []))
     if payload.checkpoint_index >= len(exit_criteria):
         raise HTTPException(
             status_code=422,
@@ -358,7 +359,7 @@ def submit_checkpoint(payload: CheckpointSubmission) -> CheckpointRecord:
         )
 
     prompt = exit_criteria[payload.checkpoint_index]
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     record = CheckpointRecord(
         module_id=payload.module_id,
@@ -385,24 +386,23 @@ def list_checkpoints(module_id: str) -> CheckpointListResponse:
     if module is None:
         raise HTTPException(status_code=404, detail=f"Module '{module_id}' not found")
 
-    exit_criteria: list[str] = module.get("exit_criteria", [])
+    exit_criteria = cast(list[str], module.get("exit_criteria", []))
     progression_data = load_progression()
     submissions = progression_data.get("checkpoints", [])
 
     # Build checkpoint list with submission status
     result: list[dict[str, object]] = []
     for idx, criterion in enumerate(exit_criteria):
-        matching = [
-            s for s in submissions
-            if s.get("module_id") == module_id and s.get("checkpoint_index") == idx
-        ]
+        matching = [s for s in submissions if s.get("module_id") == module_id and s.get("checkpoint_index") == idx]
         latest = matching[-1] if matching else None
-        result.append({
-            "index": idx,
-            "prompt": criterion,
-            "submitted": latest is not None,
-            "self_evaluation": latest["self_evaluation"] if latest else None,
-            "submitted_at": latest["submitted_at"] if latest else None,
-        })
+        result.append(
+            {
+                "index": idx,
+                "prompt": criterion,
+                "submitted": latest is not None,
+                "self_evaluation": latest["self_evaluation"] if latest else None,
+                "submitted_at": latest["submitted_at"] if latest else None,
+            }
+        )
 
     return CheckpointListResponse(module_id=module_id, checkpoints=result)

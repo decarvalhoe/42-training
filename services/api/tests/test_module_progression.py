@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -67,7 +66,9 @@ class TestModuleStatus:
         assert data["status"] == "not_started"
 
     def test_status_after_start(self) -> None:
-        prog = _make_progression(module_status={"shell-basics": {"status": "in_progress", "started_at": "2026-01-01T00:00:00+00:00"}})
+        prog = _make_progression(
+            module_status={"shell-basics": {"status": "in_progress", "started_at": "2026-01-01T00:00:00+00:00"}}
+        )
         p_cur, p_load, p_write, _prog, _w = _patch_repo(prog)
         with p_cur, p_load, p_write:
             r = client.get("/api/v1/modules/shell-basics/status")
@@ -83,7 +84,7 @@ class TestModuleStatus:
 
 class TestModuleStart:
     def test_start_first_module(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog, written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/modules/shell-basics/start")
         assert r.status_code == 200
@@ -93,7 +94,9 @@ class TestModuleStart:
         assert len(written) == 1
 
     def test_start_already_in_progress(self) -> None:
-        prog = _make_progression(module_status={"shell-basics": {"status": "in_progress", "started_at": "2026-01-01T00:00:00+00:00"}})
+        prog = _make_progression(
+            module_status={"shell-basics": {"status": "in_progress", "started_at": "2026-01-01T00:00:00+00:00"}}
+        )
         p_cur, p_load, p_write, _prog, written = _patch_repo(prog)
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/modules/shell-basics/start")
@@ -111,16 +114,20 @@ class TestModuleStart:
         assert "shell-basics" in detail["missing_prerequisites"]
 
     def test_start_after_prerequisite_completed(self) -> None:
-        prog = _make_progression(module_status={"shell-basics": {"status": "completed", "completed_at": "2026-01-01T00:00:00+00:00"}})
-        p_cur, p_load, p_write, _prog, written = _patch_repo(prog)
+        prog = _make_progression(
+            module_status={"shell-basics": {"status": "completed", "completed_at": "2026-01-01T00:00:00+00:00"}}
+        )
+        p_cur, p_load, p_write, _prog, _written = _patch_repo(prog)
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/modules/shell-streams/start")
         assert r.status_code == 200
         assert r.json()["status"] == "in_progress"
 
     def test_start_after_prerequisite_skipped(self) -> None:
-        prog = _make_progression(module_status={"shell-basics": {"status": "skipped", "skipped_at": "2026-01-01T00:00:00+00:00"}})
-        p_cur, p_load, p_write, _prog, written = _patch_repo(prog)
+        prog = _make_progression(
+            module_status={"shell-basics": {"status": "skipped", "skipped_at": "2026-01-01T00:00:00+00:00"}}
+        )
+        p_cur, p_load, p_write, _prog, _written = _patch_repo(prog)
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/modules/shell-streams/start")
         assert r.status_code == 200
@@ -135,7 +142,9 @@ class TestModuleStart:
 
 class TestModuleComplete:
     def test_complete_in_progress_module(self) -> None:
-        prog = _make_progression(module_status={"shell-basics": {"status": "in_progress", "started_at": "2026-01-01T00:00:00+00:00"}})
+        prog = _make_progression(
+            module_status={"shell-basics": {"status": "in_progress", "started_at": "2026-01-01T00:00:00+00:00"}}
+        )
         p_cur, p_load, p_write, _prog, written = _patch_repo(prog)
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/modules/shell-basics/complete")
@@ -152,7 +161,9 @@ class TestModuleComplete:
         assert r.status_code == 409
 
     def test_complete_already_completed_fails(self) -> None:
-        prog = _make_progression(module_status={"shell-basics": {"status": "completed", "completed_at": "2026-01-01T00:00:00+00:00"}})
+        prog = _make_progression(
+            module_status={"shell-basics": {"status": "completed", "completed_at": "2026-01-01T00:00:00+00:00"}}
+        )
         p_cur, p_load, p_write, _prog, _w = _patch_repo(prog)
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/modules/shell-basics/complete")

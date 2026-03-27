@@ -7,6 +7,28 @@ on:
     branches: ["main", "develop"]
 
 jobs:
+  python-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install lint tools
+        run: pip install ruff mypy pydantic fastapi
+      - name: Ruff check (services/api)
+        run: ruff check services/api
+      - name: Ruff check (services/ai_gateway)
+        run: ruff check services/ai_gateway
+      - name: Ruff format check
+        run: ruff format --check services/api services/ai_gateway
+      - name: Mypy (services/api)
+        working-directory: services/api
+        run: mypy app
+      - name: Mypy (services/ai_gateway)
+        working-directory: services/ai_gateway
+        run: mypy app
+
   api-tests:
     runs-on: ubuntu-latest
     steps:

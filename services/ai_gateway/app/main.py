@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .defense import clear_sessions, compute_session_result, create_session, get_session, score_answer
+from .defense import compute_session_result, create_session, get_session, score_answer
 from .llm_client import get_mentor_response
 from .repository import load_curriculum, load_progression
 from .retrieval import StaticSourceProvider
@@ -49,7 +50,8 @@ def health() -> dict[str, str]:
 @app.get("/api/v1/source-policy")
 def source_policy() -> dict[str, object]:
     curriculum = load_curriculum()
-    return curriculum["source_policy"]
+    result: dict[str, object] = curriculum["source_policy"]
+    return result
 
 
 def _static_fallback(request: MentorRequest, focus: str, active_course: str) -> dict[str, str]:
@@ -77,7 +79,7 @@ def _build_provenance(
     track: dict,
     module: dict | None,
     source: str,
-) -> tuple[list[SourceUsed], str, str]:
+) -> tuple[list[SourceUsed], Literal["high", "medium", "low"], str]:
     """Build provenance metadata for a mentor response.
 
     Returns (sources_used, confidence_level, reasoning_trace).
@@ -114,11 +116,14 @@ def _build_provenance(
 
     # Determine confidence from source tiers and response source
     tiers_present = {s.tier for s in sources}
+    confidence: Literal["high", "medium", "low"]
     if source == "llm" and "official_42" in tiers_present:
         confidence = "high"
-    elif source == "fallback" and "official_42" in tiers_present:
-        confidence = "medium"
-    elif "community_docs" in tiers_present or "testers_and_tooling" in tiers_present:
+    elif (
+        (source == "fallback" and "official_42" in tiers_present)
+        or "community_docs" in tiers_present
+        or "testers_and_tooling" in tiers_present
+    ):
         confidence = "medium"
     else:
         confidence = "low"
@@ -176,7 +181,10 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
         next_action = fallback["next_action"]
 
     sources_used, confidence_level, reasoning_trace = _build_provenance(
-        curriculum, track, module, response_source,
+        curriculum,
+        track,
+        module,
+        response_source,
     )
 
     return MentorResponse(
@@ -281,9 +289,7 @@ def librarian_search(request: LibrarianRequest) -> LibrarianResponse:
 @app.post("/api/v1/reviewer/review", response_model=ReviewerResponse)
 def reviewer_review(request: ReviewerRequest) -> ReviewerResponse:
     curriculum = load_curriculum()
-    track = next(
-        (t for t in curriculum["tracks"] if t["id"] == request.track_id), None
-    )
+    track = next((t for t in curriculum["tracks"] if t["id"] == request.track_id), None)
     if track is None:
         raise HTTPException(status_code=404, detail="Track not found")
 
@@ -318,15 +324,11 @@ def reviewer_review(request: ReviewerRequest) -> ReviewerResponse:
 @app.post("/api/v1/defense/start", response_model=DefenseStartResponse)
 def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
     curriculum = load_curriculum()
-    track = next(
-        (t for t in curriculum["tracks"] if t["id"] == request.track_id), None
-    )
+    track = next((t for t in curriculum["tracks"] if t["id"] == request.track_id), None)
     if track is None:
         raise HTTPException(status_code=404, detail="Track not found")
 
-    module = next(
-        (m for m in track.get("modules", []) if m["id"] == request.module_id), None
-    )
+    module = next((m for m in track.get("modules", []) if m["id"] == request.module_id), None)
     if module is None:
         raise HTTPException(status_code=404, detail="Module not found")
 
@@ -357,9 +359,7 @@ def defense_answer(request: DefenseAnswerRequest) -> DefenseAnswerResponse:
     if session.completed:
         raise HTTPException(status_code=400, detail="Session already completed")
 
-    question = next(
-        (q for q in session.questions if q.id == request.question_id), None
-    )
+    question = next((q for q in session.questions if q.id == request.question_id), None)
     if question is None:
         raise HTTPException(status_code=404, detail="Question not found")
     if question.answered:
@@ -397,7 +397,5 @@ def defense_result(session_id: str) -> DefenseResultResponse:
         overall_score=result["overall_score"],
         passed=result["passed"],
         summary=result["summary"],
-        question_results=[
-            DefenseQuestionResult(**qr) for qr in result["question_results"]
-        ],
+        question_results=[DefenseQuestionResult(**qr) for qr in result["question_results"]],
     )
