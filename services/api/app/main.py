@@ -392,17 +392,16 @@ def list_checkpoints(module_id: str) -> CheckpointListResponse:
     # Build checkpoint list with submission status
     result: list[dict[str, object]] = []
     for idx, criterion in enumerate(exit_criteria):
-        matching = [
-            s for s in submissions
-            if s.get("module_id") == module_id and s.get("checkpoint_index") == idx
-        ]
+        matching = [s for s in submissions if s.get("module_id") == module_id and s.get("checkpoint_index") == idx]
         latest = matching[-1] if matching else None
-        result.append({
-            "index": idx,
-            "prompt": criterion,
-            "submitted": latest is not None,
-            "self_evaluation": latest["self_evaluation"] if latest else None,
-            "submitted_at": latest["submitted_at"] if latest else None,
-        })
+        result.append(
+            {
+                "index": idx,
+                "prompt": criterion,
+                "submitted": latest is not None,
+                "self_evaluation": latest["self_evaluation"] if latest else None,
+                "submitted_at": latest["submitted_at"] if latest else None,
+            }
+        )
 
     return CheckpointListResponse(module_id=module_id, checkpoints=result)
