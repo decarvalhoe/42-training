@@ -21,6 +21,7 @@ from .schemas import (
     TrackDetail,
     TrackSummary,
 )
+from .validation import find_module, validate_module_activation
 
 app = FastAPI(title="42-training API", version="0.1.0")
 
@@ -127,6 +128,15 @@ def update_progression(payload: ProgressUpdate) -> ProgressionResponse:
 
     if "next_command" in updates:
         current["next_command"] = updates["next_command"]
+
+    # Validate active_module change against business rules
+    if "active_module" in updates:
+        target_module = updates["active_module"]
+        curriculum = load_curriculum()
+        completed = set(progress.get("completed_modules", []))
+        errors = validate_module_activation(curriculum, current, target_module, completed)
+        if errors:
+            raise HTTPException(status_code=422, detail={"validation_errors": errors})
 
     write_progression(current)
     return ProgressionResponse(**current)
@@ -275,6 +285,25 @@ def module_skip(module_id: str, payload: ModuleSkipRequest | None = None) -> Mod
         status="skipped",
         message="Module skipped",
     )
+
+
+# --- Module validation endpoint (Issue #26) ---
+
+
+@app.post("/api/v1/modules/{module_id}/validate")
+def validate_module(module_id: str) -> dict[str, object]:
+    """Dry-run validation: check if a module can be activated."""
+    curriculum = load_curriculum()
+    if find_module(curriculum, module_id) is None:
+        raise HTTPException(status_code=404, detail=f"Module '{module_id}' not found")
+    progression_data = load_progression()
+    completed = set(progression_data.get("progress", {}).get("completed_modules", []))
+    errors = validate_module_activation(curriculum, progression_data, module_id, completed)
+    return {
+        "module_id": module_id,
+        "valid": len(errors) == 0,
+        "errors": errors,
+    }
 
 
 # ---------------------------------------------------------------------------
