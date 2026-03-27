@@ -39,6 +39,25 @@ jobs:
         working-directory: services/ai_gateway
         run: pytest tests -q
 
+  web-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install web deps
+        working-directory: apps/web
+        run: npm ci
+      - name: ESLint
+        working-directory: apps/web
+        run: npx eslint .
+      - name: TypeScript strict check
+        working-directory: apps/web
+        run: npx tsc --noEmit
+
   web-build:
     runs-on: ubuntu-latest
     steps:
