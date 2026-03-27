@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,6 +10,11 @@ from .schemas import (
     DashboardResponse,
     HealthResponse,
     MetaResponse,
+    ModuleCompleteRequest,
+    ModuleProgressionResponse,
+    ModuleSkipRequest,
+    ModuleStartRequest,
+    ModuleStatusResponse,
     ProgressionResponse,
     ProgressUpdate,
     TrackDetail,
@@ -102,3 +109,148 @@ def update_progression(payload: ProgressUpdate) -> ProgressionResponse:
 
     write_progression(current)
     return ProgressionResponse(**current)
+
+
+# --- Helpers for module progression ---
+
+
+def _find_module(module_id: str) -> tuple[dict[str, object], dict[str, object]]:
+    """Return (track, module) for a given module_id, or raise 404."""
+    curriculum = load_curriculum()
+    for track in curriculum["tracks"]:
+        for module in track.get("modules", []):
+            if module["id"] == module_id:
+                return track, module
+    raise HTTPException(status_code=404, detail=f"Module '{module_id}' not found")
+
+
+def _get_module_statuses(progression: dict[str, object]) -> dict[str, dict[str, object]]:
+    """Return the module_status dict from progression, creating it if absent."""
+    return progression.setdefault("module_status", {})  # type: ignore[return-value]
+
+
+def _check_prerequisites(module_id: str, track: dict[str, object], progression: dict[str, object]) -> list[str]:
+    """Return list of prerequisite module IDs that are not completed/skipped."""
+    modules = track.get("modules", [])
+    module_ids = [m["id"] for m in modules]
+    if module_id not in module_ids:
+        return []
+    idx = module_ids.index(module_id)
+    if idx == 0:
+        return []
+    statuses = _get_module_statuses(progression)
+    missing = []
+    for prev_id in module_ids[:idx]:
+        prev_status = statuses.get(prev_id, {})
+        if isinstance(prev_status, dict) and prev_status.get("status") in ("completed", "skipped"):
+            continue
+        missing.append(prev_id)
+    return missing
+
+
+# --- Module progression endpoints (Issue #24) ---
+
+
+@app.get("/api/v1/modules/{module_id}/status")
+def module_status(module_id: str) -> ModuleStatusResponse:
+    track, _module = _find_module(module_id)
+    progression_data = load_progression()
+    statuses = _get_module_statuses(progression_data)
+    entry = statuses.get(module_id, {})
+    if not isinstance(entry, dict):
+        entry = {}
+    return ModuleStatusResponse(
+        module_id=module_id,
+        track_id=track["id"],  # type: ignore[arg-type]
+        status=entry.get("status", "not_started"),  # type: ignore[arg-type]
+        started_at=entry.get("started_at"),  # type: ignore[arg-type]
+        completed_at=entry.get("completed_at"),  # type: ignore[arg-type]
+        skipped_at=entry.get("skipped_at"),  # type: ignore[arg-type]
+        skip_reason=entry.get("skip_reason"),  # type: ignore[arg-type]
+    )
+
+
+@app.post("/api/v1/modules/{module_id}/start")
+def module_start(module_id: str, payload: ModuleStartRequest | None = None) -> ModuleProgressionResponse:
+    track, _module = _find_module(module_id)
+    progression_data = load_progression()
+
+    missing = _check_prerequisites(module_id, track, progression_data)
+    if missing:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "module_id": module_id,
+                "missing_prerequisites": missing,
+                "message": f"Prerequisites not met: {', '.join(missing)}",
+            },
+        )
+
+    statuses = _get_module_statuses(progression_data)
+    current = statuses.get(module_id, {})
+    if isinstance(current, dict) and current.get("status") == "in_progress":
+        return ModuleProgressionResponse(
+            module_id=module_id,
+            track_id=track["id"],  # type: ignore[arg-type]
+            status="in_progress",
+            message="Module already in progress",
+        )
+
+    now = datetime.now(timezone.utc).isoformat()
+    statuses[module_id] = {"status": "in_progress", "started_at": now}
+    write_progression(progression_data)
+
+    return ModuleProgressionResponse(
+        module_id=module_id,
+        track_id=track["id"],  # type: ignore[arg-type]
+        status="in_progress",
+        message="Module started",
+    )
+
+
+@app.post("/api/v1/modules/{module_id}/complete")
+def module_complete(module_id: str, payload: ModuleCompleteRequest | None = None) -> ModuleProgressionResponse:
+    track, _module = _find_module(module_id)
+    progression_data = load_progression()
+    statuses = _get_module_statuses(progression_data)
+    current = statuses.get(module_id, {})
+
+    if not isinstance(current, dict) or current.get("status") != "in_progress":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Module '{module_id}' must be in_progress to complete (current: {current.get('status', 'not_started') if isinstance(current, dict) else 'not_started'})",
+        )
+
+    now = datetime.now(timezone.utc).isoformat()
+    current["status"] = "completed"
+    current["completed_at"] = now
+    statuses[module_id] = current
+    write_progression(progression_data)
+
+    return ModuleProgressionResponse(
+        module_id=module_id,
+        track_id=track["id"],  # type: ignore[arg-type]
+        status="completed",
+        message="Module completed",
+    )
+
+
+@app.post("/api/v1/modules/{module_id}/skip")
+def module_skip(module_id: str, payload: ModuleSkipRequest | None = None) -> ModuleProgressionResponse:
+    track, _module = _find_module(module_id)
+    progression_data = load_progression()
+    statuses = _get_module_statuses(progression_data)
+
+    now = datetime.now(timezone.utc).isoformat()
+    entry: dict[str, object] = {"status": "skipped", "skipped_at": now}
+    if payload and payload.reason:
+        entry["skip_reason"] = payload.reason
+    statuses[module_id] = entry
+    write_progression(progression_data)
+
+    return ModuleProgressionResponse(
+        module_id=module_id,
+        track_id=track["id"],  # type: ignore[arg-type]
+        status="skipped",
+        message="Module skipped",
+    )

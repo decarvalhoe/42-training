@@ -88,6 +88,51 @@ class ProgressUpdate(BaseModel):
     next_command: str | None = None
 
 
+# --- Module progression schemas (Issue #24) ---
+
+ModuleStatus = Literal["not_started", "in_progress", "completed", "skipped"]
+
+
+class ModuleStartRequest(BaseModel):
+    """Request to start a module."""
+
+    learner_id: str = Field(default="default", min_length=1, max_length=64)
+
+
+class ModuleCompleteRequest(BaseModel):
+    """Request to mark a module as completed."""
+
+    learner_id: str = Field(default="default", min_length=1, max_length=64)
+
+
+class ModuleSkipRequest(BaseModel):
+    """Request to skip a module."""
+
+    learner_id: str = Field(default="default", min_length=1, max_length=64)
+    reason: str = Field(default="", max_length=500)
+
+
+class ModuleStatusResponse(BaseModel):
+    """Current status of a module for a learner."""
+
+    module_id: str
+    track_id: str
+    status: ModuleStatus
+    started_at: str | None = None
+    completed_at: str | None = None
+    skipped_at: str | None = None
+    skip_reason: str | None = None
+
+
+class ModuleProgressionResponse(BaseModel):
+    """Response after a progression action (start, complete, skip)."""
+
+    module_id: str
+    track_id: str
+    status: ModuleStatus
+    message: str
+
+
 # --- Mentor schemas ---
 
 
