@@ -68,6 +68,92 @@ Cinq agents CLI travaillent en parallele sur ce depot:
 
 Chaque agent travaille sur une issue a la fois, assignee via `gh issue list --assignee`.
 
+### Ownerships par area
+
+Chaque agent est proprietaire d'une ou deux areas. Le proprietaire a autorite sur les fichiers de son area et est responsable de la qualite, des tests et de la coherence dans son perimetre.
+
+#### claude — curriculum + product
+
+- **Labels issues:** `area:curriculum`, `area:product`
+- **Repertoires:**
+  - `packages/curriculum/` — schemas, donnees, scripts de validation
+  - `docs/` — documentation architecture, ADR, milestones
+  - `AGENTS.md`, `CLAUDE.md`, `ARCHITECTURE_TARGET.md`, `README.md`
+- **Responsabilites:**
+  - Structurer et enrichir le curriculum JSON
+  - Maintenir la politique de sources et les niveaux de confiance
+  - Documenter l'architecture, les conventions et la gouvernance
+  - Proteger la philosophie d'apprentissage dans tout le depot
+  - Arbitrer les decisions transverses entre areas
+
+#### codex — backend
+
+- **Labels issues:** `area:backend`
+- **Repertoires:**
+  - `services/api/` — endpoints, schemas Pydantic, logique metier
+- **Responsabilites:**
+  - Definir et implementer les endpoints API REST
+  - Creer les schemas types (Pydantic) pour les contrats de donnees
+  - Ecrire et maintenir les tests API (`pytest`)
+  - Preparer la couche d'abstraction pour la migration PostgreSQL
+  - Garantir que l'API reste le systeme de record applicatif
+
+#### copilot — frontend
+
+- **Labels issues:** `area:frontend`
+- **Repertoires:**
+  - `apps/web/` — pages Next.js, composants, navigation, styles
+- **Responsabilites:**
+  - Construire les pages et composants de l'interface apprenant
+  - Implementer le routing et la navigation
+  - Consommer l'API backend et afficher les donnees curriculum
+  - Respecter l'accessibilite et le responsive
+  - Ne pas introduire de logique metier dans le frontend
+
+#### cursor — ai
+
+- **Labels issues:** `area:ai`
+- **Repertoires:**
+  - `services/ai_gateway/` — mentor, retrieval, roles IA, garde-fous
+  - `packages/mentor-engine/` — moteur de prompts (quand actif)
+  - `prompts/` — templates de prompts
+- **Responsabilites:**
+  - Implementer les roles IA (Mentor, Librarian, Reviewer)
+  - Construire la couche retrieval et la politique de sources
+  - Maintenir les garde-fous (pas de solution directe en phase fondamentale)
+  - Brancher et configurer les appels LLM
+  - Ecrire les tests de non-regression sur les garde-fous
+
+#### gemini — devops
+
+- **Labels issues:** `area:devops`
+- **Repertoires:**
+  - `docker-compose.yml`, `scripts/` — orchestration et automatisation
+  - `.github/workflows/` — CI/CD pipelines
+  - `services/*/Dockerfile` — images Docker par service
+- **Responsabilites:**
+  - Maintenir l'environnement de developpement local (Docker, scripts)
+  - Configurer et faire evoluer la CI (linting, tests, build)
+  - Ajouter les healthchecks et smoke tests
+  - Documenter le runbook local (setup en 3 commandes)
+
+#### Matrice de responsabilite
+
+| Ressource | claude | codex | copilot | cursor | gemini |
+|-----------|--------|-------|---------|--------|--------|
+| `packages/curriculum/` | **owner** | | | | |
+| `docs/`, `AGENTS.md`, `CLAUDE.md` | **owner** | | | | |
+| `services/api/` | | **owner** | | | |
+| `apps/web/` | | | **owner** | | |
+| `services/ai_gateway/` | | | | **owner** | |
+| `packages/mentor-engine/`, `prompts/` | | | | **owner** | |
+| `docker-compose.yml`, `scripts/` | | | | | **owner** |
+| `.github/workflows/` | | | | | **owner** |
+| `README.md` | **owner** | contrib | contrib | contrib | contrib |
+| `packages/shared-types/` | coord | contrib | contrib | contrib | |
+
+**owner** = autorite sur le fichier, responsable review. **contrib** = peut modifier via PR avec review du owner. **coord** = coordonne les changements transverses.
+
 ### Convention de branches et PR
 
 #### Nommage des branches
@@ -265,6 +351,92 @@ Five CLI agents work in parallel on this repository:
 | `gemini` | devops | CI, Docker, linting, healthchecks |
 
 Each agent works on one issue at a time, assigned via `gh issue list --assignee`.
+
+### Ownerships by area
+
+Each agent owns one or two areas. The owner has authority over files in their area and is responsible for quality, tests and consistency within their scope.
+
+#### claude — curriculum + product
+
+- **Issue labels:** `area:curriculum`, `area:product`
+- **Directories:**
+  - `packages/curriculum/` — schemas, data, validation scripts
+  - `docs/` — architecture docs, ADRs, milestones
+  - `AGENTS.md`, `CLAUDE.md`, `ARCHITECTURE_TARGET.md`, `README.md`
+- **Responsibilities:**
+  - Structure and enrich the curriculum JSON
+  - Maintain source policy and confidence levels
+  - Document architecture, conventions and governance
+  - Protect the learning philosophy across the repository
+  - Arbitrate cross-area decisions
+
+#### codex — backend
+
+- **Issue labels:** `area:backend`
+- **Directories:**
+  - `services/api/` — endpoints, Pydantic schemas, business logic
+- **Responsibilities:**
+  - Define and implement REST API endpoints
+  - Create typed schemas (Pydantic) for data contracts
+  - Write and maintain API tests (`pytest`)
+  - Prepare the repository abstraction for PostgreSQL migration
+  - Ensure the API remains the application system of record
+
+#### copilot — frontend
+
+- **Issue labels:** `area:frontend`
+- **Directories:**
+  - `apps/web/` — Next.js pages, components, navigation, styles
+- **Responsibilities:**
+  - Build learner-facing pages and components
+  - Implement routing and navigation
+  - Consume the backend API and display curriculum data
+  - Respect accessibility and responsive design
+  - Do not introduce business logic in the frontend
+
+#### cursor — ai
+
+- **Issue labels:** `area:ai`
+- **Directories:**
+  - `services/ai_gateway/` — mentor, retrieval, AI roles, guardrails
+  - `packages/mentor-engine/` — prompt engine (when active)
+  - `prompts/` — prompt templates
+- **Responsibilities:**
+  - Implement AI roles (Mentor, Librarian, Reviewer)
+  - Build the retrieval layer and source policy enforcement
+  - Maintain guardrails (no direct solutions in foundation phases)
+  - Wire and configure LLM calls
+  - Write regression tests for guardrails
+
+#### gemini — devops
+
+- **Issue labels:** `area:devops`
+- **Directories:**
+  - `docker-compose.yml`, `scripts/` — orchestration and automation
+  - `.github/workflows/` — CI/CD pipelines
+  - `services/*/Dockerfile` — Docker images per service
+- **Responsibilities:**
+  - Maintain the local development environment (Docker, scripts)
+  - Configure and evolve CI (linting, tests, build)
+  - Add healthchecks and smoke tests
+  - Document the local runbook (setup in 3 commands)
+
+#### Responsibility matrix
+
+| Resource | claude | codex | copilot | cursor | gemini |
+|----------|--------|-------|---------|--------|--------|
+| `packages/curriculum/` | **owner** | | | | |
+| `docs/`, `AGENTS.md`, `CLAUDE.md` | **owner** | | | | |
+| `services/api/` | | **owner** | | | |
+| `apps/web/` | | | **owner** | | |
+| `services/ai_gateway/` | | | | **owner** | |
+| `packages/mentor-engine/`, `prompts/` | | | | **owner** | |
+| `docker-compose.yml`, `scripts/` | | | | | **owner** |
+| `.github/workflows/` | | | | | **owner** |
+| `README.md` | **owner** | contrib | contrib | contrib | contrib |
+| `packages/shared-types/` | coord | contrib | contrib | contrib | |
+
+**owner** = authority over the file, responsible for review. **contrib** = may modify via PR with owner review. **coord** = coordinates cross-area changes.
 
 ### Branch and PR convention
 
