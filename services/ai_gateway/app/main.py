@@ -7,7 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .llm_client import get_mentor_response
 from .repository import load_curriculum, load_progression
-from .schemas import MentorRequest, MentorResponse
+from .retrieval import StaticSourceProvider
+from .schemas import (
+    LibrarianRequest,
+    LibrarianResponse,
+    LibrarianResult,
+    MentorRequest,
+    MentorResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -99,4 +106,84 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
             "solution_metadata_only",
         ],
         direct_solution_allowed=direct_solution_allowed,
+    )
+
+
+# --- Tiers that are always blocked from Librarian results ---
+BLOCKED_TIERS = {"blocked_solution_content"}
+
+# Foundation and practice phases also block solution metadata
+PHASE_RESTRICTED_TIERS: dict[str, set[str]] = {
+    "foundation": {"solution_metadata"},
+    "practice": {"solution_metadata"},
+}
+
+
+def _allowed_tiers(phase: str) -> list[str]:
+    """Return tier ids the Librarian is allowed to serve for a given phase."""
+    curriculum = load_curriculum()
+    all_tiers = [t["id"] for t in curriculum["source_policy"]["tiers"]]
+    excluded = BLOCKED_TIERS | PHASE_RESTRICTED_TIERS.get(phase, set())
+    return [t for t in all_tiers if t not in excluded]
+
+
+def _tier_labels() -> dict[str, str]:
+    """Map tier id to human-readable label."""
+    curriculum = load_curriculum()
+    return {t["id"]: t["label"] for t in curriculum["source_policy"]["tiers"]}
+
+
+@app.post("/api/v1/librarian/search", response_model=LibrarianResponse)
+def librarian_search(request: LibrarianRequest) -> LibrarianResponse:
+    allowed = _allowed_tiers(request.phase)
+    labels = _tier_labels()
+    provider = StaticSourceProvider()
+
+    # Build search query — enrich with track/module context if provided
+    search_query = request.query
+    if request.module_id:
+        search_query = f"{request.module_id} {search_query}"
+    elif request.track_id:
+        search_query = f"{request.track_id} {search_query}"
+
+    raw_results = provider.search(
+        query=request.query,
+        tier_filter=allowed,
+        max_results=request.max_results,
+    )
+
+    # Also search with enriched query if it differs
+    if search_query != request.query:
+        extra = provider.search(
+            query=search_query,
+            tier_filter=allowed,
+            max_results=request.max_results,
+        )
+        seen = {(r.content, r.tier) for r in raw_results}
+        for r in extra:
+            if (r.content, r.tier) not in seen:
+                raw_results.append(r)
+                seen.add((r.content, r.tier))
+
+    # Re-sort and truncate
+    raw_results.sort(key=lambda r: r.confidence, reverse=True)
+    raw_results = raw_results[: request.max_results]
+
+    blocked = sorted(BLOCKED_TIERS | PHASE_RESTRICTED_TIERS.get(request.phase, set()))
+
+    return LibrarianResponse(
+        status="ok",
+        query=request.query,
+        results=[
+            LibrarianResult(
+                content=r.content,
+                source_url=r.source_url,
+                tier=r.tier,
+                tier_label=labels.get(r.tier, r.tier),
+                confidence=r.confidence,
+            )
+            for r in raw_results
+        ],
+        tiers_used=sorted({r.tier for r in raw_results}),
+        blocked_tiers=blocked,
     )
