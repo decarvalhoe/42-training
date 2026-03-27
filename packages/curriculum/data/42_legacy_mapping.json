@@ -1,0 +1,320 @@
+{
+  "metadata": {
+    "description": "Maps official 42 curriculum projects (legacy and new common core) to the preparation track/module structure defined in 42_lausanne_curriculum.json.",
+    "source_governance": "Project names and ordering for the legacy common core are well-documented community knowledge. The new common core mapping is inferred from 42 Lausanne public infographics and community discussion — treat with appropriate caution.",
+    "updated_on": "2026-03-27"
+  },
+  "piscine": {
+    "id": "piscine",
+    "label": "La Piscine",
+    "category": "selection",
+    "confidence": "high",
+    "confidence_rationale": "The Piscine format is publicly documented by 42 Network.",
+    "description": "Intensive 26-day selection process covering shell basics, C fundamentals, and peer learning discipline.",
+    "prepares_with_modules": [
+      "shell-basics",
+      "shell-streams",
+      "shell-permissions",
+      "c-basics",
+      "c-memory"
+    ],
+    "skills_tested": [
+      "shell navigation and file manipulation",
+      "redirections and pipes",
+      "C syntax, variables, loops, functions",
+      "pointers and basic memory management",
+      "reading man pages",
+      "peer evaluation methodology"
+    ],
+    "note": "The Piscine is the entry gate. Our shell and C foundation modules are specifically designed to prepare for it."
+  },
+  "legacy_common_core": {
+    "description": "The original 42 common core, historically C and Unix heavy. This mapping shows which preparation modules are most relevant for each project.",
+    "projects": [
+      {
+        "id": "libft",
+        "label": "Libft",
+        "position": 1,
+        "category": "c_fundamentals",
+        "confidence": "high",
+        "confidence_rationale": "libft is universally the first graded project across all 42 campuses.",
+        "description": "Build a personal C library reimplementing standard libc functions.",
+        "prepares_with_modules": ["c-basics", "c-memory", "c-build-debug", "c-libft-pushswap-bridge"],
+        "primary_skills": ["string manipulation", "memory allocation", "linked lists", "Makefile", "norminette"],
+        "track": "c"
+      },
+      {
+        "id": "get_next_line",
+        "label": "get_next_line",
+        "position": 2,
+        "category": "c_fundamentals",
+        "confidence": "high",
+        "confidence_rationale": "Universally present in the early common core.",
+        "description": "Read a line from a file descriptor, handling buffer management.",
+        "prepares_with_modules": ["c-memory", "c-build-debug", "shell-streams"],
+        "primary_skills": ["file descriptors", "static variables", "buffer management", "memory discipline"],
+        "track": "c"
+      },
+      {
+        "id": "ft_printf",
+        "label": "ft_printf",
+        "position": 3,
+        "category": "c_fundamentals",
+        "confidence": "high",
+        "confidence_rationale": "Universally present in the early common core.",
+        "description": "Reimplement printf with variadic arguments.",
+        "prepares_with_modules": ["c-basics", "c-memory", "c-libft-pushswap-bridge"],
+        "primary_skills": ["variadic functions", "format parsing", "type conversion", "string building"],
+        "track": "c"
+      },
+      {
+        "id": "born2beroot",
+        "label": "Born2beroot",
+        "position": 4,
+        "category": "sysadmin",
+        "confidence": "high",
+        "confidence_rationale": "Well-documented across campuses as an early sysadmin project.",
+        "description": "Set up a virtual machine with strict security and service configuration.",
+        "prepares_with_modules": ["shell-basics", "shell-permissions", "shell-tooling"],
+        "primary_skills": ["VM setup", "user management", "firewall rules", "SSH configuration", "cron"],
+        "track": "shell"
+      },
+      {
+        "id": "push_swap",
+        "label": "push_swap",
+        "position": 5,
+        "category": "algorithms",
+        "confidence": "high",
+        "confidence_rationale": "Present in both legacy and new common core.",
+        "description": "Sort a stack of integers using a limited set of operations with minimal moves.",
+        "prepares_with_modules": ["c-libft-pushswap-bridge", "c-memory", "c-build-debug"],
+        "primary_skills": ["sorting algorithms", "complexity analysis", "stack operations", "optimization"],
+        "track": "c"
+      },
+      {
+        "id": "pipex",
+        "label": "Pipex",
+        "position": 6,
+        "category": "unix",
+        "confidence": "high",
+        "confidence_rationale": "Standard Unix project in the legacy common core.",
+        "description": "Reproduce shell pipe behavior using fork, execve and dup2.",
+        "prepares_with_modules": ["shell-streams", "c-memory", "c-build-debug"],
+        "primary_skills": ["fork", "execve", "dup2", "pipe system call", "process management"],
+        "track": "c"
+      },
+      {
+        "id": "minishell",
+        "label": "Minishell",
+        "position": 7,
+        "category": "unix",
+        "confidence": "high",
+        "confidence_rationale": "Major milestone project, universally present.",
+        "description": "Build a simple shell with parsing, builtins, redirections and pipes.",
+        "prepares_with_modules": ["shell-streams", "shell-permissions", "c-memory", "c-build-debug"],
+        "primary_skills": ["lexer/parser", "process creation", "signal handling", "environment variables", "redirections"],
+        "track": "c"
+      },
+      {
+        "id": "philo",
+        "label": "Philosophers",
+        "position": 8,
+        "category": "concurrency",
+        "confidence": "high",
+        "confidence_rationale": "Universally present as the concurrency introduction.",
+        "description": "Solve the dining philosophers problem using threads and mutexes.",
+        "prepares_with_modules": ["c-memory", "c-build-debug"],
+        "primary_skills": ["threads", "mutexes", "deadlock prevention", "timing", "race conditions"],
+        "track": "c"
+      },
+      {
+        "id": "cub3d_or_mini_rt",
+        "label": "cub3D / miniRT",
+        "position": 9,
+        "category": "graphics",
+        "confidence": "high",
+        "confidence_rationale": "One of the two is required; choice is campus-dependent.",
+        "description": "Build a raycaster (cub3D) or ray tracer (miniRT) rendering engine.",
+        "prepares_with_modules": ["c-memory", "c-build-debug", "c-libft-pushswap-bridge"],
+        "primary_skills": ["graphics math", "raycasting or raytracing", "event handling", "mlx library"],
+        "track": "c"
+      },
+      {
+        "id": "cpp_modules",
+        "label": "CPP Modules (00-09)",
+        "position": 10,
+        "category": "cpp",
+        "confidence": "high",
+        "confidence_rationale": "Standard CPP progression in the legacy common core.",
+        "description": "Series of 10 modules introducing C++ OOP, STL and design patterns.",
+        "prepares_with_modules": ["c-basics", "c-memory", "c-libft-pushswap-bridge"],
+        "primary_skills": ["classes", "inheritance", "polymorphism", "templates", "STL containers", "exceptions"],
+        "track": "c",
+        "note": "C++ builds on C knowledge but introduces OOP. No direct preparation module exists yet — future track candidate."
+      },
+      {
+        "id": "net_practice",
+        "label": "NetPractice",
+        "position": 11,
+        "category": "network",
+        "confidence": "high",
+        "confidence_rationale": "Present in both legacy and new common core.",
+        "description": "Configure network interfaces, routing tables and subnets in a simulator.",
+        "prepares_with_modules": ["shell-tooling"],
+        "primary_skills": ["IP addressing", "subnetting", "routing", "network topology"],
+        "track": "shell",
+        "note": "Primarily conceptual. Shell tooling helps with network debugging commands (ping, ifconfig, netstat)."
+      },
+      {
+        "id": "webserv_or_irc",
+        "label": "Webserv / ft_irc",
+        "position": 12,
+        "category": "network_programming",
+        "confidence": "high",
+        "confidence_rationale": "One of the two is required in the legacy common core.",
+        "description": "Build an HTTP server (webserv) or IRC server (ft_irc) from scratch in C++.",
+        "prepares_with_modules": ["c-memory", "c-build-debug", "c-libft-pushswap-bridge"],
+        "primary_skills": ["socket programming", "HTTP/IRC protocol", "multiplexing (poll/select)", "request parsing"],
+        "track": "c"
+      },
+      {
+        "id": "inception",
+        "label": "Inception",
+        "position": 13,
+        "category": "devops",
+        "confidence": "high",
+        "confidence_rationale": "Present in both legacy and new common core.",
+        "description": "Set up a multi-service infrastructure using Docker and docker-compose.",
+        "prepares_with_modules": ["shell-basics", "shell-permissions", "shell-tooling"],
+        "primary_skills": ["Docker", "docker-compose", "Nginx", "MariaDB", "WordPress", "volumes", "networks"],
+        "track": "shell"
+      },
+      {
+        "id": "transcendance",
+        "label": "ft_transcendence",
+        "position": 14,
+        "category": "full_stack",
+        "confidence": "high",
+        "confidence_rationale": "Final project in both legacy and new common core.",
+        "description": "Build a full-stack web application with real-time multiplayer features.",
+        "prepares_with_modules": ["shell-tooling", "c-build-debug"],
+        "primary_skills": ["web framework", "database", "authentication", "real-time communication", "deployment"],
+        "track": "c",
+        "note": "Full-stack project. In the new curriculum, Python skills also apply. Preparation is broad rather than module-specific."
+      }
+    ]
+  },
+  "new_common_core_additions": {
+    "description": "Projects specific to or repositioned in the new common core. These names come from 42 Lausanne public materials and community interpretation — confidence is lower than legacy projects.",
+    "projects": [
+      {
+        "id": "piscine_python",
+        "label": "Piscine Python",
+        "confidence": "medium",
+        "confidence_rationale": "Referenced in 42 Lausanne infographics. Exact scope is inferred from community mapping.",
+        "description": "Intensive Python bootcamp introducing the language within the common core.",
+        "prepares_with_modules": ["python-basics", "python-oop-scripting"],
+        "primary_skills": ["Python syntax", "data structures", "file I/O", "OOP basics"],
+        "track": "python_ai"
+      },
+      {
+        "id": "a_maze_ing",
+        "label": "a maze ing",
+        "confidence": "low",
+        "confidence_rationale": "Name appears in infographic. Scope and requirements are inferred.",
+        "description": "Likely an algorithmic/graphics project involving maze generation or solving.",
+        "prepares_with_modules": ["c-libft-pushswap-bridge", "c-memory"],
+        "primary_skills": ["graph algorithms", "pathfinding", "visualization"],
+        "track": "c"
+      },
+      {
+        "id": "codexion",
+        "label": "Codexion",
+        "confidence": "low",
+        "confidence_rationale": "Name appears in infographic. No public description available.",
+        "description": "Unknown scope. Positioned mid-core, possibly algorithmic or systems-related.",
+        "prepares_with_modules": ["c-basics", "c-memory"],
+        "primary_skills": [],
+        "track": "c",
+        "note": "Insufficient information to map reliably. Listed for completeness."
+      },
+      {
+        "id": "fly_in",
+        "label": "fly in",
+        "confidence": "low",
+        "confidence_rationale": "Name appears in infographic. No public description available.",
+        "description": "Unknown scope. Possibly systems or network related.",
+        "prepares_with_modules": [],
+        "primary_skills": [],
+        "track": "c",
+        "note": "Insufficient information to map reliably. Listed for completeness."
+      },
+      {
+        "id": "call_me_maybe",
+        "label": "call me maybe",
+        "confidence": "low",
+        "confidence_rationale": "Name appears in infographic. Likely network or IPC related based on naming.",
+        "description": "Possibly a networking or inter-process communication project.",
+        "prepares_with_modules": ["c-memory", "shell-streams"],
+        "primary_skills": [],
+        "track": "c",
+        "note": "Mapping is speculative based on project name only."
+      },
+      {
+        "id": "pacman",
+        "label": "Pacman",
+        "confidence": "low",
+        "confidence_rationale": "Name appears in infographic. Likely a graphics or game project.",
+        "description": "Possibly a game implementation project involving graphics and game logic.",
+        "prepares_with_modules": ["c-libft-pushswap-bridge", "c-memory", "c-build-debug"],
+        "primary_skills": ["game loop", "graphics", "collision detection"],
+        "track": "c"
+      },
+      {
+        "id": "rag_against_the_machine",
+        "label": "RAG against the machine",
+        "confidence": "medium",
+        "confidence_rationale": "Name clearly references RAG (Retrieval-Augmented Generation). Confirmed as AI-related in 42 Lausanne public materials.",
+        "description": "Build a retrieval-augmented generation system, applying AI and source governance principles.",
+        "prepares_with_modules": ["python-oop-scripting", "ai-rag-agents"],
+        "primary_skills": ["RAG pipeline", "prompt engineering", "document retrieval", "evaluation"],
+        "track": "python_ai"
+      },
+      {
+        "id": "the_answer_protocol",
+        "label": "the answer protocol",
+        "confidence": "low",
+        "confidence_rationale": "Name appears in infographic. Likely AI or protocol-related.",
+        "description": "Possibly an AI evaluation or protocol implementation project.",
+        "prepares_with_modules": ["ai-rag-agents", "python-oop-scripting"],
+        "primary_skills": [],
+        "track": "python_ai",
+        "note": "Mapping is speculative. Positioned after RAG project in known ordering."
+      },
+      {
+        "id": "agent_smith",
+        "label": "agent smith",
+        "confidence": "medium",
+        "confidence_rationale": "Name references AI agents. Positioned late in the new common core, suggesting advanced AI work.",
+        "description": "Likely an agentic AI project involving autonomous agent design and orchestration.",
+        "prepares_with_modules": ["ai-rag-agents", "python-oop-scripting"],
+        "primary_skills": ["agent architecture", "tool use", "orchestration", "evaluation"],
+        "track": "python_ai"
+      }
+    ]
+  },
+  "track_coverage_summary": {
+    "shell": {
+      "directly_prepares": ["piscine", "born2beroot", "net_practice", "inception"],
+      "supports": ["pipex", "minishell", "get_next_line"]
+    },
+    "c": {
+      "directly_prepares": ["piscine", "libft", "ft_printf", "get_next_line", "push_swap", "pipex", "minishell", "philo", "cub3d_or_mini_rt"],
+      "supports": ["cpp_modules", "webserv_or_irc", "transcendance"]
+    },
+    "python_ai": {
+      "directly_prepares": ["piscine_python", "rag_against_the_machine", "agent_smith"],
+      "supports": ["the_answer_protocol", "transcendance"]
+    }
+  }
+}
