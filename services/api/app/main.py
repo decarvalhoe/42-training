@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .repository import load_curriculum, load_progression, write_progression
+from .repository import CurriculumRepository, repo
 from .schemas import ProgressUpdate
 
 app = FastAPI(title="42-training API", version="0.1.0")
@@ -17,15 +17,20 @@ app.add_middleware(
 )
 
 
+def get_repo() -> CurriculumRepository:
+    """Return the active repository.  Override in tests via app.dependency_overrides."""
+    return repo
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "api"}
 
 
 @app.get("/api/v1/meta")
-def meta() -> dict[str, object]:
-    curriculum = load_curriculum()
-    progression = load_progression()
+def meta(r: CurriculumRepository = Depends(get_repo)) -> dict[str, object]:
+    curriculum = r.get_curriculum()
+    progression = r.get_progression()
     return {
         "app": "42-training",
         "campus": curriculum["metadata"]["campus"],
@@ -35,62 +40,32 @@ def meta() -> dict[str, object]:
 
 
 @app.get("/api/v1/dashboard")
-def dashboard() -> dict[str, object]:
+def dashboard(r: CurriculumRepository = Depends(get_repo)) -> dict[str, object]:
     return {
-        "curriculum": load_curriculum(),
-        "progression": load_progression(),
+        "curriculum": r.get_curriculum(),
+        "progression": r.get_progression(),
     }
 
 
 @app.get("/api/v1/tracks")
-def tracks() -> list[dict[str, object]]:
-    curriculum = load_curriculum()
-    result: list[dict[str, object]] = []
-    for track in curriculum["tracks"]:
-        result.append(
-            {
-                "id": track["id"],
-                "title": track["title"],
-                "summary": track["summary"],
-                "why_it_matters": track["why_it_matters"],
-                "module_count": len(track.get("modules", [])),
-            }
-        )
-    return result
+def tracks(r: CurriculumRepository = Depends(get_repo)) -> list[dict[str, object]]:
+    return r.get_tracks()
 
 
 @app.get("/api/v1/tracks/{track_id}")
-def track_detail(track_id: str) -> dict[str, object]:
-    curriculum = load_curriculum()
-    for track in curriculum["tracks"]:
-        if track["id"] == track_id:
-            return track
-    raise HTTPException(status_code=404, detail="Track not found")
+def track_detail(track_id: str, r: CurriculumRepository = Depends(get_repo)) -> dict[str, object]:
+    track = r.get_track(track_id)
+    if track is None:
+        raise HTTPException(status_code=404, detail="Track not found")
+    return track
 
 
 @app.get("/api/v1/progression")
-def progression() -> dict[str, object]:
-    return load_progression()
+def progression(r: CurriculumRepository = Depends(get_repo)) -> dict[str, object]:
+    return r.get_progression()
 
 
 @app.post("/api/v1/progression")
-def update_progression(payload: ProgressUpdate) -> dict[str, object]:
-    current = load_progression()
-    learning_plan = current.setdefault("learning_plan", {})
-    progress = current.setdefault("progress", {})
-
+def update_progression(payload: ProgressUpdate, r: CurriculumRepository = Depends(get_repo)) -> dict[str, object]:
     updates = payload.model_dump(exclude_none=True)
-
-    for key in ("active_course", "active_module", "pace_mode"):
-        if key in updates:
-            learning_plan[key] = updates[key]
-
-    for key in ("current_exercise", "current_step"):
-        if key in updates:
-            progress[key] = updates[key]
-
-    if "next_command" in updates:
-        current["next_command"] = updates["next_command"]
-
-    write_progression(current)
-    return current
+    return r.update_progression(updates)

@@ -1,17 +1,19 @@
 """Comprehensive API tests for all endpoints (Issue #27).
 
-Tests are isolated from the filesystem via mocked repository functions.
+Tests are isolated from the filesystem via a fake in-memory repository.
 """
 
 from __future__ import annotations
 
 import json
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import app, get_repo
+from app.repository import CurriculumRepository
 
 client = TestClient(app)
 
@@ -65,23 +67,86 @@ def _fresh_progression() -> dict[str, object]:
     return json.loads(json.dumps(_PROGRESSION_BASE))
 
 
-def _patch_repo(progression: dict[str, object] | None = None):
-    """Return context-manager patches for curriculum, progression and write."""
-    prog = progression if progression is not None else _fresh_progression()
-    written: list[dict[str, object]] = []
+class FakeRepository(CurriculumRepository):
+    """In-memory repository for tests."""
 
-    def fake_write(data: dict[str, object]) -> None:
-        prog.clear()
-        prog.update(data)
-        written.append(json.loads(json.dumps(data)))
+    def __init__(self, curriculum: dict[str, Any] = _CURRICULUM, progression: dict[str, Any] | None = None) -> None:
+        self._curriculum = curriculum
+        self._progression = progression if progression is not None else _fresh_progression()
+        self.writes: list[dict[str, Any]] = []
 
-    return (
-        patch("app.main.load_curriculum", return_value=_CURRICULUM),
-        patch("app.main.load_progression", side_effect=lambda: json.loads(json.dumps(prog))),
-        patch("app.main.write_progression", side_effect=fake_write),
-        prog,
-        written,
-    )
+    def get_curriculum(self) -> dict[str, Any]:
+        return self._curriculum
+
+    def get_tracks(self) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for track in self._curriculum["tracks"]:
+            result.append(
+                {
+                    "id": track["id"],
+                    "title": track["title"],
+                    "summary": track["summary"],
+                    "why_it_matters": track["why_it_matters"],
+                    "module_count": len(track.get("modules", [])),
+                }
+            )
+        return result
+
+    def get_track(self, track_id: str) -> dict[str, Any] | None:
+        for track in self._curriculum["tracks"]:
+            if track["id"] == track_id:
+                return track
+        return None
+
+    def get_modules(self, track_id: str) -> list[dict[str, Any]]:
+        track = self.get_track(track_id)
+        if track is None:
+            return []
+        return track.get("modules", [])
+
+    def get_module(self, module_id: str) -> dict[str, Any] | None:
+        for track in self._curriculum["tracks"]:
+            for module in track.get("modules", []):
+                if module["id"] == module_id:
+                    return module
+        return None
+
+    def get_progression(self, learner_id: str = "default") -> dict[str, Any]:
+        return json.loads(json.dumps(self._progression))
+
+    def update_progression(self, data: dict[str, Any], learner_id: str = "default") -> dict[str, Any]:
+        current = self.get_progression(learner_id)
+        learning_plan = current.setdefault("learning_plan", {})
+        progress = current.setdefault("progress", {})
+
+        for key in ("active_course", "active_module", "pace_mode"):
+            if key in data:
+                learning_plan[key] = data[key]
+
+        for key in ("current_exercise", "current_step"):
+            if key in data:
+                progress[key] = data[key]
+
+        if "next_command" in data:
+            current["next_command"] = data["next_command"]
+
+        self._progression = current
+        self.writes.append(json.loads(json.dumps(current)))
+        return current
+
+
+def _use_fake(progression: dict[str, Any] | None = None, curriculum: dict[str, Any] = _CURRICULUM) -> FakeRepository:
+    """Install a FakeRepository and return it."""
+    fake = FakeRepository(curriculum=curriculum, progression=progression)
+    app.dependency_overrides[get_repo] = lambda: fake
+    return fake
+
+
+@pytest.fixture(autouse=True)
+def _cleanup_overrides():
+    """Remove dependency overrides after each test."""
+    yield
+    app.dependency_overrides.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -109,9 +174,8 @@ class TestHealth:
 
 class TestMeta:
     def test_meta_happy_path(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.get("/api/v1/meta")
+        _use_fake()
+        r = client.get("/api/v1/meta")
         assert r.status_code == 200
         data = r.json()
         assert data["app"] == "42-training"
@@ -121,16 +185,14 @@ class TestMeta:
 
     def test_meta_defaults_when_progression_empty(self) -> None:
         """When progression has no learning_plan, defaults apply."""
-        p_cur, p_load, p_write, _p, _w = _patch_repo(progression={})
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/meta").json()
+        _use_fake(progression={})
+        data = client.get("/api/v1/meta").json()
         assert data["active_course"] == "shell"
         assert data["pace_mode"] == "self_paced"
 
     def test_meta_response_keys(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/meta").json()
+        _use_fake()
+        data = client.get("/api/v1/meta").json()
         assert set(data.keys()) == {"app", "campus", "active_course", "pace_mode"}
 
 
@@ -141,24 +203,21 @@ class TestMeta:
 
 class TestDashboard:
     def test_dashboard_happy_path(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.get("/api/v1/dashboard")
+        _use_fake()
+        r = client.get("/api/v1/dashboard")
         assert r.status_code == 200
         data = r.json()
         assert "curriculum" in data
         assert "progression" in data
 
     def test_dashboard_curriculum_has_tracks(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/dashboard").json()
+        _use_fake()
+        data = client.get("/api/v1/dashboard").json()
         assert len(data["curriculum"]["tracks"]) == 2
 
     def test_dashboard_progression_reflects_state(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/dashboard").json()
+        _use_fake()
+        data = client.get("/api/v1/dashboard").json()
         assert data["progression"]["learning_plan"]["active_course"] == "shell"
 
 
@@ -169,33 +228,29 @@ class TestDashboard:
 
 class TestTracks:
     def test_tracks_list(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks")
+        _use_fake()
+        r = client.get("/api/v1/tracks")
         assert r.status_code == 200
         data = r.json()
         assert len(data) == 2
 
     def test_tracks_contain_expected_ids(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks").json()
+        _use_fake()
+        data = client.get("/api/v1/tracks").json()
         ids = {t["id"] for t in data}
         assert ids == {"shell", "c"}
 
     def test_tracks_module_count(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks").json()
+        _use_fake()
+        data = client.get("/api/v1/tracks").json()
         shell = next(t for t in data if t["id"] == "shell")
         assert shell["module_count"] == 2
         c_track = next(t for t in data if t["id"] == "c")
         assert c_track["module_count"] == 1
 
     def test_tracks_summary_fields(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks").json()
+        _use_fake()
+        data = client.get("/api/v1/tracks").json()
         for track in data:
             assert "id" in track
             assert "title" in track
@@ -211,39 +266,34 @@ class TestTracks:
 
 class TestTrackDetail:
     def test_track_detail_shell(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks/shell")
+        _use_fake()
+        r = client.get("/api/v1/tracks/shell")
         assert r.status_code == 200
         data = r.json()
         assert data["id"] == "shell"
         assert len(data["modules"]) == 2
 
     def test_track_detail_c(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks/c")
+        _use_fake()
+        r = client.get("/api/v1/tracks/c")
         assert r.status_code == 200
         assert r.json()["id"] == "c"
 
     def test_track_detail_404(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks/nonexistent")
+        _use_fake()
+        r = client.get("/api/v1/tracks/nonexistent")
         assert r.status_code == 404
         assert "not found" in r.json()["detail"].lower()
 
     def test_track_detail_includes_modules(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks/shell").json()
+        _use_fake()
+        data = client.get("/api/v1/tracks/shell").json()
         module_ids = [m["id"] for m in data["modules"]]
         assert module_ids == ["shell-basics", "shell-streams"]
 
     def test_track_detail_module_has_phase(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks/shell").json()
+        _use_fake()
+        data = client.get("/api/v1/tracks/shell").json()
         for m in data["modules"]:
             assert "phase" in m
 
@@ -255,24 +305,21 @@ class TestTrackDetail:
 
 class TestGetProgression:
     def test_progression_happy_path(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.get("/api/v1/progression")
+        _use_fake()
+        r = client.get("/api/v1/progression")
         assert r.status_code == 200
         data = r.json()
         assert data["learning_plan"]["active_course"] == "shell"
 
     def test_progression_includes_progress_block(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/progression").json()
+        _use_fake()
+        data = client.get("/api/v1/progression").json()
         assert "progress" in data
         assert data["progress"]["current_exercise"] == "Ex1"
 
     def test_progression_empty_state(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo(progression={})
-        with p_cur, p_load, p_write:
-            r = client.get("/api/v1/progression")
+        _use_fake(progression={})
+        r = client.get("/api/v1/progression")
         assert r.status_code == 200
         assert r.json() == {}
 
@@ -284,55 +331,48 @@ class TestGetProgression:
 
 class TestUpdateProgression:
     def test_update_active_course(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"active_course": "c"})
+        fake = _use_fake()
+        r = client.post("/api/v1/progression", json={"active_course": "c"})
         assert r.status_code == 200
         assert r.json()["learning_plan"]["active_course"] == "c"
-        assert len(written) == 1
+        assert len(fake.writes) == 1
 
     def test_update_active_module(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"active_module": "shell-streams"})
+        _use_fake()
+        r = client.post("/api/v1/progression", json={"active_module": "shell-streams"})
         assert r.status_code == 200
         assert r.json()["learning_plan"]["active_module"] == "shell-streams"
 
     def test_update_pace_mode(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"pace_mode": "intensive"})
+        _use_fake()
+        r = client.post("/api/v1/progression", json={"pace_mode": "intensive"})
         assert r.status_code == 200
         assert r.json()["learning_plan"]["pace_mode"] == "intensive"
 
     def test_update_current_exercise(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"current_exercise": "Ex3"})
+        _use_fake()
+        r = client.post("/api/v1/progression", json={"current_exercise": "Ex3"})
         assert r.status_code == 200
         assert r.json()["progress"]["current_exercise"] == "Ex3"
 
     def test_update_current_step(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"current_step": "3.2"})
+        _use_fake()
+        r = client.post("/api/v1/progression", json={"current_step": "3.2"})
         assert r.status_code == 200
         assert r.json()["progress"]["current_step"] == "3.2"
 
     def test_update_next_command(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"next_command": "cd /tmp"})
+        _use_fake()
+        r = client.post("/api/v1/progression", json={"next_command": "cd /tmp"})
         assert r.status_code == 200
         assert r.json()["next_command"] == "cd /tmp"
 
     def test_update_multiple_fields(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post(
-                "/api/v1/progression",
-                json={"active_course": "c", "current_exercise": "Ex5", "next_command": "gcc main.c"},
-            )
+        _use_fake()
+        r = client.post(
+            "/api/v1/progression",
+            json={"active_course": "c", "current_exercise": "Ex5", "next_command": "gcc main.c"},
+        )
         assert r.status_code == 200
         data = r.json()
         assert data["learning_plan"]["active_course"] == "c"
@@ -341,17 +381,15 @@ class TestUpdateProgression:
 
     def test_update_empty_payload(self) -> None:
         """Empty payload should still succeed — no fields modified."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={})
+        _use_fake()
+        r = client.post("/api/v1/progression", json={})
         assert r.status_code == 200
         assert r.json()["learning_plan"]["active_course"] == "shell"
 
     def test_update_preserves_existing_fields(self) -> None:
         """Updating one field should not erase others."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"active_course": "c"})
+        _use_fake()
+        r = client.post("/api/v1/progression", json={"active_course": "c"})
         data = r.json()
         # active_module should still be present from original
         assert data["learning_plan"]["active_module"] == "shell-basics"
@@ -360,18 +398,16 @@ class TestUpdateProgression:
 
     def test_update_unknown_key_ignored(self) -> None:
         """Keys not handled by the endpoint should not crash."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"unknown_field": "value"})
+        _use_fake()
+        r = client.post("/api/v1/progression", json={"unknown_field": "value"})
         assert r.status_code == 200
 
     def test_update_writes_to_persistence(self) -> None:
-        """Verify write_progression is called exactly once."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            client.post("/api/v1/progression", json={"active_course": "c"})
-        assert len(written) == 1
-        assert written[0]["learning_plan"]["active_course"] == "c"
+        """Verify update_progression records exactly one write."""
+        fake = _use_fake()
+        client.post("/api/v1/progression", json={"active_course": "c"})
+        assert len(fake.writes) == 1
+        assert fake.writes[0]["learning_plan"]["active_course"] == "c"
 
 
 # ---------------------------------------------------------------------------
@@ -382,55 +418,33 @@ class TestUpdateProgression:
 class TestProgressionConsistency:
     def test_sequential_mutations_accumulate(self) -> None:
         """Multiple sequential updates should accumulate state."""
-        prog = _fresh_progression()
-        written: list[dict[str, object]] = []
+        fake = _use_fake()
 
-        def fake_write(data: dict[str, object]) -> None:
-            prog.clear()
-            prog.update(data)
-            written.append(json.loads(json.dumps(data)))
+        # First update: change course
+        r1 = client.post("/api/v1/progression", json={"active_course": "c"})
+        assert r1.json()["learning_plan"]["active_course"] == "c"
 
-        with (
-            patch("app.main.load_curriculum", return_value=_CURRICULUM),
-            patch("app.main.load_progression", side_effect=lambda: json.loads(json.dumps(prog))),
-            patch("app.main.write_progression", side_effect=fake_write),
-        ):
-            # First update: change course
-            r1 = client.post("/api/v1/progression", json={"active_course": "c"})
-            assert r1.json()["learning_plan"]["active_course"] == "c"
+        # Second update: change exercise
+        r2 = client.post("/api/v1/progression", json={"current_exercise": "Ex10"})
+        data2 = r2.json()
+        # Both mutations should be reflected
+        assert data2["learning_plan"]["active_course"] == "c"
+        assert data2["progress"]["current_exercise"] == "Ex10"
 
-            # Second update: change exercise
-            r2 = client.post("/api/v1/progression", json={"current_exercise": "Ex10"})
-            data2 = r2.json()
-            # Both mutations should be reflected
-            assert data2["learning_plan"]["active_course"] == "c"
-            assert data2["progress"]["current_exercise"] == "Ex10"
+        # Third update: change step
+        r3 = client.post("/api/v1/progression", json={"current_step": "10.3"})
+        data3 = r3.json()
+        assert data3["learning_plan"]["active_course"] == "c"
+        assert data3["progress"]["current_exercise"] == "Ex10"
+        assert data3["progress"]["current_step"] == "10.3"
 
-            # Third update: change step
-            r3 = client.post("/api/v1/progression", json={"current_step": "10.3"})
-            data3 = r3.json()
-            assert data3["learning_plan"]["active_course"] == "c"
-            assert data3["progress"]["current_exercise"] == "Ex10"
-            assert data3["progress"]["current_step"] == "10.3"
-
-        assert len(written) == 3
+        assert len(fake.writes) == 3
 
     def test_get_reflects_latest_write(self) -> None:
         """GET /progression should return the state after POST."""
-        prog = _fresh_progression()
-
-        def fake_write(data: dict[str, object]) -> None:
-            prog.clear()
-            prog.update(data)
-
-        with (
-            patch("app.main.load_curriculum", return_value=_CURRICULUM),
-            patch("app.main.load_progression", side_effect=lambda: json.loads(json.dumps(prog))),
-            patch("app.main.write_progression", side_effect=fake_write),
-        ):
-            client.post("/api/v1/progression", json={"active_course": "python_ai"})
-            r = client.get("/api/v1/progression")
-
+        _use_fake()
+        client.post("/api/v1/progression", json={"active_course": "python_ai"})
+        r = client.get("/api/v1/progression")
         assert r.json()["learning_plan"]["active_course"] == "python_ai"
 
 
@@ -447,9 +461,8 @@ class TestValidationErrors:
 
     def test_post_progression_non_object_body(self) -> None:
         """Sending a JSON array instead of object."""
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json=[1, 2, 3])
+        _use_fake()
+        r = client.post("/api/v1/progression", json=[1, 2, 3])
         assert r.status_code == 422
 
 
@@ -467,29 +480,26 @@ class TestEdgeCases:
                 {"id": "empty", "title": "Empty", "summary": "No modules", "why_it_matters": "Test"},
             ],
         }
-        with patch("app.main.load_curriculum", return_value=curriculum_no_modules):
-            data = client.get("/api/v1/tracks").json()
+        _use_fake(curriculum=curriculum_no_modules)
+        data = client.get("/api/v1/tracks").json()
         assert data[0]["module_count"] == 0
 
     def test_track_detail_special_characters_in_id(self) -> None:
         """Track IDs with URL-safe special chars should still 404 properly."""
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks/some-weird-id_123")
+        _use_fake()
+        r = client.get("/api/v1/tracks/some-weird-id_123")
         assert r.status_code == 404
 
     def test_progression_missing_learning_plan(self) -> None:
         """POST should create learning_plan if absent in progression."""
-        p_cur, p_load, p_write, prog, written = _patch_repo(progression={"progress": {}})
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"active_course": "c"})
+        _use_fake(progression={"progress": {}})
+        r = client.post("/api/v1/progression", json={"active_course": "c"})
         assert r.status_code == 200
         assert r.json()["learning_plan"]["active_course"] == "c"
 
     def test_progression_missing_progress_block(self) -> None:
         """POST should create progress block if absent."""
-        p_cur, p_load, p_write, prog, written = _patch_repo(progression={"learning_plan": {}})
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"current_exercise": "Ex1"})
+        _use_fake(progression={"learning_plan": {}})
+        r = client.post("/api/v1/progression", json={"current_exercise": "Ex1"})
         assert r.status_code == 200
         assert r.json()["progress"]["current_exercise"] == "Ex1"
