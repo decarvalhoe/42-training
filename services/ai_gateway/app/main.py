@@ -8,12 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from .llm_client import get_mentor_response
 from .repository import load_curriculum, load_progression
 from .retrieval import StaticSourceProvider
+from .reviewer import build_review
 from .schemas import (
     LibrarianRequest,
     LibrarianResponse,
     LibrarianResult,
     MentorRequest,
     MentorResponse,
+    ReviewerRequest,
+    ReviewerResponse,
     SourceUsed,
 )
 
@@ -264,4 +267,38 @@ def librarian_search(request: LibrarianRequest) -> LibrarianResponse:
         ],
         tiers_used=sorted({r.tier for r in raw_results}),
         blocked_tiers=blocked,
+    )
+
+
+@app.post("/api/v1/reviewer/review", response_model=ReviewerResponse)
+def reviewer_review(request: ReviewerRequest) -> ReviewerResponse:
+    curriculum = load_curriculum()
+    track = next(
+        (t for t in curriculum["tracks"] if t["id"] == request.track_id), None
+    )
+    if track is None:
+        raise HTTPException(status_code=404, detail="Track not found")
+
+    module = None
+    if request.module_id:
+        module = next(
+            (m for m in track.get("modules", []) if m["id"] == request.module_id),
+            None,
+        )
+
+    review = build_review(
+        code=request.code,
+        language=request.language,
+        track=track,
+        module=module,
+        phase=request.phase,
+    )
+
+    return ReviewerResponse(
+        status="ok",
+        observation=review["observation"],
+        questions=review["questions"],
+        hint=review["hint"],
+        next_action=review["next_action"],
+        corrected_code=None,
     )
