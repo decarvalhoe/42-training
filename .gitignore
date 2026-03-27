@@ -1,23 +1,22 @@
-# Backups temporaires
+# Runtime artifacts
 *.backup
-*.tmp
-*.swp
-
-# Logs
 *.log
+*.swp
+*.tmp
 
-# OS Files
+# Local workspaces
+.42-mentor/
+backups/
+
+# OS files
 .DS_Store
 Thumbs.db
 
-# IDE
-.vscode/
+# Editors
 .idea/
+.vscode/
 
-# Personnelle (ne pas partager)
+# Personal or secret material
 .env
-secrets.txt
 backup.txt
-
-# Mais on garde les backups datés
-!backups/*.json
+secrets.txt

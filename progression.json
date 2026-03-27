@@ -1,25 +1,25 @@
 {
   "session": {
     "date_start": "2026-03-05",
-    "current_date": "2026-03-05",
+    "current_date": "2026-03-27",
     "level": 0,
     "time_spent_minutes": 30,
     "background": "Senior roles: Tech Lead, Solution Architect, CSV Pharma, IT Manufacturing",
-    "motivation": "Retrouver le plaisir du code direct + networking 42 - Piscine Juin 2026 (PAS 2027!)",
-    "professional_context": "Utilise des agents IA pour créer des apps complexes (RBOK), gérer infra, audits automatisés",
-    "planning": "Progression accélérée: 3 mois intensifs jusqu'à la Piscine"
+    "motivation": "Retrouver le plaisir du code direct plus networking 42 - Piscine Juin 2026",
+    "professional_context": "Utilise des agents IA pour creer des apps complexes, gerer de l'infra et faire des audits automatises",
+    "planning": "Progression acceleree: 3 mois intensifs jusqu'a la Piscine"
   },
   "progress": {
     "current_exercise": "Exercice 2: Manipulation fichiers",
     "current_step": "2.4 - Copier et supprimer fichiers",
     "completed": [
-      "pwd - Afficher le répertoire actuel",
-      "ls -la - Lister avec détails",
-      "mkdir - Créer un dossier",
+      "pwd - Afficher le repertoire actuel",
+      "ls -la - Lister avec details",
+      "mkdir - Creer un dossier",
       "mv - Renommer un dossier",
       "cd - Naviguer",
       "cd ~ - Retour home",
-      "touch - Créer fichier vide",
+      "touch - Creer fichier vide",
       "echo avec redirection >",
       "echo avec >> pour ajouter",
       "cat - Lire fichier"
@@ -28,7 +28,6 @@
       "cp - Copier fichiers"
     ],
     "todo": [
-      "cat - Lire fichier",
       "cp - Copier",
       "rm - Supprimer",
       "pipes |",
@@ -40,18 +39,19 @@
   "mistakes": [
     {
       "command": "echo \"Bonjour 42!\"",
-      "issue": "Oublié la redirection >",
-      "learned": "echo seul affiche à l'écran, echo > écrit dans fichier"
+      "issue": "Oublie la redirection >",
+      "learned": "echo seul affiche a l'ecran, echo > ecrit dans le fichier"
     },
     {
       "command": "ls 42_training",
-      "issue": "Utilisé ls au lieu de cd",
+      "issue": "Utilise ls au lieu de cd",
       "learned": "ls = voir, cd = entrer"
     }
   ],
-  "next_command": "echo \"Bonjour 42!\" > hello.txt",
-  "current_directory": "/home/decarvalhoe/42_training",
+  "next_command": "cp hello.txt test.txt",
+  "current_directory": "/home/decarvalhoe/42-training",
   "files_created": [
-    "/home/decarvalhoe/42_training/hello.txt"
+    "/home/decarvalhoe/42-training/hello.txt",
+    "/home/decarvalhoe/42-training/test.txt"
   ]
 }

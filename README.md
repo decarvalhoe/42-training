@@ -1,147 +1,150 @@
-# 🎯 42-training - Préparation Piscine 42 Lausanne
+# 42 Training
 
-> **Objectif:** Réapprendre les bases depuis ZÉRO pour la Piscine 42 Lausanne (Juin 2026)
+Linux-first training workspace for preparing 42 Lausanne.
 
-## 📊 Contexte
+This repository now combines two needs in a single project:
 
-Après des années dans des rôles de leadership technique (Chef de Projet, Ingénieur CSV Pharma, Tech Lead, Solution Architect, Business Analyst, IT Manufacturing), je n'ai plus codé directement. J'ai géré des équipes, conçu des architectures, validé des systèmes critiques, mais le code "hands-on" est devenu distant.
+- a personal progression tracker for bash, Git, Vim and C
+- a Linux-only mentor toolkit that can guide the work without taking it over
 
-Aujourd'hui, j'utilise des agents IA (Claude, Copilot, Cursor, etc.) pour créer des applications professionnelles complexes, gérer de l'infrastructure via CLI, faire des audits automatisés (projet RBOK et autres à venir). Mais pour la Piscine 42, je veux retrouver cette connexion directe avec le code - ce plaisir de créer ligne par ligne, sans intermédiaire.
+The supported runtime is Ubuntu on bare metal or Ubuntu inside WSL2. The host
+OS can be Windows, but all real commands and scripts run on Linux.
 
-Ce repo contient mon système d'apprentissage pour retrouver l'autonomie complète avant la Piscine 42, et surtout pour le plaisir de coder à nouveau.
+## Principles
 
-## 🚀 Quick Start
+- One repository only
+- One canonical path: `~/42-training`
+- Linux-only workflow
+- The mentor helps with questions, hints and checks, not full solutions by default
+- The source of truth for progression is `progression.json`
 
-### Windows
-1. Clone ce repo
-2. Double-clic sur `START_42_TRAINING.bat`
-3. Suit les instructions dans WSL
+## Quick Start
 
-### Linux/WSL
 ```bash
-git clone https://github.com/decarvalhoe/42-training.git
-cd 42-training
-cat REPRENDRE_SESSION.md  # Pour reprendre avec Claude
+git clone https://github.com/decarvalhoe/42-training.git ~/42-training
+cd ~/42-training
+chmod +x save_progress.sh scripts/*.sh
+./scripts/bootstrap_ubuntu_42.sh
+./scripts/doctor.sh
+./scripts/print_session_state.sh
 ```
 
-## 📂 Structure
+To start a mentor-enabled work session from the repository root:
 
+```bash
+./scripts/start_42_mentor_env.sh .
 ```
+
+Then attach the tmux sessions:
+
+```bash
+tmux attach -t learn42
+tmux attach -t mentor42
+```
+
+## Repository Layout
+
+```text
 42-training/
-├── README.md                 # Ce fichier
-├── progression.json          # Tracking détaillé de ma progression
-├── REPRENDRE_SESSION.md      # Context pour Claude (reprise de session)
-├── INSTALLATION_WINDOWS.md   # Guide installation Windows
-├── save_progress.sh          # Script de sauvegarde
-├── START_42_TRAINING.bat     # Launcher Windows
-├── backups/                  # Sauvegardes datées
-└── exercises/                # Mes exercices pratiques
-    └── hello.txt            # Premier fichier d'exercice
+|-- README.md
+|-- progression.json
+|-- REPRENDRE_SESSION.md
+|-- save_progress.sh
+|-- hello.txt
+|-- test.txt
+|-- prompts/
+|   `-- mentor_system_prompt.txt
+`-- scripts/
+    |-- ask_mentor.sh
+    |-- bootstrap_ubuntu_42.sh
+    |-- doctor.sh
+    |-- e2e_smoke_test.sh
+    |-- print_session_state.sh
+    |-- setup_github_auth.sh
+    |-- start_42_mentor_env.sh
+    |-- teardown_mentor_env.sh
+    |-- update_progress.sh
+    `-- watch_mentor.sh
 ```
 
-## 📈 Progression Actuelle
+## Daily Workflow
 
-**Niveau:** 0 (Réapprentissage depuis zéro)
-**Phase:** Bash/Terminal basics
-**Objectif:** Piscine 42 Lausanne - 22 juin 2026
+1. Open Ubuntu or WSL Ubuntu.
+2. `cd ~/42-training`
+3. `./scripts/doctor.sh`
+4. `./scripts/print_session_state.sh`
+5. Work in the `learn42` tmux session.
+6. Ask for guidance only when needed:
+   `m "je bloque sur ft_strlen"`
+7. Update the progression file with the helper:
+   `./scripts/update_progress.sh --step "2.5 - Supprimer fichier" --next-command "rm test.txt"`
+8. Save the session:
+   `./save_progress.sh`
+9. Stop the sessions cleanly when needed:
+   `./scripts/teardown_mentor_env.sh`
+10. Commit and push with normal Git flow:
+   `git add . && git commit -m "Progression du jour" && git push`
 
-### ✅ Complété
-- [x] Navigation basique (pwd, ls, cd)
-- [x] Création dossiers/fichiers (mkdir, touch)
-- [x] Renommer/déplacer (mv)
+## Progression
 
-### 🔄 En cours
-- [ ] Manipulation fichiers (echo, cat, cp, rm)
-- [ ] Pipes et redirections
-- [ ] Permissions (chmod)
+Current progression lives in [`progression.json`](progression.json).
+Do not duplicate the exact current step in multiple files. Read it from JSON and
+use [`scripts/print_session_state.sh`](scripts/print_session_state.sh) for a
+quick summary.
 
-### 📅 Planning (Progression Accélérée!)
+## Mentor Mode
 
-| Période | Focus | Status |
-|---------|-------|--------|
-| Mars 2026 - Semaine 1-2 | Bash/Terminal basics | 🔄 En cours |
-| Mars 2026 - Semaine 3-4 | Scripts Bash avancés | ⏳ À venir |
-| Avril 2026 - Semaine 1-2 | Vim + Git mastery | ⏳ À venir |
-| Avril 2026 - Semaine 3-4 | C basics (variables, boucles) | ⏳ À venir |
-| Mai 2026 - Semaine 1-2 | C pointeurs & mémoire | ⏳ À venir |
-| Mai 2026 - Semaine 3-4 | C avancé + Norminette | ⏳ À venir |
-| Juin 2026 - Semaine 1-2 | Révisions intensives | ⏳ À venir |
-| **22 Juin 2026** | **PISCINE 42 LAUSANNE!** | 🎯 Goal |
+The mentor toolkit comes from the local `42-remote-mentor-kit` and has been
+merged here so the repository stays self-contained.
 
-## 🧠 Méthode d'apprentissage
+What it adds:
 
-### Règles strictes
-1. **ZÉRO IA** pendant les exercices
-2. Utiliser uniquement `man` pages
-3. Apprendre de mes erreurs
-4. Répéter jusqu'à la muscle memory
-5. Session quotidienne minimum 2h
+- `tmux` sessions for work, build and tests
+- a dedicated mentor session running Claude on Linux
+- quick feedback with terminal capture
+- periodic watch mode
+- an end-to-end smoke test for pedagogy rules
 
-### Workflow quotidien
+The mentor contract is strict:
+
+- no full solution by default
+- one useful question
+- one hint
+- one next action
+- answers in French
+
+See [`prompts/mentor_system_prompt.txt`](prompts/mentor_system_prompt.txt).
+
+## GitHub Auth
+
+Use GitHub CLI or SSH, but do not inject tokens into the remote URL.
+
+Helper:
+
 ```bash
-# Matin
-./START_42_TRAINING.bat      # Lance WSL + Claude
-cat REPRENDRE_SESSION.md     # Reprend où j'étais
+./scripts/setup_github_auth.sh
+```
 
-# Exercices
-# ... pratique sans IA ...
+Pushes should remain standard:
 
-# Soir
-./save_progress.sh           # Sauvegarde progression
-git add .
-git commit -m "Progression du jour"
+```bash
 git push
 ```
 
-## 🎮 Gamification
+## Useful Commands
 
-| Level | Description | Status |
-|-------|-------------|--------|
-| 0 | Can't ls without help | ✅ Current |
-| 1 | Terminal navigation OK | 🔄 |
-| 2 | Pipes & redirections OK | ⏳ |
-| 3 | Grep/Sed/Awk OK | ⏳ |
-| 4 | Bash scripting OK | ⏳ |
-| 5 | C basics OK | ⏳ |
-| 10 | READY FOR PISCINE! | 🎯 |
-
-## 📝 Notes d'apprentissage
-
-### Erreurs communes (pour apprendre)
-- `ls` pour voir vs `cd` pour entrer
-- `echo` seul affiche vs `echo >` écrit dans fichier
-- `mkdir` pour dossiers vs `touch` pour fichiers
-
-### Commands essentielles jour 1
 ```bash
-pwd              # Où suis-je?
-ls -la           # Tout voir
-cd dossier       # Entrer
-cd ~             # Home
-mkdir nom        # Créer dossier
-touch fichier    # Créer fichier vide
-echo "txt" > f   # Écrire dans fichier
-cat fichier      # Lire fichier
+./scripts/bootstrap_ubuntu_42.sh
+./scripts/doctor.sh
+./scripts/print_session_state.sh
+./scripts/start_42_mentor_env.sh .
+./scripts/update_progress.sh --help
+./scripts/teardown_mentor_env.sh
+./scripts/watch_mentor.sh
+./scripts/e2e_smoke_test.sh
+./save_progress.sh
 ```
 
-## 🤝 Contribution
+## License
 
-Ce repo est personnel mais peut aider d'autres candidats 42. N'hésitez pas à:
-- ⭐ Star si ça vous aide
-- 🍴 Fork pour votre propre préparation
-- 💬 Ouvrir une issue pour des suggestions
-
-## 📧 Contact
-
-- GitHub: [@decarvalhoe](https://github.com/decarvalhoe)
-- LinkedIn: [Eric de Carvalho](https://www.linkedin.com/in/ericdanieldecarvalho)
-
-## ⚖️ License
-
-MIT - Utilisez librement pour votre préparation 42!
-
----
-
-**Motto:** *"No IA today, no pain at Piscine"* 💪
-
-*Dernière update: 05/03/2026*
+MIT
