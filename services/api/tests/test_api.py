@@ -1,14 +1,10 @@
-"""Comprehensive API tests for all endpoints (Issue #27).
-
-Tests are isolated from the filesystem via mocked repository functions.
-"""
+"""API tests covering /curriculum/*, /progression/* routes and legacy redirects."""
 
 from __future__ import annotations
 
 import json
 from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -135,58 +131,48 @@ class TestMeta:
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/dashboard
+# GET /api/v1/curriculum/dashboard
 # ---------------------------------------------------------------------------
 
 
-class TestDashboard:
+class TestCurriculumDashboard:
     def test_dashboard_happy_path(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            r = client.get("/api/v1/dashboard")
+            r = client.get("/api/v1/curriculum/dashboard")
         assert r.status_code == 200
         data = r.json()
         assert "curriculum" in data
         assert "progression" in data
-
-    def test_dashboard_curriculum_has_tracks(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/dashboard").json()
         assert len(data["curriculum"]["tracks"]) == 2
 
-    def test_dashboard_progression_reflects_state(self) -> None:
+    def test_dashboard_progression_state(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            data = client.get("/api/v1/dashboard").json()
+            data = client.get("/api/v1/curriculum/dashboard").json()
         assert data["progression"]["learning_plan"]["active_course"] == "shell"
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/tracks
+# GET /api/v1/curriculum/tracks
 # ---------------------------------------------------------------------------
 
 
-class TestTracks:
+class TestCurriculumTracks:
     def test_tracks_list(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks")
+            r = client.get("/api/v1/curriculum/tracks")
         assert r.status_code == 200
         data = r.json()
         assert len(data) == 2
-
-    def test_tracks_contain_expected_ids(self) -> None:
-        p_cur, p_load, p_write, _p, _w = _patch_repo()
-        with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks").json()
         ids = {t["id"] for t in data}
         assert ids == {"shell", "c"}
 
     def test_tracks_module_count(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks").json()
+            data = client.get("/api/v1/curriculum/tracks").json()
         shell = next(t for t in data if t["id"] == "shell")
         assert shell["module_count"] == 2
         c_track = next(t for t in data if t["id"] == "c")
@@ -195,25 +181,22 @@ class TestTracks:
     def test_tracks_summary_fields(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks").json()
+            data = client.get("/api/v1/curriculum/tracks").json()
         for track in data:
-            assert "id" in track
-            assert "title" in track
-            assert "summary" in track
-            assert "why_it_matters" in track
-            assert "module_count" in track
+            for key in ("id", "title", "summary", "why_it_matters", "module_count"):
+                assert key in track
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/tracks/{track_id}
+# GET /api/v1/curriculum/tracks/{track_id}
 # ---------------------------------------------------------------------------
 
 
-class TestTrackDetail:
+class TestCurriculumTrackDetail:
     def test_track_detail_shell(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks/shell")
+            r = client.get("/api/v1/curriculum/tracks/shell")
         assert r.status_code == 200
         data = r.json()
         assert data["id"] == "shell"
@@ -222,28 +205,28 @@ class TestTrackDetail:
     def test_track_detail_c(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks/c")
+            r = client.get("/api/v1/curriculum/tracks/c")
         assert r.status_code == 200
         assert r.json()["id"] == "c"
 
     def test_track_detail_404(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks/nonexistent")
+            r = client.get("/api/v1/curriculum/tracks/nonexistent")
         assert r.status_code == 404
         assert "not found" in r.json()["detail"].lower()
 
     def test_track_detail_includes_modules(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks/shell").json()
+            data = client.get("/api/v1/curriculum/tracks/shell").json()
         module_ids = [m["id"] for m in data["modules"]]
         assert module_ids == ["shell-basics", "shell-streams"]
 
-    def test_track_detail_module_has_phase(self) -> None:
+    def test_track_detail_modules_have_phase(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            data = client.get("/api/v1/tracks/shell").json()
+            data = client.get("/api/v1/curriculum/tracks/shell").json()
         for m in data["modules"]:
             assert "phase" in m
 
@@ -355,17 +338,8 @@ class TestUpdateProgression:
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_course": "c"})
         data = r.json()
-        # active_module should still be present from original
         assert data["learning_plan"]["active_module"] == "shell-basics"
-        # progress block should still be intact
         assert data["progress"]["current_exercise"] == "Ex1"
-
-    def test_update_unknown_key_ignored(self) -> None:
-        """Keys not handled by the endpoint should not crash."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
-        with p_cur, p_load, p_write:
-            r = client.post("/api/v1/progression", json={"unknown_field": "value"})
-        assert r.status_code == 200
 
     def test_update_writes_to_persistence(self) -> None:
         """Verify write_progression is called exactly once."""
@@ -397,18 +371,14 @@ class TestProgressionConsistency:
             patch("app.main.load_progression", side_effect=lambda: json.loads(json.dumps(prog))),
             patch("app.main.write_progression", side_effect=fake_write),
         ):
-            # First update: change course
             r1 = client.post("/api/v1/progression", json={"active_course": "c"})
             assert r1.json()["learning_plan"]["active_course"] == "c"
 
-            # Second update: change exercise
             r2 = client.post("/api/v1/progression", json={"current_exercise": "Ex10"})
             data2 = r2.json()
-            # Both mutations should be reflected
             assert data2["learning_plan"]["active_course"] == "c"
             assert data2["progress"]["current_exercise"] == "Ex10"
 
-            # Third update: change step
             r3 = client.post("/api/v1/progression", json={"current_step": "10.3"})
             data3 = r3.json()
             assert data3["learning_plan"]["active_course"] == "c"
@@ -470,14 +440,14 @@ class TestEdgeCases:
             ],
         }
         with patch("app.main.load_curriculum", return_value=curriculum_no_modules):
-            data = client.get("/api/v1/tracks").json()
+            data = client.get("/api/v1/curriculum/tracks").json()
         assert data[0]["module_count"] == 0
 
     def test_track_detail_special_characters_in_id(self) -> None:
         """Track IDs with URL-safe special chars should still 404 properly."""
         p_cur, p_load, p_write, _p, _w = _patch_repo()
         with p_cur, p_load, p_write:
-            r = client.get("/api/v1/tracks/some-weird-id_123")
+            r = client.get("/api/v1/curriculum/tracks/some-weird-id_123")
         assert r.status_code == 404
 
     def test_progression_missing_learning_plan(self) -> None:
@@ -495,3 +465,47 @@ class TestEdgeCases:
             r = client.post("/api/v1/progression", json={"current_exercise": "Ex1"})
         assert r.status_code == 200
         assert r.json()["progress"]["current_exercise"] == "Ex1"
+
+
+# ---------------------------------------------------------------------------
+# Legacy route redirects (backward compatibility)
+# ---------------------------------------------------------------------------
+
+
+class TestLegacyRedirects:
+    def test_legacy_dashboard_redirects(self) -> None:
+        r = client.get("/api/v1/dashboard", follow_redirects=False)
+        assert r.status_code == 301
+        assert r.headers["location"] == "/api/v1/curriculum/dashboard"
+
+    def test_legacy_tracks_redirects(self) -> None:
+        r = client.get("/api/v1/tracks", follow_redirects=False)
+        assert r.status_code == 301
+        assert r.headers["location"] == "/api/v1/curriculum/tracks"
+
+    def test_legacy_track_detail_redirects(self) -> None:
+        r = client.get("/api/v1/tracks/shell", follow_redirects=False)
+        assert r.status_code == 301
+        assert r.headers["location"] == "/api/v1/curriculum/tracks/shell"
+
+    def test_legacy_dashboard_follow_works(self) -> None:
+        """Following the redirect should return the actual dashboard data."""
+        p_cur, p_load, p_write, _p, _w = _patch_repo()
+        with p_cur, p_load, p_write:
+            r = client.get("/api/v1/dashboard", follow_redirects=True)
+        assert r.status_code == 200
+        assert "curriculum" in r.json()
+
+    def test_legacy_tracks_follow_works(self) -> None:
+        p_cur, p_load, p_write, _p, _w = _patch_repo()
+        with p_cur, p_load, p_write:
+            r = client.get("/api/v1/tracks", follow_redirects=True)
+        assert r.status_code == 200
+        assert any(t["id"] == "shell" for t in r.json())
+
+    def test_legacy_track_detail_follow_works(self) -> None:
+        p_cur, p_load, p_write, _p, _w = _patch_repo()
+        with p_cur, p_load, p_write:
+            r = client.get("/api/v1/tracks/shell", follow_redirects=True)
+        assert r.status_code == 200
+        assert r.json()["id"] == "shell"

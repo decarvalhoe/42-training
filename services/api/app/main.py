@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from .repository import load_curriculum, load_progression, write_progression
 from .schemas import (
@@ -32,9 +33,19 @@ app.add_middleware(
 )
 
 
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
+
+
 @app.get("/health")
 def health() -> HealthResponse:
     return HealthResponse(status="ok", service="api")
+
+
+# ---------------------------------------------------------------------------
+# Global metadata
+# ---------------------------------------------------------------------------
 
 
 @app.get("/api/v1/meta")
@@ -49,16 +60,21 @@ def meta() -> MetaResponse:
     )
 
 
-@app.get("/api/v1/dashboard")
-def dashboard() -> DashboardResponse:
+# ---------------------------------------------------------------------------
+# Curriculum (read-only)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/v1/curriculum/dashboard")
+def curriculum_dashboard() -> DashboardResponse:
     return DashboardResponse(
         curriculum=load_curriculum(),
         progression=load_progression(),
     )
 
 
-@app.get("/api/v1/tracks")
-def tracks() -> list[TrackSummary]:
+@app.get("/api/v1/curriculum/tracks")
+def curriculum_tracks() -> list[TrackSummary]:
     curriculum = load_curriculum()
     result: list[TrackSummary] = []
     for track in curriculum["tracks"]:
@@ -74,13 +90,18 @@ def tracks() -> list[TrackSummary]:
     return result
 
 
-@app.get("/api/v1/tracks/{track_id}")
-def track_detail(track_id: str) -> TrackDetail:
+@app.get("/api/v1/curriculum/tracks/{track_id}")
+def curriculum_track_detail(track_id: str) -> TrackDetail:
     curriculum = load_curriculum()
     for track in curriculum["tracks"]:
         if track["id"] == track_id:
             return TrackDetail(**track)
     raise HTTPException(status_code=404, detail="Track not found")
+
+
+# ---------------------------------------------------------------------------
+# Progression (read + mutations)
+# ---------------------------------------------------------------------------
 
 
 @app.get("/api/v1/progression")
@@ -254,3 +275,23 @@ def module_skip(module_id: str, payload: ModuleSkipRequest | None = None) -> Mod
         status="skipped",
         message="Module skipped",
     )
+
+
+# ---------------------------------------------------------------------------
+# Backward-compatible redirects (old -> new canonical routes)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/v1/dashboard")
+def legacy_dashboard() -> RedirectResponse:
+    return RedirectResponse(url="/api/v1/curriculum/dashboard", status_code=301)
+
+
+@app.get("/api/v1/tracks")
+def legacy_tracks() -> RedirectResponse:
+    return RedirectResponse(url="/api/v1/curriculum/tracks", status_code=301)
+
+
+@app.get("/api/v1/tracks/{track_id}")
+def legacy_track_detail(track_id: str) -> RedirectResponse:
+    return RedirectResponse(url=f"/api/v1/curriculum/tracks/{track_id}", status_code=301)
