@@ -44,7 +44,9 @@ class CurriculumRepository(ABC):
         """Return progression state for a learner."""
 
     @abstractmethod
-    def update_progression(self, data: dict[str, Any], learner_id: str = "default") -> dict[str, Any]:
+    def update_progression(
+        self, data: dict[str, Any], learner_id: str = "default"
+    ) -> dict[str, Any]:
         """Merge *data* into the learner's progression and return the updated state."""
 
 
@@ -65,7 +67,9 @@ def _find_root() -> Path:
 
 
 ROOT = _find_root()
-CURRICULUM_PATH = ROOT / "packages" / "curriculum" / "data" / "42_lausanne_curriculum.json"
+CURRICULUM_PATH = (
+    ROOT / "packages" / "curriculum" / "data" / "42_lausanne_curriculum.json"
+)
 PROGRESSION_PATH = ROOT / "progression.json"
 
 
@@ -127,7 +131,9 @@ class JsonCurriculumRepository(CurriculumRepository):
     def get_progression(self, learner_id: str = "default") -> dict[str, Any]:
         return json.loads(self._progression_path.read_text(encoding="utf-8"))
 
-    def update_progression(self, data: dict[str, Any], learner_id: str = "default") -> dict[str, Any]:
+    def update_progression(
+        self, data: dict[str, Any], learner_id: str = "default"
+    ) -> dict[str, Any]:
         current = self.get_progression(learner_id)
         learning_plan = current.setdefault("learning_plan", {})
         progress = current.setdefault("progress", {})

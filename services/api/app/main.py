@@ -34,8 +34,12 @@ def meta(r: CurriculumRepository = Depends(get_repo)) -> dict[str, object]:
     return {
         "app": "42-training",
         "campus": curriculum["metadata"]["campus"],
-        "active_course": progression.get("learning_plan", {}).get("active_course", "shell"),
-        "pace_mode": progression.get("learning_plan", {}).get("pace_mode", "self_paced"),
+        "active_course": progression.get("learning_plan", {}).get(
+            "active_course", "shell"
+        ),
+        "pace_mode": progression.get("learning_plan", {}).get(
+            "pace_mode", "self_paced"
+        ),
     }
 
 
@@ -53,7 +57,9 @@ def tracks(r: CurriculumRepository = Depends(get_repo)) -> list[dict[str, object
 
 
 @app.get("/api/v1/tracks/{track_id}")
-def track_detail(track_id: str, r: CurriculumRepository = Depends(get_repo)) -> dict[str, object]:
+def track_detail(
+    track_id: str, r: CurriculumRepository = Depends(get_repo)
+) -> dict[str, object]:
     track = r.get_track(track_id)
     if track is None:
         raise HTTPException(status_code=404, detail="Track not found")
@@ -66,6 +72,8 @@ def progression(r: CurriculumRepository = Depends(get_repo)) -> dict[str, object
 
 
 @app.post("/api/v1/progression")
-def update_progression(payload: ProgressUpdate, r: CurriculumRepository = Depends(get_repo)) -> dict[str, object]:
+def update_progression(
+    payload: ProgressUpdate, r: CurriculumRepository = Depends(get_repo)
+) -> dict[str, object]:
     updates = payload.model_dump(exclude_none=True)
     return r.update_progression(updates)

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -30,8 +29,20 @@ _CURRICULUM = {
             "summary": "Linux-first recovery track.",
             "why_it_matters": "Command fluency.",
             "modules": [
-                {"id": "shell-basics", "title": "Navigation", "phase": "foundation", "skills": ["pwd", "ls"], "deliverable": "Navigate."},
-                {"id": "shell-streams", "title": "Pipes", "phase": "foundation", "skills": ["pipe"], "deliverable": "Pipe."},
+                {
+                    "id": "shell-basics",
+                    "title": "Navigation",
+                    "phase": "foundation",
+                    "skills": ["pwd", "ls"],
+                    "deliverable": "Navigate.",
+                },
+                {
+                    "id": "shell-streams",
+                    "title": "Pipes",
+                    "phase": "foundation",
+                    "skills": ["pipe"],
+                    "deliverable": "Pipe.",
+                },
             ],
         },
         {
@@ -40,7 +51,13 @@ _CURRICULUM = {
             "summary": "Low-level rigor.",
             "why_it_matters": "Memory discipline.",
             "modules": [
-                {"id": "c-basics", "title": "Syntax", "phase": "foundation", "skills": ["variables"], "deliverable": "Compile."},
+                {
+                    "id": "c-basics",
+                    "title": "Syntax",
+                    "phase": "foundation",
+                    "skills": ["variables"],
+                    "deliverable": "Compile.",
+                },
             ],
         },
     ],
@@ -70,9 +87,15 @@ def _fresh_progression() -> dict[str, object]:
 class FakeRepository(CurriculumRepository):
     """In-memory repository for tests."""
 
-    def __init__(self, curriculum: dict[str, Any] = _CURRICULUM, progression: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        curriculum: dict[str, Any] = _CURRICULUM,
+        progression: dict[str, Any] | None = None,
+    ) -> None:
         self._curriculum = curriculum
-        self._progression = progression if progression is not None else _fresh_progression()
+        self._progression = (
+            progression if progression is not None else _fresh_progression()
+        )
         self.writes: list[dict[str, Any]] = []
 
     def get_curriculum(self) -> dict[str, Any]:
@@ -114,7 +137,9 @@ class FakeRepository(CurriculumRepository):
     def get_progression(self, learner_id: str = "default") -> dict[str, Any]:
         return json.loads(json.dumps(self._progression))
 
-    def update_progression(self, data: dict[str, Any], learner_id: str = "default") -> dict[str, Any]:
+    def update_progression(
+        self, data: dict[str, Any], learner_id: str = "default"
+    ) -> dict[str, Any]:
         current = self.get_progression(learner_id)
         learning_plan = current.setdefault("learning_plan", {})
         progress = current.setdefault("progress", {})
@@ -135,7 +160,9 @@ class FakeRepository(CurriculumRepository):
         return current
 
 
-def _use_fake(progression: dict[str, Any] | None = None, curriculum: dict[str, Any] = _CURRICULUM) -> FakeRepository:
+def _use_fake(
+    progression: dict[str, Any] | None = None, curriculum: dict[str, Any] = _CURRICULUM
+) -> FakeRepository:
     """Install a FakeRepository and return it."""
     fake = FakeRepository(curriculum=curriculum, progression=progression)
     app.dependency_overrides[get_repo] = lambda: fake
@@ -371,7 +398,11 @@ class TestUpdateProgression:
         _use_fake()
         r = client.post(
             "/api/v1/progression",
-            json={"active_course": "c", "current_exercise": "Ex5", "next_command": "gcc main.c"},
+            json={
+                "active_course": "c",
+                "current_exercise": "Ex5",
+                "next_command": "gcc main.c",
+            },
         )
         assert r.status_code == 200
         data = r.json()
@@ -456,7 +487,11 @@ class TestProgressionConsistency:
 class TestValidationErrors:
     def test_post_progression_invalid_json(self) -> None:
         """Sending non-JSON body should return 422."""
-        r = client.post("/api/v1/progression", content=b"not json", headers={"content-type": "application/json"})
+        r = client.post(
+            "/api/v1/progression",
+            content=b"not json",
+            headers={"content-type": "application/json"},
+        )
         assert r.status_code == 422
 
     def test_post_progression_non_object_body(self) -> None:
@@ -477,7 +512,12 @@ class TestEdgeCases:
         curriculum_no_modules = {
             "metadata": {"campus": "42 Lausanne"},
             "tracks": [
-                {"id": "empty", "title": "Empty", "summary": "No modules", "why_it_matters": "Test"},
+                {
+                    "id": "empty",
+                    "title": "Empty",
+                    "summary": "No modules",
+                    "why_it_matters": "Test",
+                },
             ],
         }
         _use_fake(curriculum=curriculum_no_modules)
