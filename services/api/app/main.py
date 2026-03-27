@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .repository import load_curriculum, load_progression, write_progression
+from .repository import get_repository
 from .schemas import ProgressUpdate
 
 app = FastAPI(title="42-training API", version="0.1.0")
@@ -24,8 +24,9 @@ def health() -> dict[str, str]:
 
 @app.get("/api/v1/meta")
 def meta() -> dict[str, object]:
-    curriculum = load_curriculum()
-    progression = load_progression()
+    repo = get_repository()
+    curriculum = repo.get_curriculum()
+    progression = repo.get_progression()
     return {
         "app": "42-training",
         "campus": curriculum["metadata"]["campus"],
@@ -36,17 +37,18 @@ def meta() -> dict[str, object]:
 
 @app.get("/api/v1/dashboard")
 def dashboard() -> dict[str, object]:
+    repo = get_repository()
     return {
-        "curriculum": load_curriculum(),
-        "progression": load_progression(),
+        "curriculum": repo.get_curriculum(),
+        "progression": repo.get_progression(),
     }
 
 
 @app.get("/api/v1/tracks")
 def tracks() -> list[dict[str, object]]:
-    curriculum = load_curriculum()
+    repo = get_repository()
     result: list[dict[str, object]] = []
-    for track in curriculum["tracks"]:
+    for track in repo.get_tracks():
         result.append(
             {
                 "id": track["id"],
@@ -61,21 +63,22 @@ def tracks() -> list[dict[str, object]]:
 
 @app.get("/api/v1/tracks/{track_id}")
 def track_detail(track_id: str) -> dict[str, object]:
-    curriculum = load_curriculum()
-    for track in curriculum["tracks"]:
-        if track["id"] == track_id:
-            return track
-    raise HTTPException(status_code=404, detail="Track not found")
+    repo = get_repository()
+    track = repo.get_track(track_id)
+    if track is None:
+        raise HTTPException(status_code=404, detail="Track not found")
+    return track
 
 
 @app.get("/api/v1/progression")
 def progression() -> dict[str, object]:
-    return load_progression()
+    return get_repository().get_progression()
 
 
 @app.post("/api/v1/progression")
 def update_progression(payload: ProgressUpdate) -> dict[str, object]:
-    current = load_progression()
+    repo = get_repository()
+    current = repo.get_progression()
     learning_plan = current.setdefault("learning_plan", {})
     progress = current.setdefault("progress", {})
 
@@ -92,5 +95,5 @@ def update_progression(payload: ProgressUpdate) -> dict[str, object]:
     if "next_command" in updates:
         current["next_command"] = updates["next_command"]
 
-    write_progression(current)
+    repo.update_progression(current)
     return current
