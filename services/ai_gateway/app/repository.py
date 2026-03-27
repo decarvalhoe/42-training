@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 
+
 def _find_root() -> Path:
     """Find project root: use DATA_ROOT env var (Docker) or traverse up from __file__."""
     env_root = os.environ.get("DATA_ROOT")
@@ -29,7 +30,8 @@ PROGRESSION_PATH = ROOT / "progression.json"
 
 @lru_cache(maxsize=1)
 def load_curriculum() -> dict[str, Any]:
-    return json.loads(CURRICULUM_PATH.read_text(encoding="utf-8"))
+    result: dict[str, Any] = json.loads(CURRICULUM_PATH.read_text(encoding="utf-8"))
+    return result
 
 
 def reload_curriculum() -> dict[str, Any]:
@@ -38,7 +40,8 @@ def reload_curriculum() -> dict[str, Any]:
 
 
 def load_progression() -> dict[str, Any]:
-    return json.loads(PROGRESSION_PATH.read_text(encoding="utf-8"))
+    result: dict[str, Any] = json.loads(PROGRESSION_PATH.read_text(encoding="utf-8"))
+    return result
 
 
 def write_progression(data: dict[str, Any]) -> None:

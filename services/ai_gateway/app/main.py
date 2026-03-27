@@ -49,7 +49,8 @@ def health() -> dict[str, str]:
 @app.get("/api/v1/source-policy")
 def source_policy() -> dict[str, object]:
     curriculum = load_curriculum()
-    return curriculum["source_policy"]
+    result: dict[str, object] = curriculum["source_policy"]
+    return result
 
 
 def _static_fallback(request: MentorRequest, focus: str, active_course: str) -> dict[str, str]:
