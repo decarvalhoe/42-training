@@ -244,3 +244,68 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Source policy badge                                                 */
+/* ------------------------------------------------------------------ */
+
+.spb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.spb-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.spb--high {
+  background: rgba(53, 95, 59, 0.12);
+  border-color: rgba(53, 95, 59, 0.22);
+  color: var(--python);
+}
+
+.spb--medium {
+  background: rgba(28, 93, 99, 0.1);
+  border-color: rgba(28, 93, 99, 0.2);
+  color: var(--shell);
+}
+
+.spb--low {
+  background: rgba(216, 166, 87, 0.15);
+  border-color: rgba(216, 166, 87, 0.3);
+  color: #7a5a16;
+}
+
+.spb--blocked {
+  background: rgba(178, 76, 43, 0.1);
+  border-color: rgba(178, 76, 43, 0.2);
+  color: var(--c);
+}
+
+/* Legend */
+
+.spb-legend {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.spb-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.spb-legend-item .muted {
+  font-size: 12px;
+}
