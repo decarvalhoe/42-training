@@ -154,3 +154,53 @@ class MentorResponse(BaseModel):
     direct_solution_allowed: bool
 
 
+# --- Checkpoint, Review, DefenseSession schemas (Issue #36) ---
+
+CheckpointType = Literal["exit_criteria", "deliverable", "skill_check"]
+DefenseStatus = Literal["scheduled", "in_progress", "passed", "failed"]
+
+
+class Checkpoint(BaseModel):
+    """A verifiable checkpoint within a module.
+
+    Checkpoints represent self-assessment gates. The learner submits
+    evidence (command output, explanation, file) and the system evaluates
+    it against success_criteria.
+    """
+
+    module_id: str = Field(min_length=1)
+    type: CheckpointType
+    prompt: str = Field(min_length=3, max_length=2000)
+    success_criteria: list[str] = Field(min_length=1)
+    evidence: str = Field(default="", max_length=5000)
+
+
+class Review(BaseModel):
+    """A peer-review submission aligned with 42 pair-review culture.
+
+    Reviews capture structured feedback on a learner's work: the code or
+    command output being reviewed, qualitative feedback, and questions
+    the reviewer would ask in a real evaluation.
+    """
+
+    reviewer_id: str = Field(min_length=1, max_length=64)
+    module_id: str = Field(min_length=1)
+    code_snippet: str = Field(min_length=1, max_length=10000)
+    feedback: str = Field(min_length=3, max_length=5000)
+    questions: list[str] = Field(default_factory=list)
+    score: int | None = Field(default=None, ge=0, le=100)
+
+
+class DefenseSession(BaseModel):
+    """An oral defense session modeled after 42 project evaluations.
+
+    Defense sessions track the Q&A exchange between an examiner agent
+    and a learner, producing per-question scores and an overall status.
+    """
+
+    session_id: str = Field(min_length=1, max_length=64)
+    module_id: str = Field(min_length=1)
+    questions: list[str] = Field(min_length=1)
+    answers: list[str] = Field(default_factory=list)
+    scores: list[int] = Field(default_factory=list)
+    status: DefenseStatus = "scheduled"
