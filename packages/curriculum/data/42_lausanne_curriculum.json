@@ -3,7 +3,9 @@
     "campus": "42 Lausanne",
     "updated_on": "2026-03-27",
     "status": "mvp",
-    "positioning": "triple-track learning app for shell, C, Python and AI literacy"
+    "positioning": "triple-track learning app for shell, C, Python and AI literacy",
+    "schema_version": "0.2.0",
+    "entity_note": "skills, checkpoints, resources and evidence_types are seeded for shell-basics as exemplar. Other modules will be populated incrementally."
   },
   "source_policy": {
     "tiers": [
@@ -113,6 +115,10 @@
           "phase": "foundation",
           "prerequisites": [],
           "skills": ["pwd", "ls", "cd", "mkdir", "touch", "cp", "mv", "rm"],
+          "skill_ids": [
+            "shell-pwd", "shell-ls", "shell-cd", "shell-mkdir",
+            "shell-touch", "shell-cp", "shell-mv", "shell-rm"
+          ],
           "deliverable": "Navigate, create, copy and clean files without hesitation.",
           "objectives": [
             "Move confidently in a filesystem hierarchy",
@@ -147,6 +153,10 @@
           "phase": "foundation",
           "prerequisites": ["shell-basics"],
           "skills": ["stdin", "stdout", "stderr", "redirect", "append", "pipe", "grep"],
+          "skill_ids": [
+            "shell-stdin", "shell-stdout", "shell-stderr", "shell-redirect",
+            "shell-append", "shell-pipe", "shell-grep"
+          ],
           "deliverable": "Compose useful shell chains and inspect text quickly.",
           "objectives": [
             "Distinguish stdin, stdout and stderr",
@@ -181,6 +191,9 @@
           "phase": "foundation",
           "prerequisites": ["shell-basics"],
           "skills": ["chmod", "ownership", "executable bit", "PATH"],
+          "skill_ids": [
+            "shell-chmod", "shell-ownership", "shell-executable-bit", "shell-path"
+          ],
           "deliverable": "Understand why a script runs or fails.",
           "objectives": [
             "Read and interpret rwx permission triads",
@@ -215,6 +228,9 @@
           "phase": "practice",
           "prerequisites": ["shell-streams", "shell-permissions"],
           "skills": ["find", "history", "man", "vim basics", "git basics"],
+          "skill_ids": [
+            "shell-find", "shell-history", "shell-man", "shell-vim-basics", "shell-git-basics"
+          ],
           "deliverable": "Operate daily in Linux without depending on GUI reflexes.",
           "objectives": [
             "Use find to locate files by name, type and modification time",
@@ -263,6 +279,9 @@
           "phase": "foundation",
           "prerequisites": ["shell-basics"],
           "skills": ["variables", "conditions", "loops", "functions", "headers"],
+          "skill_ids": [
+            "c-variables", "c-conditions", "c-loops", "c-functions", "c-headers"
+          ],
           "deliverable": "Write small programs cleanly and compile with warnings enabled.",
           "objectives": [
             "Declare and use variables with appropriate types",
@@ -304,6 +323,9 @@
           "phase": "foundation",
           "prerequisites": ["c-basics"],
           "skills": ["addresses", "pointers", "arrays", "strings", "malloc", "free"],
+          "skill_ids": [
+            "c-addresses", "c-pointers", "c-arrays", "c-strings", "c-malloc", "c-free"
+          ],
           "deliverable": "Explain memory decisions and avoid basic leaks.",
           "objectives": [
             "Understand the difference between stack and heap allocation",
@@ -345,6 +367,9 @@
           "phase": "practice",
           "prerequisites": ["c-basics", "shell-streams"],
           "skills": ["cc", "Wall", "Wextra", "Werror", "gdb", "valgrind"],
+          "skill_ids": [
+            "c-cc", "c-wall", "c-wextra", "c-werror", "c-gdb", "c-valgrind"
+          ],
           "deliverable": "Investigate failures instead of guessing.",
           "objectives": [
             "Compile with strict warning flags and interpret compiler messages",
@@ -392,6 +417,9 @@
           "phase": "core",
           "prerequisites": ["c-memory", "c-build-debug"],
           "skills": ["libft mindset", "API naming", "sorting logic", "complexity intuition"],
+          "skill_ids": [
+            "c-libft-mindset", "c-api-naming", "c-sorting-logic", "c-complexity-intuition"
+          ],
           "deliverable": "Prepare for libft, printf, gnl and push_swap logic.",
           "objectives": [
             "Understand the purpose of building a personal C library",
@@ -446,6 +474,9 @@
           "phase": "foundation",
           "prerequisites": ["shell-basics"],
           "skills": ["variables", "conditions", "loops", "functions", "collections"],
+          "skill_ids": [
+            "py-variables", "py-conditions", "py-loops", "py-functions", "py-collections"
+          ],
           "deliverable": "Write and explain small scripts confidently.",
           "objectives": [
             "Use Python types, variables and basic data structures",
@@ -481,6 +512,9 @@
           "phase": "practice",
           "prerequisites": ["python-basics"],
           "skills": ["classes", "methods", "files", "json", "argparse"],
+          "skill_ids": [
+            "py-classes", "py-methods", "py-files", "py-json", "py-argparse"
+          ],
           "deliverable": "Build useful utilities and simple models.",
           "objectives": [
             "Define classes with attributes, methods and constructors",
@@ -516,6 +550,9 @@
           "phase": "advanced",
           "prerequisites": ["python-oop-scripting"],
           "skills": ["prompt design", "retrieval", "evaluation", "agent workflow", "source policy"],
+          "skill_ids": [
+            "ai-prompt-design", "ai-retrieval", "ai-evaluation", "ai-agent-workflow", "ai-source-policy"
+          ],
           "deliverable": "Use AI as a disciplined tool without outsourcing understanding.",
           "objectives": [
             "Understand the retrieval-augmented generation pattern",
@@ -552,6 +589,167 @@
           "estimated_hours": 15
         }
       ]
+    }
+  ],
+  "skills": [
+    {
+      "id": "shell-pwd",
+      "label": "pwd",
+      "track": "shell",
+      "module_id": "shell-basics",
+      "description": "Print the current working directory to know where you are.",
+      "phase": "foundation",
+      "prerequisites": []
+    },
+    {
+      "id": "shell-ls",
+      "label": "ls",
+      "track": "shell",
+      "module_id": "shell-basics",
+      "description": "List directory contents to see what files exist.",
+      "phase": "foundation",
+      "prerequisites": ["shell-pwd"]
+    },
+    {
+      "id": "shell-cd",
+      "label": "cd",
+      "track": "shell",
+      "module_id": "shell-basics",
+      "description": "Change directory to move through the filesystem.",
+      "phase": "foundation",
+      "prerequisites": ["shell-pwd"]
+    },
+    {
+      "id": "shell-mkdir",
+      "label": "mkdir",
+      "track": "shell",
+      "module_id": "shell-basics",
+      "description": "Create directories to organize files.",
+      "phase": "foundation",
+      "prerequisites": ["shell-cd"]
+    },
+    {
+      "id": "shell-touch",
+      "label": "touch",
+      "track": "shell",
+      "module_id": "shell-basics",
+      "description": "Create empty files or update timestamps.",
+      "phase": "foundation",
+      "prerequisites": ["shell-cd"]
+    },
+    {
+      "id": "shell-cp",
+      "label": "cp",
+      "track": "shell",
+      "module_id": "shell-basics",
+      "description": "Copy files and directories.",
+      "phase": "foundation",
+      "prerequisites": ["shell-ls"]
+    },
+    {
+      "id": "shell-mv",
+      "label": "mv",
+      "track": "shell",
+      "module_id": "shell-basics",
+      "description": "Move or rename files and directories.",
+      "phase": "foundation",
+      "prerequisites": ["shell-ls"]
+    },
+    {
+      "id": "shell-rm",
+      "label": "rm",
+      "track": "shell",
+      "module_id": "shell-basics",
+      "description": "Remove files and directories. Understand irreversibility.",
+      "phase": "foundation",
+      "prerequisites": ["shell-ls", "shell-cp"]
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "cp-shell-navigate",
+      "label": "Navigate a directory tree",
+      "type": "exercise",
+      "validates_skills": ["shell-pwd", "shell-ls", "shell-cd"],
+      "module_id": "shell-basics",
+      "prompt": "Starting from your home directory, navigate to /tmp, list its contents, then return home. Show each command and its output.",
+      "success_criteria": "Learner uses pwd, cd, and ls correctly and can explain where they are at each step."
+    },
+    {
+      "id": "cp-shell-create-organize",
+      "label": "Create and organize a project structure",
+      "type": "exercise",
+      "validates_skills": ["shell-mkdir", "shell-touch", "shell-cp", "shell-mv"],
+      "module_id": "shell-basics",
+      "prompt": "Create a directory called 'myproject' with subdirectories 'src' and 'docs'. Create a file in src, copy it to docs, then rename it.",
+      "success_criteria": "Correct directory structure exists and learner can verify it with ls -R."
+    },
+    {
+      "id": "cp-shell-cleanup",
+      "label": "Clean up files safely",
+      "type": "self_check",
+      "validates_skills": ["shell-rm"],
+      "module_id": "shell-basics",
+      "prompt": "Remove the test structure you created. Before each rm, explain what will be deleted and why it is safe to do so.",
+      "success_criteria": "Learner demonstrates awareness of what rm does and checks before deleting."
+    }
+  ],
+  "entity_resources": [
+    {
+      "id": "res-42-pedagogie",
+      "label": "42 Lausanne - pedagogie",
+      "url": "https://42lausanne.ch/pedagogie-42/",
+      "tier": "official_42",
+      "skill_ids": ["shell-pwd", "shell-ls", "shell-cd"],
+      "format": "article",
+      "language": "fr"
+    },
+    {
+      "id": "res-man-pages",
+      "label": "Linux man pages online",
+      "url": "https://man7.org/linux/man-pages/",
+      "tier": "community_docs",
+      "skill_ids": [
+        "shell-pwd", "shell-ls", "shell-cd", "shell-mkdir",
+        "shell-touch", "shell-cp", "shell-mv", "shell-rm"
+      ],
+      "format": "man_page",
+      "language": "en"
+    },
+    {
+      "id": "res-awesome-42",
+      "label": "awesome-42",
+      "url": "https://github.com/leeoocca/awesome-42",
+      "tier": "community_docs",
+      "skill_ids": ["shell-pwd", "shell-ls"],
+      "format": "repository",
+      "language": "en"
+    }
+  ],
+  "evidence_types": [
+    {
+      "id": "ev-shell-navigate-output",
+      "type": "command_output",
+      "skill_id": "shell-cd",
+      "checkpoint_id": "cp-shell-navigate",
+      "description": "Terminal session showing navigation between directories.",
+      "expected_content": "Sequence of cd, pwd and ls commands with correct output showing directory changes."
+    },
+    {
+      "id": "ev-shell-create-artifact",
+      "type": "file_artifact",
+      "skill_id": "shell-mkdir",
+      "checkpoint_id": "cp-shell-create-organize",
+      "description": "The directory tree created by the learner.",
+      "expected_content": "A myproject/ directory with src/ and docs/ subdirectories and correctly named files."
+    },
+    {
+      "id": "ev-shell-rm-explanation",
+      "type": "explanation",
+      "skill_id": "shell-rm",
+      "checkpoint_id": "cp-shell-cleanup",
+      "description": "Learner's reasoning about safe deletion.",
+      "expected_content": "Explanation of what each rm command will delete, why it is safe, and what could go wrong."
     }
   ],
   "bridges": [
