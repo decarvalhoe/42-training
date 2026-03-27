@@ -204,3 +204,37 @@ class DefenseSession(BaseModel):
     answers: list[str] = Field(default_factory=list)
     scores: list[int] = Field(default_factory=list)
     status: DefenseStatus = "scheduled"
+
+
+# --- Checkpoint submission schemas (Issue #37) ---
+
+EvaluationResult = Literal["pass", "partial", "fail"]
+
+
+class CheckpointSubmission(BaseModel):
+    """Payload for submitting evidence against a checkpoint."""
+
+    module_id: str = Field(min_length=1)
+    checkpoint_index: int = Field(ge=0)
+    type: CheckpointType = "exit_criteria"
+    evidence: str = Field(min_length=1, max_length=10000)
+    self_evaluation: EvaluationResult
+
+
+class CheckpointRecord(BaseModel):
+    """Stored record of a checkpoint submission and its evaluation."""
+
+    module_id: str
+    checkpoint_index: int
+    type: CheckpointType
+    prompt: str
+    evidence: str
+    self_evaluation: EvaluationResult
+    submitted_at: str
+
+
+class CheckpointListResponse(BaseModel):
+    """Response listing checkpoints for a module with submission status."""
+
+    module_id: str
+    checkpoints: list[dict[str, object]]
