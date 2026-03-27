@@ -5,11 +5,9 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.schemas import CheckpointSubmission
 
 client = TestClient(app)
 
@@ -101,7 +99,7 @@ def _patch_repo(progression: dict[str, object] | None = None):
 
 class TestSubmitCheckpoint:
     def test_submit_happy_path(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog_data, written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/checkpoints/submit", json={
                 "module_id": "shell-basics",
@@ -122,7 +120,7 @@ class TestSubmitCheckpoint:
         assert len(written[0]["checkpoints"]) == 1
 
     def test_submit_second_checkpoint(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog_data, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/checkpoints/submit", json={
                 "module_id": "shell-basics",
@@ -136,7 +134,7 @@ class TestSubmitCheckpoint:
         assert r.json()["self_evaluation"] == "partial"
 
     def test_submit_fail_evaluation(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog_data, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/checkpoints/submit", json={
                 "module_id": "shell-basics",
@@ -149,7 +147,7 @@ class TestSubmitCheckpoint:
         assert r.json()["self_evaluation"] == "fail"
 
     def test_submit_unknown_module_404(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog_data, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/checkpoints/submit", json={
                 "module_id": "nonexistent",
@@ -161,7 +159,7 @@ class TestSubmitCheckpoint:
         assert r.status_code == 404
 
     def test_submit_index_out_of_range(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog_data, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/checkpoints/submit", json={
                 "module_id": "shell-basics",
@@ -175,7 +173,7 @@ class TestSubmitCheckpoint:
 
     def test_submit_module_no_exit_criteria(self) -> None:
         """c-basics has no exit_criteria — index 0 should be out of range."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog_data, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/checkpoints/submit", json={
                 "module_id": "c-basics",
@@ -219,7 +217,7 @@ class TestSubmitCheckpoint:
 
     def test_submit_persists_to_progression(self) -> None:
         """Verify the checkpoint record is written to progression data."""
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog_data, written = _patch_repo()
         with p_cur, p_load, p_write:
             client.post("/api/v1/checkpoints/submit", json={
                 "module_id": "shell-basics",
@@ -245,7 +243,7 @@ class TestSubmitCheckpoint:
             "self_evaluation": "fail",
             "submitted_at": "2026-01-01T00:00:00+00:00",
         }])
-        p_cur, p_load, p_write, prog, written = _patch_repo(existing)
+        p_cur, p_load, p_write, _prog_data, written = _patch_repo(existing)
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/checkpoints/submit", json={
                 "module_id": "shell-basics",
@@ -259,7 +257,7 @@ class TestSubmitCheckpoint:
         assert len(written[0]["checkpoints"]) == 2
 
     def test_submit_deliverable_type(self) -> None:
-        p_cur, p_load, p_write, prog, written = _patch_repo()
+        p_cur, p_load, p_write, _prog_data, _written = _patch_repo()
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/checkpoints/submit", json={
                 "module_id": "shell-basics",

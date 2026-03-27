@@ -358,7 +358,7 @@ def submit_checkpoint(payload: CheckpointSubmission) -> CheckpointRecord:
         )
 
     prompt = exit_criteria[payload.checkpoint_index]
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     record = CheckpointRecord(
         module_id=payload.module_id,
