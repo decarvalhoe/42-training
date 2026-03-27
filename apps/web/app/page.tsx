@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { getDashboardData } from "@/lib/api";
+import { SourcePolicyBadge } from "@/app/components/SourcePolicyBadge";
 
 function Pill({ children }: { children: ReactNode }) {
   return <span className="pill">{children}</span>;
@@ -112,7 +113,7 @@ export default async function HomePage() {
             {curriculum.source_policy.tiers.map((tier) => (
               <div key={tier.id} className="policy-item">
                 <strong>{tier.label}</strong>
-                <span>{tier.allowed_usage}</span>
+                <SourcePolicyBadge tier={tier.id} />
               </div>
             ))}
           </div>
