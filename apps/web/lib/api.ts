@@ -1,9 +1,21 @@
+export type ModuleResource = {
+  label: string;
+  url: string;
+  tier: string;
+  why?: string;
+};
+
 export type ModuleItem = {
   id: string;
   title: string;
   phase: string;
   skills: string[];
   deliverable: string;
+  objectives?: string[];
+  exit_criteria?: string[];
+  resources?: ModuleResource[];
+  estimated_hours?: number;
+  prerequisites?: string[];
 };
 
 export type TrackItem = {
@@ -25,6 +37,7 @@ export type DashboardData = {
     };
     tracks: TrackItem[];
     bridges: Array<{ id: string; title: string; recommended_modules: string[] }>;
+    recommended_resources?: Array<{ label: string; url: string; tier: string }>;
   };
   progression: {
     learning_plan?: {
