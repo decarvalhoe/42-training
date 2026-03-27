@@ -1,150 +1,221 @@
 # 42 Training
 
-Linux-first training workspace for preparing 42 Lausanne.
+## FR
 
-This repository now combines two needs in a single project:
+Espace de preparation Linux-first pour 42 Lausanne.
 
-- a personal progression tracker for bash, Git, Vim and C
-- a Linux-only mentor toolkit that can guide the work without taking it over
+Le depot contient maintenant deux couches qui coexistent:
 
-The supported runtime is Ubuntu on bare metal or Ubuntu inside WSL2. The host
-OS can be Windows, but all real commands and scripts run on Linux.
+- le workflow historique centré terminal, shell et mentor
+- une fondation MVP d'application pour une plateforme pedagogique a trois parcours
 
-## Principles
+### Index documentaire
 
-- One repository only
-- One canonical path: `~/42-training`
-- Linux-only workflow
-- The mentor helps with questions, hints and checks, not full solutions by default
-- The source of truth for progression is `progression.json`
+Documentation principale:
 
-## Quick Start
+- `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
+- `ARCHITECTURE_TARGET.md`
+- `docs/DEVOPS_RBOK_ADAPTATION.md`
+- `docs/adr/README.md`
+- `AGENTS.md`
+- `CLAUDE.md`
 
-```bash
-git clone https://github.com/decarvalhoe/42-training.git ~/42-training
-cd ~/42-training
-chmod +x save_progress.sh scripts/*.sh
-./scripts/bootstrap_ubuntu_42.sh
-./scripts/doctor.sh
-./scripts/print_session_state.sh
-```
+Documentation GitHub:
 
-To start a mentor-enabled work session from the repository root:
+- `.github/CONTRIBUTING.md`
+- `.github/SECURITY.md`
+- `.github/SUPPORT.md`
+- `.github/CODE_OF_CONDUCT.md`
 
-```bash
-./scripts/start_42_mentor_env.sh .
-```
+### Direction produit
 
-Then attach the tmux sessions:
+Le produit cible est une application unique avec trois parcours:
 
-```bash
-tmux attach -t learn42
-tmux attach -t mentor42
-```
+- `shell`: Shell 0 to Hero
+- `c`: preparation low-level et logique 42
+- `python_ai`: bases Python, IA, RAG et agents
 
-## Repository Layout
+L'architecture suit volontairement des patterns inspirés de RBOK:
+
+- monolithe modulaire
+- separation `web`, `api`, `ai_gateway`
+- gouvernance explicite des sources
+- developpement local scriptable et Linux-first
+
+### Structure du depot
 
 ```text
 42-training/
-|-- README.md
+|-- apps/web/
+|-- services/api/
+|-- services/ai_gateway/
+|-- packages/curriculum/
+|-- packages/mentor-engine/
+|-- packages/shared-types/
+|-- scripts/
 |-- progression.json
-|-- REPRENDRE_SESSION.md
-|-- save_progress.sh
-|-- hello.txt
-|-- test.txt
-|-- prompts/
-|   `-- mentor_system_prompt.txt
-`-- scripts/
-    |-- ask_mentor.sh
-    |-- bootstrap_ubuntu_42.sh
-    |-- doctor.sh
-    |-- e2e_smoke_test.sh
-    |-- print_session_state.sh
-    |-- setup_github_auth.sh
-    |-- start_42_mentor_env.sh
-    |-- teardown_mentor_env.sh
-    |-- update_progress.sh
-    `-- watch_mentor.sh
+`-- infra/docker-compose.dev.example.yml
 ```
 
-## Daily Workflow
+### Lancer le MVP en local
 
-1. Open Ubuntu or WSL Ubuntu.
-2. `cd ~/42-training`
-3. `./scripts/doctor.sh`
-4. `./scripts/print_session_state.sh`
-5. Work in the `learn42` tmux session.
-6. Ask for guidance only when needed:
-   `m "je bloque sur ft_strlen"`
-7. Update the progression file with the helper:
-   `./scripts/update_progress.sh --step "2.5 - Supprimer fichier" --next-command "rm test.txt"`
-8. Save the session:
-   `./save_progress.sh`
-9. Stop the sessions cleanly when needed:
-   `./scripts/teardown_mentor_env.sh`
-10. Commit and push with normal Git flow:
-   `git add . && git commit -m "Progression du jour" && git push`
-
-## Progression
-
-Current progression lives in [`progression.json`](progression.json).
-Do not duplicate the exact current step in multiple files. Read it from JSON and
-use [`scripts/print_session_state.sh`](scripts/print_session_state.sh) for a
-quick summary.
-
-## Mentor Mode
-
-The mentor toolkit comes from the local `42-remote-mentor-kit` and has been
-merged here so the repository stays self-contained.
-
-What it adds:
-
-- `tmux` sessions for work, build and tests
-- a dedicated mentor session running Claude on Linux
-- quick feedback with terminal capture
-- periodic watch mode
-- an end-to-end smoke test for pedagogy rules
-
-The mentor contract is strict:
-
-- no full solution by default
-- one useful question
-- one hint
-- one next action
-- answers in French
-
-See [`prompts/mentor_system_prompt.txt`](prompts/mentor_system_prompt.txt).
-
-## GitHub Auth
-
-Use GitHub CLI or SSH, but do not inject tokens into the remote URL.
-
-Helper:
+API:
 
 ```bash
-./scripts/setup_github_auth.sh
+./scripts/start_api.sh
 ```
 
-Pushes should remain standard:
+AI gateway:
 
 ```bash
-git push
+./scripts/start_ai_gateway.sh
 ```
 
-## Useful Commands
+Web:
 
 ```bash
-./scripts/bootstrap_ubuntu_42.sh
-./scripts/doctor.sh
-./scripts/print_session_state.sh
-./scripts/start_42_mentor_env.sh .
-./scripts/update_progress.sh --help
-./scripts/teardown_mentor_env.sh
-./scripts/watch_mentor.sh
-./scripts/e2e_smoke_test.sh
-./save_progress.sh
+cd apps/web
+npm install
+cd ../..
+./scripts/start_web.sh
 ```
 
-## License
+Smoke test:
 
-MIT
+```bash
+./scripts/smoke_mvp.sh
+```
+
+### Endpoints disponibles
+
+API:
+
+- `GET /health`
+- `GET /api/v1/meta`
+- `GET /api/v1/dashboard`
+- `GET /api/v1/tracks`
+- `GET /api/v1/tracks/{track_id}`
+- `GET /api/v1/progression`
+- `POST /api/v1/progression`
+
+AI Gateway:
+
+- `GET /health`
+- `GET /api/v1/source-policy`
+- `POST /api/v1/mentor/respond`
+
+### Notes
+
+- L'AI gateway est volontairement contraint: pas de solution complete par defaut dans les phases fondamentales.
+- Les repos de solutions de la communaute sont traites comme sources de cartographie, pas comme materiau libre de reponse.
+- Le frontend contient un fallback local afin de rester utile meme si l'API n'est pas encore demarree.
+
+## EN
+
+Linux-first preparation workspace for 42 Lausanne.
+
+The repository now contains two coexisting layers:
+
+- the historical shell-first mentor workflow
+- a new MVP application foundation for a triple-track learning platform
+
+### Documentation index
+
+Core documentation:
+
+- `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
+- `ARCHITECTURE_TARGET.md`
+- `docs/DEVOPS_RBOK_ADAPTATION.md`
+- `docs/adr/README.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+GitHub health documentation:
+
+- `.github/CONTRIBUTING.md`
+- `.github/SECURITY.md`
+- `.github/SUPPORT.md`
+- `.github/CODE_OF_CONDUCT.md`
+
+### Product direction
+
+The target product is one application with three tracks:
+
+- `shell`: Shell 0 to Hero
+- `c`: low-level and core-42 preparation
+- `python_ai`: Python foundations, AI, RAG and agent literacy
+
+The architecture deliberately follows RBOK-inspired patterns:
+
+- modular monolith
+- `web`, `api` and `ai_gateway` separation
+- explicit source governance
+- scriptable local development with a Linux-first bias
+
+### Repository layout
+
+```text
+42-training/
+|-- apps/web/
+|-- services/api/
+|-- services/ai_gateway/
+|-- packages/curriculum/
+|-- packages/mentor-engine/
+|-- packages/shared-types/
+|-- scripts/
+|-- progression.json
+`-- infra/docker-compose.dev.example.yml
+```
+
+### Run the MVP locally
+
+API:
+
+```bash
+./scripts/start_api.sh
+```
+
+AI gateway:
+
+```bash
+./scripts/start_ai_gateway.sh
+```
+
+Web:
+
+```bash
+cd apps/web
+npm install
+cd ../..
+./scripts/start_web.sh
+```
+
+Smoke test:
+
+```bash
+./scripts/smoke_mvp.sh
+```
+
+### Available endpoints
+
+API:
+
+- `GET /health`
+- `GET /api/v1/meta`
+- `GET /api/v1/dashboard`
+- `GET /api/v1/tracks`
+- `GET /api/v1/tracks/{track_id}`
+- `GET /api/v1/progression`
+- `POST /api/v1/progression`
+
+AI Gateway:
+
+- `GET /health`
+- `GET /api/v1/source-policy`
+- `POST /api/v1/mentor/respond`
+
+### Notes
+
+- The AI gateway is intentionally constrained: no full solution by default in foundation phases.
+- Community solution repositories are treated as mapping sources, not as unrestricted answer material.
+- The frontend ships with a local fallback dataset so it remains useful even before the API is running.

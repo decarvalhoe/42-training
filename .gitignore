@@ -4,6 +4,15 @@
 *.swp
 *.tmp
 
+# Python
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Node / Next
+node_modules/
+.next/
+
 # Local workspaces
 .42-mentor/
 backups/
