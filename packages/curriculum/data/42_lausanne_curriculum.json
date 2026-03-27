@@ -131,6 +131,15 @@
             "Recreate a given directory tree from a textual spec",
             "Explain the difference between cp and mv in own words"
           ],
+          "exit_checklist": [
+            { "item": "Navigate to /tmp, /var/log and home using only cd and pwd", "type": "exercise" },
+            { "item": "Create a directory tree: project/src, project/docs, project/tests", "type": "exercise" },
+            { "item": "Copy a file from src/ to docs/ and verify with ls", "type": "exercise" },
+            { "item": "Move a file from docs/ to tests/ and confirm the original is gone", "type": "exercise" },
+            { "item": "Remove the entire project/ tree with rm -r", "type": "exercise" },
+            { "item": "Explain in own words: what does cp do that mv does not?", "type": "explanation" },
+            { "item": "Navigate a directory tree blindfolded (no ls, only cd and pwd)", "type": "challenge" }
+          ],
           "resources": [
             {
               "label": "42 Lausanne - pedagogie",
@@ -169,6 +178,14 @@
             "Redirect stderr to a log file while keeping stdout visible",
             "Explain what happens when you pipe into grep vs redirect into grep"
           ],
+          "exit_checklist": [
+            { "item": "Write output of ls -la to a file using >", "type": "exercise" },
+            { "item": "Append date output to the same file using >>", "type": "exercise" },
+            { "item": "Run a command that produces stderr and redirect only stderr to error.log", "type": "exercise" },
+            { "item": "Build a pipeline: cat file | grep pattern | wc -l", "type": "exercise" },
+            { "item": "Build a 3-stage pipeline that filters, sorts and counts unique lines", "type": "challenge" },
+            { "item": "Explain the difference between echo hello | grep h and grep h < file", "type": "explanation" }
+          ],
           "resources": [
             {
               "label": "42 Lausanne - pedagogie",
@@ -206,6 +223,14 @@
             "Make a script executable and run it via PATH",
             "Explain why a file with 644 cannot be executed"
           ],
+          "exit_checklist": [
+            { "item": "Create a script, try to run it, observe permission denied", "type": "exercise" },
+            { "item": "Use chmod +x to make it executable and run it", "type": "exercise" },
+            { "item": "Set permissions to 755 using octal notation and verify with ls -l", "type": "exercise" },
+            { "item": "Add the script directory to PATH and run it by name alone", "type": "exercise" },
+            { "item": "Explain why 644 means read+write for owner but no execute for anyone", "type": "explanation" },
+            { "item": "Diagnose a permission denied error on a file you did not create", "type": "challenge" }
+          ],
           "resources": [
             {
               "label": "42 Lausanne - pedagogie",
@@ -242,6 +267,16 @@
             "Find all .c files modified in the last 24 hours in a project tree",
             "Answer a shell question using only man without web search",
             "Create a git repository and make 3 meaningful commits"
+          ],
+          "exit_checklist": [
+            { "item": "Use find to locate all .c files in a project tree", "type": "exercise" },
+            { "item": "Use find with -mtime to filter files modified in the last 24 hours", "type": "exercise" },
+            { "item": "Look up the flags of chmod using only man chmod", "type": "exercise" },
+            { "item": "Open a file in vim, insert text, save and quit", "type": "exercise" },
+            { "item": "Search for a word in vim using /pattern", "type": "exercise" },
+            { "item": "Run git init, create 3 files, commit each with a meaningful message", "type": "exercise" },
+            { "item": "Use git log to review your commit history", "type": "exercise" },
+            { "item": "Answer a man page question without any web search", "type": "challenge" }
           ],
           "resources": [
             {
@@ -295,6 +330,16 @@
             "Implement a function that uses loops and conditionals to solve a stated problem",
             "Split a program across multiple files with a shared header"
           ],
+          "exit_checklist": [
+            { "item": "Declare int, char, float variables and print them with printf", "type": "exercise" },
+            { "item": "Write an if/else block that handles at least 3 cases", "type": "exercise" },
+            { "item": "Write a while loop that counts from 1 to 100", "type": "exercise" },
+            { "item": "Write a for loop that iterates over a string character by character", "type": "exercise" },
+            { "item": "Create a function with a prototype in a .h file", "type": "exercise" },
+            { "item": "Compile with cc -Wall -Wextra -Werror and fix all warnings", "type": "exercise" },
+            { "item": "Split a program into main.c, utils.c and utils.h", "type": "challenge" },
+            { "item": "Run norminette on your code and fix all style errors", "type": "exercise" }
+          ],
           "resources": [
             {
               "label": "42 Lausanne - pedagogie",
@@ -339,6 +384,16 @@
             "Write a function that allocates, uses and frees memory correctly",
             "Run valgrind on own code and fix all reported leaks"
           ],
+          "exit_checklist": [
+            { "item": "Declare a pointer, assign it to a variable address, dereference it", "type": "exercise" },
+            { "item": "Pass an int by pointer to a function and modify it", "type": "exercise" },
+            { "item": "Iterate over a char array using pointer arithmetic", "type": "exercise" },
+            { "item": "Allocate an int array with malloc, fill it, then free it", "type": "exercise" },
+            { "item": "Write a function that returns a malloc'd string and free it in main", "type": "exercise" },
+            { "item": "Draw a memory diagram showing stack frame and heap allocation", "type": "explanation" },
+            { "item": "Run valgrind --leak-check=full on your program and fix all leaks", "type": "exercise" },
+            { "item": "Explain what a dangling pointer is and how to avoid one", "type": "explanation" }
+          ],
           "resources": [
             {
               "label": "42 Lausanne - pedagogie",
@@ -382,6 +437,16 @@
             "Fix a segfault using gdb without modifying code randomly",
             "Write a Makefile with all, clean, fclean and re targets",
             "Produce a valgrind-clean run on a project with dynamic allocation"
+          ],
+          "exit_checklist": [
+            { "item": "Compile a program with cc -Wall -Wextra -Werror -g", "type": "exercise" },
+            { "item": "Read a compiler error message and fix the issue without guessing", "type": "exercise" },
+            { "item": "Write a Makefile with all, clean, fclean and re targets", "type": "exercise" },
+            { "item": "Run make re and verify the binary is rebuilt from scratch", "type": "exercise" },
+            { "item": "Set a breakpoint in gdb, run to it, inspect a variable", "type": "exercise" },
+            { "item": "Use gdb to find the exact line causing a segfault", "type": "challenge" },
+            { "item": "Run valgrind on a program with malloc and achieve zero errors", "type": "exercise" },
+            { "item": "Describe your debugging workflow: what do you try first, second, third?", "type": "explanation" }
           ],
           "resources": [
             {
@@ -431,6 +496,17 @@
             "Implement 5 libft-style utility functions with consistent prototypes",
             "Explain the time complexity of at least two sorting algorithms",
             "Write a test harness that validates function behavior against edge cases"
+          ],
+          "exit_checklist": [
+            { "item": "Implement ft_strlen with the same prototype as strlen", "type": "exercise" },
+            { "item": "Implement ft_strcpy, ft_strdup and ft_substr", "type": "exercise" },
+            { "item": "Implement ft_atoi handling signs and whitespace", "type": "exercise" },
+            { "item": "Ensure all functions follow a consistent naming convention", "type": "exercise" },
+            { "item": "Write a main.c that tests each function with normal and edge inputs", "type": "exercise" },
+            { "item": "Implement bubble sort and explain why it is O(n^2)", "type": "exercise" },
+            { "item": "Implement a second sort (insertion or selection) and compare", "type": "exercise" },
+            { "item": "Run norminette and valgrind on all functions and fix all issues", "type": "exercise" },
+            { "item": "Explain when O(n log n) matters vs O(n^2) with a concrete example", "type": "explanation" }
           ],
           "resources": [
             {
@@ -490,6 +566,16 @@
             "Explain the difference between a list, tuple and dictionary",
             "Solve a small algorithmic problem using only standard library"
           ],
+          "exit_checklist": [
+            { "item": "Declare variables of type int, str, float, bool and print them", "type": "exercise" },
+            { "item": "Write an if/elif/else block with at least 3 branches", "type": "exercise" },
+            { "item": "Write a for loop that iterates over a list and a dictionary", "type": "exercise" },
+            { "item": "Write a function that takes a list and returns a filtered version", "type": "exercise" },
+            { "item": "Use a list comprehension to transform a list of strings", "type": "exercise" },
+            { "item": "Write a script that reads a text file and counts word frequencies", "type": "exercise" },
+            { "item": "Explain when to use a list vs a tuple vs a dictionary", "type": "explanation" },
+            { "item": "Solve FizzBuzz using only the standard library", "type": "challenge" }
+          ],
           "resources": [
             {
               "label": "42 Lausanne - IA",
@@ -528,6 +614,15 @@
             "Design a class hierarchy for a simple domain model",
             "Write a script that handles missing files and bad input gracefully"
           ],
+          "exit_checklist": [
+            { "item": "Define a class with __init__, at least 2 attributes and a method", "type": "exercise" },
+            { "item": "Create a subclass that overrides one method", "type": "exercise" },
+            { "item": "Read a JSON file with json.load and access nested fields", "type": "exercise" },
+            { "item": "Write a dictionary to a JSON file with json.dump and indent=2", "type": "exercise" },
+            { "item": "Parse CLI arguments with argparse (at least 1 positional, 1 optional)", "type": "exercise" },
+            { "item": "Handle FileNotFoundError and json.JSONDecodeError with try/except", "type": "exercise" },
+            { "item": "Build a CLI tool that reads JSON, transforms it and writes output", "type": "challenge" }
+          ],
           "resources": [
             {
               "label": "42 Lausanne - IA",
@@ -565,6 +660,16 @@
             "Build a minimal RAG pipeline that retrieves context and generates an answer",
             "Evaluate 5 AI-generated responses for factual accuracy against sources",
             "Explain the source-governance tiers and why they matter for learning integrity"
+          ],
+          "exit_checklist": [
+            { "item": "Explain what RAG is and why retrieval matters for accuracy", "type": "explanation" },
+            { "item": "Write a prompt that constrains the LLM to answer from provided context only", "type": "exercise" },
+            { "item": "Build a minimal retrieve-then-generate pipeline (even with mock data)", "type": "exercise" },
+            { "item": "Evaluate 5 AI responses: mark each as accurate, partial or hallucinated", "type": "exercise" },
+            { "item": "Identify which source tier each response draws from (official, community, inferred)", "type": "exercise" },
+            { "item": "Explain the 5 source-governance tiers and give one example per tier", "type": "explanation" },
+            { "item": "Describe one scenario where AI assistance becomes AI dependency", "type": "explanation" },
+            { "item": "Build a pipeline that refuses to answer when no source is available", "type": "challenge" }
           ],
           "resources": [
             {
