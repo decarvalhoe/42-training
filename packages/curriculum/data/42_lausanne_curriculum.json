@@ -45,6 +45,7 @@
           "id": "shell-basics",
           "title": "Navigation and files",
           "phase": "foundation",
+          "prerequisites": [],
           "skills": ["pwd", "ls", "cd", "mkdir", "touch", "cp", "mv", "rm"],
           "deliverable": "Navigate, create, copy and clean files without hesitation."
         },
@@ -52,6 +53,7 @@
           "id": "shell-streams",
           "title": "Redirections and pipes",
           "phase": "foundation",
+          "prerequisites": ["shell-basics"],
           "skills": ["stdin", "stdout", "stderr", "redirect", "append", "pipe", "grep"],
           "deliverable": "Compose useful shell chains and inspect text quickly."
         },
@@ -59,6 +61,7 @@
           "id": "shell-permissions",
           "title": "Permissions and execution",
           "phase": "foundation",
+          "prerequisites": ["shell-basics"],
           "skills": ["chmod", "ownership", "executable bit", "PATH"],
           "deliverable": "Understand why a script runs or fails."
         },
@@ -66,6 +69,7 @@
           "id": "shell-tooling",
           "title": "Linux work habits",
           "phase": "practice",
+          "prerequisites": ["shell-streams", "shell-permissions"],
           "skills": ["find", "history", "man", "vim basics", "git basics"],
           "deliverable": "Operate daily in Linux without depending on GUI reflexes."
         }
@@ -81,6 +85,7 @@
           "id": "c-basics",
           "title": "Syntax and control flow",
           "phase": "foundation",
+          "prerequisites": ["shell-basics"],
           "skills": ["variables", "conditions", "loops", "functions", "headers"],
           "deliverable": "Write small programs cleanly and compile with warnings enabled."
         },
@@ -88,6 +93,7 @@
           "id": "c-memory",
           "title": "Pointers and memory",
           "phase": "foundation",
+          "prerequisites": ["c-basics"],
           "skills": ["addresses", "pointers", "arrays", "strings", "malloc", "free"],
           "deliverable": "Explain memory decisions and avoid basic leaks."
         },
@@ -95,6 +101,7 @@
           "id": "c-build-debug",
           "title": "Build, tests and debug",
           "phase": "practice",
+          "prerequisites": ["c-basics", "shell-streams"],
           "skills": ["cc", "Wall", "Wextra", "Werror", "gdb", "valgrind"],
           "deliverable": "Investigate failures instead of guessing."
         },
@@ -102,6 +109,7 @@
           "id": "c-libft-pushswap-bridge",
           "title": "Library and algorithm bridge",
           "phase": "core",
+          "prerequisites": ["c-memory", "c-build-debug"],
           "skills": ["libft mindset", "API naming", "sorting logic", "complexity intuition"],
           "deliverable": "Prepare for libft, printf, gnl and push_swap logic."
         }
@@ -117,6 +125,7 @@
           "id": "python-basics",
           "title": "Python foundations",
           "phase": "foundation",
+          "prerequisites": ["shell-basics"],
           "skills": ["variables", "conditions", "loops", "functions", "collections"],
           "deliverable": "Write and explain small scripts confidently."
         },
@@ -124,6 +133,7 @@
           "id": "python-oop-scripting",
           "title": "Objects and automation",
           "phase": "practice",
+          "prerequisites": ["python-basics"],
           "skills": ["classes", "methods", "files", "json", "argparse"],
           "deliverable": "Build useful utilities and simple models."
         },
@@ -131,6 +141,7 @@
           "id": "ai-rag-agents",
           "title": "AI, RAG and agent literacy",
           "phase": "advanced",
+          "prerequisites": ["python-oop-scripting"],
           "skills": ["prompt design", "retrieval", "evaluation", "agent workflow", "source policy"],
           "deliverable": "Use AI as a disciplined tool without outsourcing understanding."
         }
