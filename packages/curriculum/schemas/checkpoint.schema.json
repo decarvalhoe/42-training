@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "checkpoint.schema.json",
+  "title": "Checkpoint",
+  "description": "A validation point where the learner demonstrates mastery of one or more skills. Checkpoints gate progression between phases or modules.",
+  "type": "object",
+  "required": ["id", "label", "type", "validates_skills"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the checkpoint.",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable name."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["self_check", "exercise", "peer_review", "project"],
+      "description": "How the checkpoint is evaluated. self_check = learner confirms understanding, exercise = small task, peer_review = validated by another learner, project = substantial deliverable."
+    },
+    "validates_skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "List of skill IDs this checkpoint validates."
+    },
+    "module_id": {
+      "type": "string",
+      "description": "The module this checkpoint belongs to."
+    },
+    "prompt": {
+      "type": "string",
+      "description": "The question or task presented to the learner."
+    },
+    "success_criteria": {
+      "type": "string",
+      "description": "What counts as a pass."
+    }
+  },
+  "additionalProperties": false
+}

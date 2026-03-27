@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evidence.schema.json",
+  "title": "Evidence",
+  "description": "A proof of mastery produced by the learner. Evidence is what the system collects to determine whether a skill is acquired and a checkpoint is passed.",
+  "type": "object",
+  "required": ["id", "type", "skill_id", "checkpoint_id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the evidence record.",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["command_output", "file_artifact", "explanation", "test_result", "peer_feedback"],
+      "description": "What form the evidence takes. command_output = terminal output, file_artifact = a file the learner produced, explanation = learner's own words, test_result = automated test pass, peer_feedback = another learner's review."
+    },
+    "skill_id": {
+      "type": "string",
+      "description": "The skill this evidence demonstrates."
+    },
+    "checkpoint_id": {
+      "type": "string",
+      "description": "The checkpoint this evidence satisfies."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what the evidence shows."
+    },
+    "expected_content": {
+      "type": "string",
+      "description": "What the evidence should contain or demonstrate to be valid."
+    }
+  },
+  "additionalProperties": false
+}
