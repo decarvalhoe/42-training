@@ -8,6 +8,9 @@ from fastapi.responses import RedirectResponse
 
 from .repository import load_curriculum, load_progression, write_progression
 from .schemas import (
+    CheckpointListResponse,
+    CheckpointRecord,
+    CheckpointSubmission,
     DashboardResponse,
     HealthResponse,
     MetaResponse,
@@ -324,3 +327,82 @@ def legacy_tracks() -> RedirectResponse:
 @app.get("/api/v1/tracks/{track_id}")
 def legacy_track_detail(track_id: str) -> RedirectResponse:
     return RedirectResponse(url=f"/api/v1/curriculum/tracks/{track_id}", status_code=301)
+
+
+# ---------------------------------------------------------------------------
+# Checkpoint submission (Issue #37)
+# ---------------------------------------------------------------------------
+
+
+def _find_module_in_curriculum(module_id: str) -> dict[str, object] | None:
+    """Return the module dict from curriculum, or None."""
+    curriculum = load_curriculum()
+    for track in curriculum.get("tracks", []):
+        for module in track.get("modules", []):
+            if module["id"] == module_id:
+                return module
+    return None
+
+
+@app.post("/api/v1/checkpoints/submit")
+def submit_checkpoint(payload: CheckpointSubmission) -> CheckpointRecord:
+    module = _find_module_in_curriculum(payload.module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail=f"Module '{payload.module_id}' not found")
+
+    exit_criteria: list[str] = module.get("exit_criteria", [])
+    if payload.checkpoint_index >= len(exit_criteria):
+        raise HTTPException(
+            status_code=422,
+            detail=f"checkpoint_index {payload.checkpoint_index} out of range (module has {len(exit_criteria)} exit criteria)",
+        )
+
+    prompt = exit_criteria[payload.checkpoint_index]
+    now = datetime.now(timezone.utc).isoformat()
+
+    record = CheckpointRecord(
+        module_id=payload.module_id,
+        checkpoint_index=payload.checkpoint_index,
+        type=payload.type,
+        prompt=prompt,
+        evidence=payload.evidence,
+        self_evaluation=payload.self_evaluation,
+        submitted_at=now,
+    )
+
+    # Persist to progression.json under checkpoints key
+    progression_data = load_progression()
+    checkpoints = progression_data.setdefault("checkpoints", [])
+    checkpoints.append(record.model_dump())
+    write_progression(progression_data)
+
+    return record
+
+
+@app.get("/api/v1/checkpoints/{module_id}")
+def list_checkpoints(module_id: str) -> CheckpointListResponse:
+    module = _find_module_in_curriculum(module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail=f"Module '{module_id}' not found")
+
+    exit_criteria: list[str] = module.get("exit_criteria", [])
+    progression_data = load_progression()
+    submissions = progression_data.get("checkpoints", [])
+
+    # Build checkpoint list with submission status
+    result: list[dict[str, object]] = []
+    for idx, criterion in enumerate(exit_criteria):
+        matching = [
+            s for s in submissions
+            if s.get("module_id") == module_id and s.get("checkpoint_index") == idx
+        ]
+        latest = matching[-1] if matching else None
+        result.append({
+            "index": idx,
+            "prompt": criterion,
+            "submitted": latest is not None,
+            "self_evaluation": latest["self_evaluation"] if latest else None,
+            "submitted_at": latest["submitted_at"] if latest else None,
+        })
+
+    return CheckpointListResponse(module_id=module_id, checkpoints=result)
