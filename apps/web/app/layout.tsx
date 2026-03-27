@@ -1,7 +1,14 @@
 import type { ReactNode } from "react";
 import "./globals.css";
 
+import type { Viewport } from "next";
+
 import { NavHeader } from "@/app/components/NavHeader";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata = {
   title: "42 Training",

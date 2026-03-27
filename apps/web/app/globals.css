@@ -1,3 +1,7 @@
+/* ------------------------------------------------------------------ */
+/*  Design tokens                                                      */
+/* ------------------------------------------------------------------ */
+
 :root {
   color-scheme: light;
   --bg: #f7f0e5;
@@ -11,6 +15,10 @@
   --accent: #d8a657;
   --shadow: 0 18px 40px rgba(50, 40, 20, 0.12);
 }
+
+/* ------------------------------------------------------------------ */
+/*  Reset & base (mobile-first)                                        */
+/* ------------------------------------------------------------------ */
 
 * {
   box-sizing: border-box;
@@ -27,14 +35,13 @@ body {
     linear-gradient(180deg, #f4ebde 0%, var(--bg) 100%);
   color: var(--ink);
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-}
-
-body {
-  padding: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
 }
 
 .app-content {
-  padding: 24px 32px 32px;
+  padding: 16px;
 }
 
 h1,
@@ -44,25 +51,39 @@ strong {
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
 }
 
+h1 {
+  font-size: 1.6rem;
+  line-height: 1.1;
+  margin: 0 0 8px;
+}
+
+h2 {
+  font-size: 1.15rem;
+}
+
 p {
   margin: 0;
   line-height: 1.55;
 }
 
+a {
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Layout                                                             */
+/* ------------------------------------------------------------------ */
+
 .page-shell {
   display: grid;
-  gap: 28px;
+  gap: 20px;
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
-.hero,
-.section.split {
-  display: grid;
-  gap: 24px;
-}
-
-.hero {
-  grid-template-columns: 1.6fr 0.9fr;
-}
+/* ------------------------------------------------------------------ */
+/*  Panels (shared)                                                    */
+/* ------------------------------------------------------------------ */
 
 .hero-copy,
 .status-panel,
@@ -71,44 +92,50 @@ p {
   backdrop-filter: blur(12px);
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 24px;
+  border-radius: 18px;
   box-shadow: var(--shadow);
+  padding: 18px;
 }
 
-.hero-copy {
-  padding: 32px;
+/* ------------------------------------------------------------------ */
+/*  Hero section                                                       */
+/* ------------------------------------------------------------------ */
+
+.hero,
+.section.split {
+  display: grid;
+  gap: 20px;
 }
 
-.status-panel,
-.panel {
-  padding: 24px;
+.hero h1 {
+  margin: 0 0 12px;
+  font-size: clamp(1.8rem, 5vw, 4.8rem);
+  line-height: 0.95;
+  max-width: 14ch;
 }
 
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
-  margin-bottom: 10px;
-}
-
-.hero h1 {
-  margin: 0 0 12px;
-  font-size: clamp(2.6rem, 6vw, 4.8rem);
-  line-height: 0.95;
-  max-width: 12ch;
+  margin-bottom: 8px;
 }
 
 .lead {
   max-width: 64ch;
   color: var(--muted);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Metric cards                                                       */
+/* ------------------------------------------------------------------ */
 
 .hero-grid,
 .track-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .hero-grid {
@@ -116,9 +143,9 @@ p {
 }
 
 .metric-card {
-  padding: 16px;
+  padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.6);
 }
 
@@ -130,8 +157,8 @@ p {
 
 .metric-card strong {
   display: block;
-  margin-top: 8px;
-  font-size: 1.1rem;
+  margin-top: 6px;
+  font-size: 1rem;
 }
 
 .status-panel {
@@ -142,43 +169,52 @@ p {
 .section h2,
 .panel h2,
 .track-card h3 {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Pills                                                              */
+/* ------------------------------------------------------------------ */
 
 .stack-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .pill {
   display: inline-flex;
   align-items: center;
-  padding: 7px 11px;
+  padding: 7px 12px;
   border-radius: 999px;
   background: rgba(28, 26, 23, 0.06);
   border: 1px solid rgba(28, 26, 23, 0.08);
   font-size: 13px;
+  min-height: 36px;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Section                                                            */
+/* ------------------------------------------------------------------ */
 
 .section {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .section-heading {
   display: flex;
-  align-items: end;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.track-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
+/* ------------------------------------------------------------------ */
+/*  Track grid                                                         */
+/* ------------------------------------------------------------------ */
 
 .track-card {
-  padding: 22px;
+  padding: 18px;
 }
 
 .track-card.active {
@@ -190,19 +226,30 @@ p {
 .track-card:nth-child(2) { border-top: 6px solid var(--c); }
 .track-card:nth-child(3) { border-top: 6px solid var(--python); }
 
-.card-topline,
-.module-header,
-.policy-item {
+.card-topline {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-}
-
-.card-topline {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 12px;
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Module / bridge / policy lists                                     */
+/* ------------------------------------------------------------------ */
+
+.module-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.policy-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .module-list,
@@ -219,59 +266,16 @@ p {
   border-top: 1px solid var(--line);
 }
 
-.section.split {
-  grid-template-columns: 1.2fr 0.8fr;
-}
-
-@media (max-width: 1080px) {
-  .hero,
-  .track-grid,
-  .section.split {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 720px) {
-  .hero-copy,
-  .status-panel,
-  .track-card,
-  .panel {
-    border-radius: 18px;
-    padding: 18px;
-  }
-
-  .hero-grid,
-  .prog-stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .app-content {
-    padding: 18px;
-  }
-
-  .nav-header {
-    flex-direction: column;
-    gap: 8px;
-    padding: 12px 18px;
-  }
-
-  .nav-links {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
 /* ------------------------------------------------------------------ */
 /*  Navigation header                                                  */
 /* ------------------------------------------------------------------ */
 
 .nav-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 32px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 16px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(12px);
@@ -313,16 +317,21 @@ p {
   display: flex;
   align-items: center;
   gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .nav-link {
-  padding: 6px 14px;
+  padding: 8px 14px;
   border-radius: 10px;
   font-size: 13px;
   color: var(--muted);
   text-decoration: none;
   transition: background 0.12s, color 0.12s;
   white-space: nowrap;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .nav-link:hover {
@@ -337,7 +346,7 @@ p {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Progression page                                                   */
+/*  Breadcrumb                                                         */
 /* ------------------------------------------------------------------ */
 
 .breadcrumb {
@@ -361,8 +370,12 @@ p {
   opacity: 0.4;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Progression page                                                   */
+/* ------------------------------------------------------------------ */
+
 .progression-hero {
-  padding: 32px;
+  padding: 18px;
 }
 
 .progression-hero h1 {
@@ -373,12 +386,10 @@ p {
 
 .prog-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
 }
-
-/* Progress bar */
 
 .progress-bar {
   height: 6px;
@@ -394,18 +405,14 @@ p {
   transition: width 0.3s ease;
 }
 
-/* Next action */
-
 .prog-next-action {
   border-left: 5px solid var(--accent);
 }
 
 .prog-next-content {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .prog-next-content h2 {
@@ -427,10 +434,26 @@ p {
   text-decoration: none;
   transition: opacity 0.15s;
   white-space: nowrap;
+  min-height: 44px;
+  justify-content: center;
 }
 
 .action-btn:hover {
   opacity: 0.85;
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-btn--done {
+  background: var(--muted);
+}
+
+.action-btn--in_progress {
+  background: var(--accent);
+  color: var(--ink);
 }
 
 /* Pill variants */
@@ -454,10 +477,6 @@ p {
 
 /* Checklist */
 
-.prog-body {
-  grid-template-columns: 1.2fr 0.8fr;
-}
-
 .prog-checklist {
   display: grid;
   gap: 4px;
@@ -475,6 +494,7 @@ p {
   text-decoration: none;
   color: var(--ink);
   transition: background 0.15s;
+  min-height: 44px;
 }
 
 .prog-checklist-item:hover {
@@ -550,8 +570,6 @@ p {
   50% { opacity: 0.5; }
 }
 
-/* Code inline */
-
 .prog-code {
   padding: 3px 8px;
   border-radius: 6px;
@@ -560,47 +578,12 @@ p {
   font-size: 13px;
 }
 
-@media (max-width: 1080px) {
-  .prog-stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .prog-body {
-    grid-template-columns: 1fr;
-  }
-
-  .module-detail-body {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ------------------------------------------------------------------ */
 /*  Module detail page                                                 */
 /* ------------------------------------------------------------------ */
 
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.breadcrumb a {
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.breadcrumb a:hover {
-  color: var(--ink);
-}
-
-.breadcrumb-sep {
-  opacity: 0.4;
-}
-
 .module-detail-hero {
-  padding: 32px;
+  padding: 18px;
 }
 
 .module-detail-hero h1 {
@@ -616,71 +599,11 @@ p {
   flex-wrap: wrap;
 }
 
-.module-detail-body {
-  grid-template-columns: 1.4fr 0.6fr;
-}
-
 .module-detail-main,
 .module-detail-sidebar {
   display: grid;
   gap: 18px;
   align-content: start;
-}
-
-/* Action button */
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 20px;
-  padding: 12px 28px;
-  border: none;
-  border-radius: 14px;
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  color: #fff;
-  background: var(--ink);
-  text-decoration: none;
-  transition: opacity 0.15s;
-}
-
-.action-btn:hover {
-  opacity: 0.85;
-}
-
-.action-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.action-btn--done {
-  background: var(--muted);
-}
-
-.action-btn--in_progress {
-  background: var(--accent);
-  color: var(--ink);
-}
-
-/* Pill variants */
-
-.pill--done {
-  background: rgba(53, 95, 59, 0.12);
-  border-color: rgba(53, 95, 59, 0.2);
-  color: var(--python);
-}
-
-.pill--in_progress {
-  background: rgba(216, 166, 87, 0.18);
-  border-color: rgba(216, 166, 87, 0.3);
-  color: #7a5a16;
-}
-
-.pill--todo {
-  background: rgba(28, 26, 23, 0.06);
-  border-color: rgba(28, 26, 23, 0.08);
 }
 
 /* Skill grid */
@@ -700,6 +623,7 @@ p {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.5);
   font-size: 14px;
+  min-height: 44px;
 }
 
 .skill-indicator {
@@ -726,8 +650,6 @@ p {
   font-size: 12px;
 }
 
-/* Objective list */
-
 .objective-list {
   margin: 8px 0 0;
   padding-left: 20px;
@@ -752,6 +674,7 @@ p {
   border-radius: 10px;
   border: 1px solid var(--line);
   font-size: 14px;
+  min-height: 40px;
 }
 
 .prereq-indicator {
@@ -785,6 +708,7 @@ p {
   border-radius: 10px;
   border: 1px solid var(--line);
   font-size: 14px;
+  min-height: 40px;
 }
 
 .resource-item a {
@@ -842,8 +766,6 @@ p {
   color: var(--c);
 }
 
-/* Legend */
-
 .spb-legend {
   display: grid;
   gap: 8px;
@@ -859,4 +781,184 @@ p {
 
 .spb-legend-item .muted {
   font-size: 12px;
+}
+
+/* ================================================================== */
+/*  Tablet breakpoint (>=600px)                                        */
+/* ================================================================== */
+
+@media (min-width: 600px) {
+  .app-content {
+    padding: 24px;
+  }
+
+  .page-shell {
+    gap: 24px;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  .eyebrow {
+    font-size: 12px;
+  }
+
+  .section-heading {
+    flex-direction: row;
+    align-items: end;
+    justify-content: space-between;
+  }
+
+  .module-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .policy-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .hero-copy,
+  .status-panel,
+  .track-card,
+  .panel {
+    border-radius: 22px;
+    padding: 22px;
+  }
+
+  .hero-copy {
+    padding: 28px;
+  }
+
+  .metric-card {
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .metric-card strong {
+    font-size: 1.1rem;
+  }
+
+  .nav-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+  }
+
+  .nav-links {
+    overflow-x: visible;
+  }
+
+  .prog-next-content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .progression-hero,
+  .module-detail-hero {
+    padding: 28px;
+  }
+
+  .prog-stats-grid {
+    gap: 16px;
+  }
+}
+
+/* ================================================================== */
+/*  Desktop breakpoint (>=900px)                                       */
+/* ================================================================== */
+
+@media (min-width: 900px) {
+  .app-content {
+    padding: 24px 32px 32px;
+  }
+
+  .page-shell {
+    gap: 28px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  .hero {
+    grid-template-columns: 1.6fr 0.9fr;
+  }
+
+  .track-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .section.split {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
+
+  .hero-copy,
+  .status-panel,
+  .track-card,
+  .panel {
+    border-radius: 24px;
+    padding: 24px;
+  }
+
+  .hero-copy {
+    padding: 32px;
+  }
+
+  .metric-card {
+    border-radius: 18px;
+  }
+
+  .hero-grid,
+  .track-grid {
+    gap: 16px;
+  }
+
+  .section {
+    gap: 18px;
+  }
+
+  .pill {
+    min-height: unset;
+  }
+
+  .nav-header {
+    padding: 14px 32px;
+  }
+
+  .prog-stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .prog-body {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
+
+  .module-detail-body {
+    grid-template-columns: 1.4fr 0.6fr;
+  }
+
+  .progression-hero,
+  .module-detail-hero {
+    padding: 32px;
+  }
+
+  .skill-item,
+  .prog-checklist-item,
+  .prereq-item,
+  .resource-item {
+    min-height: unset;
+  }
+
+  .action-btn {
+    min-height: unset;
+  }
 }
