@@ -30,8 +30,8 @@ services:
 
   api:
     build:
-      context: ./services/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/api/Dockerfile
     environment:
       API_PORT: 8000
       DATABASE_URL: postgresql+asyncpg://training:training@postgres:5432/training
@@ -52,8 +52,8 @@ services:
 
   ai_gateway:
     build:
-      context: ./services/ai_gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/ai_gateway/Dockerfile
     environment:
       AI_GATEWAY_PORT: 8100
       AI_GATEWAY_API_BASE_URL: http://api:8000

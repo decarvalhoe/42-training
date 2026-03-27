@@ -6,10 +6,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements.txt ./
+COPY services/api/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-COPY app ./app
+# Copy application code
+COPY services/api/app ./app
+
+# Copy data files that repository.py needs (parents[3] = /app -> needs /packages and /progression.json)
+COPY packages/curriculum/data /packages/curriculum/data
+COPY progression.json /progression.json
 
 EXPOSE 8000
 
