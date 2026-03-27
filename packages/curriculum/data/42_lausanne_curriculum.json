@@ -46,28 +46,138 @@
           "title": "Navigation and files",
           "phase": "foundation",
           "skills": ["pwd", "ls", "cd", "mkdir", "touch", "cp", "mv", "rm"],
-          "deliverable": "Navigate, create, copy and clean files without hesitation."
+          "deliverable": "Navigate, create, copy and clean files without hesitation.",
+          "objectives": [
+            "Move confidently in a filesystem hierarchy",
+            "Create, copy, move and remove files and directories",
+            "Read and interpret absolute vs relative paths",
+            "Understand the role of hidden files and dotfiles"
+          ],
+          "exit_criteria": [
+            "Complete a blind navigation exercise without errors",
+            "Recreate a given directory tree from a textual spec",
+            "Explain the difference between cp and mv in own words"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - pedagogie",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "tier": "official_42",
+              "why": "Official description of the 42 learning model and autonomy expectations"
+            },
+            {
+              "label": "Linux command line basics - Ubuntu",
+              "url": "https://ubuntu.com/tutorials/command-line-for-beginners",
+              "tier": "community_docs",
+              "why": "Step-by-step introduction to filesystem navigation on Linux"
+            }
+          ],
+          "estimated_hours": 4
         },
         {
           "id": "shell-streams",
           "title": "Redirections and pipes",
           "phase": "foundation",
           "skills": ["stdin", "stdout", "stderr", "redirect", "append", "pipe", "grep"],
-          "deliverable": "Compose useful shell chains and inspect text quickly."
+          "deliverable": "Compose useful shell chains and inspect text quickly.",
+          "objectives": [
+            "Distinguish stdin, stdout and stderr",
+            "Redirect output to files using > and >>",
+            "Chain commands with pipes to filter and transform data",
+            "Use grep to search text patterns in files and streams"
+          ],
+          "exit_criteria": [
+            "Build a 3-stage pipeline that filters, transforms and counts lines",
+            "Redirect stderr to a log file while keeping stdout visible",
+            "Explain what happens when you pipe into grep vs redirect into grep"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - pedagogie",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "tier": "official_42",
+              "why": "Piscine shell exercises rely heavily on redirections and pipes"
+            },
+            {
+              "label": "GNU Bash manual - Redirections",
+              "url": "https://www.gnu.org/software/bash/manual/html_node/Redirections.html",
+              "tier": "community_docs",
+              "why": "Authoritative reference for redirect syntax and behavior"
+            }
+          ],
+          "estimated_hours": 5
         },
         {
           "id": "shell-permissions",
           "title": "Permissions and execution",
           "phase": "foundation",
           "skills": ["chmod", "ownership", "executable bit", "PATH"],
-          "deliverable": "Understand why a script runs or fails."
+          "deliverable": "Understand why a script runs or fails.",
+          "objectives": [
+            "Read and interpret rwx permission triads",
+            "Use chmod in symbolic and octal notation",
+            "Understand user/group/other ownership model",
+            "Explain how PATH determines which binary runs"
+          ],
+          "exit_criteria": [
+            "Diagnose a permission denied error and fix it with chmod",
+            "Make a script executable and run it via PATH",
+            "Explain why a file with 644 cannot be executed"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - pedagogie",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "tier": "official_42",
+              "why": "Permissions are tested early in the Piscine shell exercises"
+            },
+            {
+              "label": "File permissions and attributes - ArchWiki",
+              "url": "https://wiki.archlinux.org/title/File_permissions_and_attributes",
+              "tier": "community_docs",
+              "why": "Clear reference for Unix permission model with practical examples"
+            }
+          ],
+          "estimated_hours": 3
         },
         {
           "id": "shell-tooling",
           "title": "Linux work habits",
           "phase": "practice",
           "skills": ["find", "history", "man", "vim basics", "git basics"],
-          "deliverable": "Operate daily in Linux without depending on GUI reflexes."
+          "deliverable": "Operate daily in Linux without depending on GUI reflexes.",
+          "objectives": [
+            "Use find to locate files by name, type and modification time",
+            "Navigate man pages to answer questions autonomously",
+            "Perform basic editing in vim (insert, save, quit, search)",
+            "Use git init, add, commit and log for personal versioning"
+          ],
+          "exit_criteria": [
+            "Find all .c files modified in the last 24 hours in a project tree",
+            "Answer a shell question using only man without web search",
+            "Create a git repository and make 3 meaningful commits"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - pedagogie",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "tier": "official_42",
+              "why": "42 expects students to use man and vim from day one"
+            },
+            {
+              "label": "Git - the simple guide",
+              "url": "https://rogerdudler.github.io/git-guide/",
+              "tier": "community_docs",
+              "why": "Minimal practical introduction to git basics"
+            },
+            {
+              "label": "Open Vim - interactive tutorial",
+              "url": "https://www.openvim.com/",
+              "tier": "community_docs",
+              "why": "Hands-on vim practice without setup"
+            }
+          ],
+          "estimated_hours": 6
         }
       ]
     },
@@ -82,28 +192,171 @@
           "title": "Syntax and control flow",
           "phase": "foundation",
           "skills": ["variables", "conditions", "loops", "functions", "headers"],
-          "deliverable": "Write small programs cleanly and compile with warnings enabled."
+          "deliverable": "Write small programs cleanly and compile with warnings enabled.",
+          "objectives": [
+            "Declare and use variables with appropriate types",
+            "Write conditional logic with if/else and switch",
+            "Use while, for and do-while loops correctly",
+            "Organize code into functions with proper prototypes",
+            "Understand header files and include guards"
+          ],
+          "exit_criteria": [
+            "Write a program that compiles with -Wall -Wextra -Werror and zero warnings",
+            "Implement a function that uses loops and conditionals to solve a stated problem",
+            "Split a program across multiple files with a shared header"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - pedagogie",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "tier": "official_42",
+              "why": "C is the backbone of the 42 core curriculum"
+            },
+            {
+              "label": "norminette",
+              "url": "https://github.com/42school/norminette",
+              "tier": "testers_and_tooling",
+              "why": "Official 42 coding style checker — all C code must pass norminette"
+            },
+            {
+              "label": "C programming - Beej's Guide",
+              "url": "https://beej.us/guide/bgc/",
+              "tier": "community_docs",
+              "why": "Comprehensive free C guide with practical examples"
+            }
+          ],
+          "estimated_hours": 8
         },
         {
           "id": "c-memory",
           "title": "Pointers and memory",
           "phase": "foundation",
           "skills": ["addresses", "pointers", "arrays", "strings", "malloc", "free"],
-          "deliverable": "Explain memory decisions and avoid basic leaks."
+          "deliverable": "Explain memory decisions and avoid basic leaks.",
+          "objectives": [
+            "Understand the difference between stack and heap allocation",
+            "Use pointers to pass data by reference",
+            "Manipulate arrays and strings through pointer arithmetic",
+            "Allocate and free dynamic memory without leaks",
+            "Recognize and avoid common pitfalls: dangling pointers, double free, buffer overflow"
+          ],
+          "exit_criteria": [
+            "Draw a memory diagram for a program with both stack and heap variables",
+            "Write a function that allocates, uses and frees memory correctly",
+            "Run valgrind on own code and fix all reported leaks"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - pedagogie",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "tier": "official_42",
+              "why": "Memory management is central to every 42 C project"
+            },
+            {
+              "label": "norminette",
+              "url": "https://github.com/42school/norminette",
+              "tier": "testers_and_tooling",
+              "why": "Style compliance required for all 42 C submissions"
+            },
+            {
+              "label": "Valgrind quick start",
+              "url": "https://valgrind.org/docs/manual/quick-start.html",
+              "tier": "testers_and_tooling",
+              "why": "Essential tool for detecting memory leaks in C programs"
+            }
+          ],
+          "estimated_hours": 10
         },
         {
           "id": "c-build-debug",
           "title": "Build, tests and debug",
           "phase": "practice",
           "skills": ["cc", "Wall", "Wextra", "Werror", "gdb", "valgrind"],
-          "deliverable": "Investigate failures instead of guessing."
+          "deliverable": "Investigate failures instead of guessing.",
+          "objectives": [
+            "Compile with strict warning flags and interpret compiler messages",
+            "Write and run a basic Makefile",
+            "Use gdb to set breakpoints, inspect variables and step through code",
+            "Use valgrind to detect memory errors and leaks",
+            "Adopt a systematic debugging workflow instead of random edits"
+          ],
+          "exit_criteria": [
+            "Fix a segfault using gdb without modifying code randomly",
+            "Write a Makefile with all, clean, fclean and re targets",
+            "Produce a valgrind-clean run on a project with dynamic allocation"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - pedagogie",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "tier": "official_42",
+              "why": "All 42 projects require Makefile and clean compilation"
+            },
+            {
+              "label": "norminette",
+              "url": "https://github.com/42school/norminette",
+              "tier": "testers_and_tooling",
+              "why": "Code style validation required before any 42 submission"
+            },
+            {
+              "label": "GDB tutorial - University of Maryland",
+              "url": "https://www.cs.umd.edu/~srhuang/teaching/cmsc212/gdb-tutorial-handout.pdf",
+              "tier": "community_docs",
+              "why": "Practical introduction to gdb for C debugging"
+            },
+            {
+              "label": "Valgrind quick start",
+              "url": "https://valgrind.org/docs/manual/quick-start.html",
+              "tier": "testers_and_tooling",
+              "why": "Memory error detection reference"
+            }
+          ],
+          "estimated_hours": 8
         },
         {
           "id": "c-libft-pushswap-bridge",
           "title": "Library and algorithm bridge",
           "phase": "core",
           "skills": ["libft mindset", "API naming", "sorting logic", "complexity intuition"],
-          "deliverable": "Prepare for libft, printf, gnl and push_swap logic."
+          "deliverable": "Prepare for libft, printf, gnl and push_swap logic.",
+          "objectives": [
+            "Understand the purpose of building a personal C library",
+            "Apply consistent naming and API design for reusable functions",
+            "Implement basic sorting algorithms and reason about their complexity",
+            "Develop the discipline of testing each function in isolation"
+          ],
+          "exit_criteria": [
+            "Implement 5 libft-style utility functions with consistent prototypes",
+            "Explain the time complexity of at least two sorting algorithms",
+            "Write a test harness that validates function behavior against edge cases"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - pedagogie",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "tier": "official_42",
+              "why": "libft is the first graded project in the 42 common core"
+            },
+            {
+              "label": "norminette",
+              "url": "https://github.com/42school/norminette",
+              "tier": "testers_and_tooling",
+              "why": "All libft functions must pass norminette"
+            },
+            {
+              "label": "libftTester",
+              "url": "https://github.com/Tripouille/libftTester",
+              "tier": "testers_and_tooling",
+              "why": "Community tester widely used to validate libft implementations"
+            },
+            {
+              "label": "awesome-42",
+              "url": "https://github.com/leeoocca/awesome-42",
+              "tier": "community_docs",
+              "why": "Curated index of 42 project guides, testers and community resources"
+            }
+          ],
+          "estimated_hours": 12
         }
       ]
     },
@@ -118,21 +371,108 @@
           "title": "Python foundations",
           "phase": "foundation",
           "skills": ["variables", "conditions", "loops", "functions", "collections"],
-          "deliverable": "Write and explain small scripts confidently."
+          "deliverable": "Write and explain small scripts confidently.",
+          "objectives": [
+            "Use Python types, variables and basic data structures",
+            "Write functions with clear inputs and outputs",
+            "Iterate with for and while loops over collections",
+            "Understand list comprehensions and dictionary usage",
+            "Run and test scripts from the command line"
+          ],
+          "exit_criteria": [
+            "Write a script that reads a file, processes its content and outputs a result",
+            "Explain the difference between a list, tuple and dictionary",
+            "Solve a small algorithmic problem using only standard library"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - IA",
+              "url": "https://42lausanne.ch/ia/",
+              "tier": "official_42",
+              "why": "Official page describing the AI and Python axis in the new common core"
+            },
+            {
+              "label": "Python official tutorial",
+              "url": "https://docs.python.org/3/tutorial/",
+              "tier": "community_docs",
+              "why": "The canonical Python tutorial from the language maintainers"
+            }
+          ],
+          "estimated_hours": 8
         },
         {
           "id": "python-oop-scripting",
           "title": "Objects and automation",
           "phase": "practice",
           "skills": ["classes", "methods", "files", "json", "argparse"],
-          "deliverable": "Build useful utilities and simple models."
+          "deliverable": "Build useful utilities and simple models.",
+          "objectives": [
+            "Define classes with attributes, methods and constructors",
+            "Read and write files in text and JSON formats",
+            "Parse command-line arguments with argparse",
+            "Structure a small project with modules and imports",
+            "Apply basic error handling with try/except"
+          ],
+          "exit_criteria": [
+            "Build a CLI tool that reads JSON input, processes it and writes structured output",
+            "Design a class hierarchy for a simple domain model",
+            "Write a script that handles missing files and bad input gracefully"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - IA",
+              "url": "https://42lausanne.ch/ia/",
+              "tier": "official_42",
+              "why": "Python OOP skills feed directly into the AI projects in the new curriculum"
+            },
+            {
+              "label": "Python official tutorial - Classes",
+              "url": "https://docs.python.org/3/tutorial/classes.html",
+              "tier": "community_docs",
+              "why": "Official reference for Python class syntax and OOP patterns"
+            }
+          ],
+          "estimated_hours": 10
         },
         {
           "id": "ai-rag-agents",
           "title": "AI, RAG and agent literacy",
           "phase": "advanced",
           "skills": ["prompt design", "retrieval", "evaluation", "agent workflow", "source policy"],
-          "deliverable": "Use AI as a disciplined tool without outsourcing understanding."
+          "deliverable": "Use AI as a disciplined tool without outsourcing understanding.",
+          "objectives": [
+            "Understand the retrieval-augmented generation pattern",
+            "Design prompts that produce reliable and verifiable outputs",
+            "Evaluate AI responses against source documents",
+            "Distinguish between AI assistance and AI dependency",
+            "Apply source governance: official facts vs community interpretation"
+          ],
+          "exit_criteria": [
+            "Build a minimal RAG pipeline that retrieves context and generates an answer",
+            "Evaluate 5 AI-generated responses for factual accuracy against sources",
+            "Explain the source-governance tiers and why they matter for learning integrity"
+          ],
+          "resources": [
+            {
+              "label": "42 Lausanne - IA",
+              "url": "https://42lausanne.ch/ia/",
+              "tier": "official_42",
+              "why": "Official positioning of AI literacy within the 42 Lausanne curriculum"
+            },
+            {
+              "label": "42 Lausanne - pedagogie",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "tier": "official_42",
+              "why": "AI usage must remain compatible with the 42 autonomy-first learning model"
+            },
+            {
+              "label": "awesome-42",
+              "url": "https://github.com/leeoocca/awesome-42",
+              "tier": "community_docs",
+              "why": "Community reference for AI-related 42 projects and resources"
+            }
+          ],
+          "estimated_hours": 15
         }
       ]
     }
