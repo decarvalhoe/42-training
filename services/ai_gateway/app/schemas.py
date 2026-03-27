@@ -74,3 +74,60 @@ class ReviewerResponse(BaseModel):
         default=None,
         description="Always null — the Reviewer never provides corrected code",
     )
+
+
+# --- Defense (oral defense MVP) ---
+
+
+class DefenseStartRequest(BaseModel):
+    track_id: str
+    module_id: str
+    phase: Literal["foundation", "practice", "core", "advanced"] = "foundation"
+    num_questions: int = Field(default=3, ge=1, le=10)
+
+
+class DefenseQuestionOut(BaseModel):
+    question_id: str
+    text: str
+    skill: str
+
+
+class DefenseStartResponse(BaseModel):
+    status: str
+    session_id: str
+    track_id: str
+    module_id: str
+    questions: list[DefenseQuestionOut]
+    total_questions: int
+
+
+class DefenseAnswerRequest(BaseModel):
+    session_id: str
+    question_id: str
+    answer: str = Field(min_length=1, max_length=5000)
+
+
+class DefenseAnswerResponse(BaseModel):
+    status: str
+    question_id: str
+    score: float
+    feedback: str
+    questions_remaining: int
+
+
+class DefenseQuestionResult(BaseModel):
+    question_id: str
+    question: str
+    skill: str
+    score: float
+    feedback: str
+    answered: bool
+
+
+class DefenseResultResponse(BaseModel):
+    status: str
+    session_id: str
+    overall_score: float
+    passed: bool
+    summary: str
+    question_results: list[DefenseQuestionResult]

@@ -5,11 +5,19 @@ import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from .defense import clear_sessions, compute_session_result, create_session, get_session, score_answer
 from .llm_client import get_mentor_response
 from .repository import load_curriculum, load_progression
 from .retrieval import StaticSourceProvider
 from .reviewer import build_review
 from .schemas import (
+    DefenseAnswerRequest,
+    DefenseAnswerResponse,
+    DefenseQuestionOut,
+    DefenseQuestionResult,
+    DefenseResultResponse,
+    DefenseStartRequest,
+    DefenseStartResponse,
     LibrarianRequest,
     LibrarianResponse,
     LibrarianResult,
@@ -301,4 +309,95 @@ def reviewer_review(request: ReviewerRequest) -> ReviewerResponse:
         hint=review["hint"],
         next_action=review["next_action"],
         corrected_code=None,
+    )
+
+
+# --- Defense endpoints ---
+
+
+@app.post("/api/v1/defense/start", response_model=DefenseStartResponse)
+def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
+    curriculum = load_curriculum()
+    track = next(
+        (t for t in curriculum["tracks"] if t["id"] == request.track_id), None
+    )
+    if track is None:
+        raise HTTPException(status_code=404, detail="Track not found")
+
+    module = next(
+        (m for m in track.get("modules", []) if m["id"] == request.module_id), None
+    )
+    if module is None:
+        raise HTTPException(status_code=404, detail="Module not found")
+
+    session = create_session(track, module, request.phase, request.num_questions)
+
+    return DefenseStartResponse(
+        status="ok",
+        session_id=session.session_id,
+        track_id=session.track_id,
+        module_id=session.module_id,
+        questions=[
+            DefenseQuestionOut(
+                question_id=q.id,
+                text=q.text,
+                skill=q.skill,
+            )
+            for q in session.questions
+        ],
+        total_questions=len(session.questions),
+    )
+
+
+@app.post("/api/v1/defense/answer", response_model=DefenseAnswerResponse)
+def defense_answer(request: DefenseAnswerRequest) -> DefenseAnswerResponse:
+    session = get_session(request.session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.completed:
+        raise HTTPException(status_code=400, detail="Session already completed")
+
+    question = next(
+        (q for q in session.questions if q.id == request.question_id), None
+    )
+    if question is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+    if question.answered:
+        raise HTTPException(status_code=400, detail="Question already answered")
+
+    score_val, feedback = score_answer(question, request.answer)
+    question.score = score_val
+    question.feedback = feedback
+    question.answered = True
+
+    remaining = sum(1 for q in session.questions if not q.answered)
+    if remaining == 0:
+        session.completed = True
+
+    return DefenseAnswerResponse(
+        status="ok",
+        question_id=question.id,
+        score=score_val,
+        feedback=feedback,
+        questions_remaining=remaining,
+    )
+
+
+@app.get("/api/v1/defense/{session_id}/result", response_model=DefenseResultResponse)
+def defense_result(session_id: str) -> DefenseResultResponse:
+    session = get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    result = compute_session_result(session)
+
+    return DefenseResultResponse(
+        status="ok",
+        session_id=session.session_id,
+        overall_score=result["overall_score"],
+        passed=result["passed"],
+        summary=result["summary"],
+        question_results=[
+            DefenseQuestionResult(**qr) for qr in result["question_results"]
+        ],
     )
