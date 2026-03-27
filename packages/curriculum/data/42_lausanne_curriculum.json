@@ -10,29 +10,95 @@
       {
         "id": "official_42",
         "label": "Official 42 sources",
-        "allowed_usage": "ground_truth"
+        "allowed_usage": "ground_truth",
+        "confidence_level": "high",
+        "confidence_rationale": "Published and maintained by 42 Network or 42 Lausanne directly.",
+        "examples": [
+          "42lausanne.ch/pedagogie-42/",
+          "42lausanne.ch/ia/",
+          "42 intranet project subjects (when accessible)",
+          "Official 42 GitHub repositories (e.g. 42school/norminette)"
+        ]
       },
       {
         "id": "community_docs",
         "label": "Community docs and guides",
-        "allowed_usage": "explanation_and_mapping"
+        "allowed_usage": "explanation_and_mapping",
+        "confidence_level": "medium",
+        "confidence_rationale": "Written by experienced students or educators. Useful for explanation but may contain outdated or campus-specific information.",
+        "examples": [
+          "github.com/leeoocca/awesome-42",
+          "harm-smits.github.io/42docs",
+          "Beej's Guide to C Programming",
+          "ArchWiki and Ubuntu tutorials for Linux concepts"
+        ]
       },
       {
         "id": "testers_and_tooling",
         "label": "Testers and tooling",
-        "allowed_usage": "verification"
+        "allowed_usage": "verification",
+        "confidence_level": "medium",
+        "confidence_rationale": "Community-maintained test suites. Reliable for behavioral checks but not authoritative on project requirements — the subject PDF is.",
+        "examples": [
+          "github.com/Tripouille/libftTester",
+          "github.com/42school/norminette",
+          "valgrind",
+          "francinette"
+        ]
       },
       {
         "id": "solution_metadata",
         "label": "Solution repositories metadata",
-        "allowed_usage": "path_mapping_only"
+        "allowed_usage": "path_mapping_only",
+        "confidence_level": "low",
+        "confidence_rationale": "Useful to know which projects exist and their structure, but solution code must never be surfaced as learning material.",
+        "examples": [
+          "GitHub repository names and descriptions for 42 projects",
+          "README files describing project scope and constraints",
+          "File structure patterns (e.g. Makefile, src/, includes/)"
+        ]
       },
       {
         "id": "blocked_solution_content",
         "label": "Direct solution content",
-        "allowed_usage": "blocked_by_default"
+        "allowed_usage": "blocked_by_default",
+        "confidence_level": "inferred",
+        "confidence_rationale": "Solution code is unverified, may violate 42 norms, and showing it defeats the learning model. Blocked in foundation and practice phases.",
+        "examples": [
+          "Function implementations from student solution repos",
+          "Copy-paste code from get_next_line, ft_printf, push_swap solutions",
+          "AI-generated complete solutions to 42 project requirements"
+        ]
       }
-    ]
+    ],
+    "fallback_rules": [
+      {
+        "condition": "official_source_missing",
+        "description": "When no official 42 source covers a topic, fall back to community_docs but mark the information as community-sourced and medium confidence.",
+        "action": "use_community_docs_with_disclaimer"
+      },
+      {
+        "condition": "community_docs_conflict",
+        "description": "When community sources disagree with each other, prefer the source closer to the official 42 ecosystem (e.g. 42docs over a personal blog) and flag the uncertainty.",
+        "action": "prefer_ecosystem_proximity_and_flag"
+      },
+      {
+        "condition": "no_source_available",
+        "description": "When neither official nor community sources cover a topic, state clearly that the information is inferred and should be verified by the learner.",
+        "action": "mark_as_inferred_and_require_verification"
+      },
+      {
+        "condition": "foundation_phase_solution_request",
+        "description": "In foundation or practice phases, never provide complete solutions even if available. Offer observation, question, hint and next action instead.",
+        "action": "apply_pedagogical_contract"
+      }
+    ],
+    "confidence_scale": {
+      "high": "Published by 42 Network or campus. Treat as ground truth.",
+      "medium": "Community-vetted, generally reliable. Cross-check when precision matters.",
+      "low": "Useful as metadata only. Do not treat as authoritative content.",
+      "inferred": "Not verified against any source. Must be flagged explicitly to the learner."
+    }
   },
   "tracks": [
     {
