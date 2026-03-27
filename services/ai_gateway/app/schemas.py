@@ -54,3 +54,23 @@ class LibrarianResponse(BaseModel):
     results: list[LibrarianResult]
     tiers_used: list[str]
     blocked_tiers: list[str]
+
+
+class ReviewerRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=5000)
+    track_id: str = Field(default="shell")
+    module_id: str | None = None
+    phase: Literal["foundation", "practice", "core", "advanced"] = "foundation"
+    language: Literal["shell", "c", "python"] = "shell"
+
+
+class ReviewerResponse(BaseModel):
+    status: str
+    observation: str
+    questions: list[str]
+    hint: str
+    next_action: str
+    corrected_code: None = Field(
+        default=None,
+        description="Always null — the Reviewer never provides corrected code",
+    )
