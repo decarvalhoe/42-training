@@ -12,12 +12,13 @@ def _find_root() -> Path:
     env_root = os.environ.get("DATA_ROOT")
     if env_root:
         return Path(env_root)
-    # In Docker: /app/app/repository.py -> parents[3] = /
-    # Locally: .../services/api/app/repository.py -> parents[3] = repo root
-    candidate = Path(__file__).resolve().parents[3]
-    if (candidate / "packages" / "curriculum" / "data").exists():
-        return candidate
-    # Docker fallback: data is at /
+    # Walk up from __file__ looking for the curriculum data directory.
+    # Locally: .../services/ai_gateway/app/repository.py -> repo root is parents[3]
+    # Docker: /app/app/repository.py -> parents only go up to /
+    for ancestor in Path(__file__).resolve().parents:
+        if (ancestor / "packages" / "curriculum" / "data").exists():
+            return ancestor
+    # Docker fallback: Dockerfile copies data to /packages/curriculum/data
     return Path("/")
 
 

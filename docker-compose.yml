@@ -58,6 +58,7 @@ services:
     environment:
       AI_GATEWAY_PORT: 8100
       AI_GATEWAY_API_BASE_URL: http://api:8000
+      DATA_ROOT: /
     depends_on:
       api:
         condition: service_healthy
