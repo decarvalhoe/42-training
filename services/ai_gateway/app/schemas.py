@@ -13,6 +13,12 @@ class MentorRequest(BaseModel):
     phase: Literal["foundation", "practice", "core", "advanced"] = "foundation"
 
 
+class SourceUsed(BaseModel):
+    tier: str
+    label: str
+    url: str | None = None
+
+
 class MentorResponse(BaseModel):
     status: str
     observation: str
@@ -21,6 +27,9 @@ class MentorResponse(BaseModel):
     next_action: str
     source_policy: list[str]
     direct_solution_allowed: bool
+    sources_used: list[SourceUsed]
+    confidence_level: Literal["high", "medium", "low"]
+    reasoning_trace: str
 
 
 class LibrarianRequest(BaseModel):
