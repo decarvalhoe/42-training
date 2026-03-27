@@ -274,7 +274,9 @@ class TestGetProgression:
         with p_cur, p_load, p_write:
             r = client.get("/api/v1/progression")
         assert r.status_code == 200
-        assert r.json() == {}
+        data = r.json()
+        assert data["learning_plan"] == {}
+        assert data["progress"] == {}
 
 
 # ---------------------------------------------------------------------------
