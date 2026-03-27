@@ -12,7 +12,6 @@ from app.schemas import (
     Review,
 )
 
-
 # -- LearnerProfile ----------------------------------------------------------
 
 

@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 
-
 def _find_root() -> Path:
     """Find project root: use DATA_ROOT env var (Docker) or traverse up from __file__."""
     env_root = os.environ.get("DATA_ROOT")

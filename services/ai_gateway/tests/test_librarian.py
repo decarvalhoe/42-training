@@ -41,9 +41,7 @@ def test_librarian_never_returns_blocked_tiers() -> None:
 
 def test_librarian_foundation_blocks_solution_metadata() -> None:
     """In foundation phase, solution_metadata tier is also blocked."""
-    response = client.post(
-        ENDPOINT, json={"query": "shell", "phase": "foundation", "max_results": 20}
-    )
+    response = client.post(ENDPOINT, json={"query": "shell", "phase": "foundation", "max_results": 20})
     data = response.json()
     for result in data["results"]:
         assert result["tier"] != "solution_metadata"
@@ -52,26 +50,20 @@ def test_librarian_foundation_blocks_solution_metadata() -> None:
 
 def test_librarian_advanced_allows_solution_metadata() -> None:
     """In advanced phase, solution_metadata is allowed."""
-    response = client.post(
-        ENDPOINT, json={"query": "shell", "phase": "advanced"}
-    )
+    response = client.post(ENDPOINT, json={"query": "shell", "phase": "advanced"})
     data = response.json()
     assert "solution_metadata" not in data["blocked_tiers"]
 
 
 def test_librarian_with_track_context() -> None:
-    response = client.post(
-        ENDPOINT, json={"query": "memory", "track_id": "c"}
-    )
+    response = client.post(ENDPOINT, json={"query": "memory", "track_id": "c"})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
 
 
 def test_librarian_with_module_context() -> None:
-    response = client.post(
-        ENDPOINT, json={"query": "malloc", "track_id": "c", "module_id": "c-memory"}
-    )
+    response = client.post(ENDPOINT, json={"query": "malloc", "track_id": "c", "module_id": "c-memory"})
     assert response.status_code == 200
     data = response.json()
     assert len(data["results"]) > 0

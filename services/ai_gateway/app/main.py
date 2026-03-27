@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -78,7 +79,7 @@ def _build_provenance(
     track: dict,
     module: dict | None,
     source: str,
-) -> tuple[list[SourceUsed], str, str]:
+) -> tuple[list[SourceUsed], Literal["high", "medium", "low"], str]:
     """Build provenance metadata for a mentor response.
 
     Returns (sources_used, confidence_level, reasoning_trace).
@@ -115,11 +116,14 @@ def _build_provenance(
 
     # Determine confidence from source tiers and response source
     tiers_present = {s.tier for s in sources}
+    confidence: Literal["high", "medium", "low"]
     if source == "llm" and "official_42" in tiers_present:
         confidence = "high"
-    elif source == "fallback" and "official_42" in tiers_present:
-        confidence = "medium"
-    elif "community_docs" in tiers_present or "testers_and_tooling" in tiers_present:
+    elif (
+        (source == "fallback" and "official_42" in tiers_present)
+        or "community_docs" in tiers_present
+        or "testers_and_tooling" in tiers_present
+    ):
         confidence = "medium"
     else:
         confidence = "low"
@@ -177,7 +181,10 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
         next_action = fallback["next_action"]
 
     sources_used, confidence_level, reasoning_trace = _build_provenance(
-        curriculum, track, module, response_source,
+        curriculum,
+        track,
+        module,
+        response_source,
     )
 
     return MentorResponse(

@@ -70,9 +70,7 @@ def _mentor_request(
 
 @pytest.mark.parametrize("phase", NON_ADVANCED_PHASES)
 @pytest.mark.parametrize("track_id", ALL_TRACKS)
-def test_direct_solution_blocked_in_non_advanced_phases(
-    phase: str, track_id: str
-) -> None:
+def test_direct_solution_blocked_in_non_advanced_phases(phase: str, track_id: str) -> None:
     """direct_solution_allowed must be False for all non-advanced phases."""
     module_id = None
     if track_id == "shell":
@@ -159,7 +157,7 @@ def test_response_contains_four_part_structure(phase: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("phase", NON_ADVANCED_PHASES + ("advanced",))
+@pytest.mark.parametrize("phase", (*NON_ADVANCED_PHASES, "advanced"))
 def test_blocked_sources_not_in_response(phase: str) -> None:
     """No response should ever expose blocked_solution_content as an allowed tier."""
     resp = client.post(
@@ -170,9 +168,7 @@ def test_blocked_sources_not_in_response(phase: str) -> None:
     policy = set(resp.json()["source_policy"])
 
     leaked = policy & BLOCKED_SOURCE_TIERS
-    assert not leaked, (
-        f"Blocked source tier(s) {leaked} leaked into response for phase={phase}"
-    )
+    assert not leaked, f"Blocked source tier(s) {leaked} leaked into response for phase={phase}"
 
 
 def test_source_policy_contains_only_allowed_tiers() -> None:
@@ -183,9 +179,7 @@ def test_source_policy_contains_only_allowed_tiers() -> None:
     )
     assert resp.status_code == 200
     policy = set(resp.json()["source_policy"])
-    assert policy <= ALLOWED_SOURCE_TIERS, (
-        f"Unexpected tiers in source_policy: {policy - ALLOWED_SOURCE_TIERS}"
-    )
+    assert policy <= ALLOWED_SOURCE_TIERS, f"Unexpected tiers in source_policy: {policy - ALLOWED_SOURCE_TIERS}"
 
 
 # ---------------------------------------------------------------------------
@@ -217,9 +211,7 @@ def test_question_field_is_interrogative(phase: str) -> None:
     )
     assert resp.status_code == 200
     question = resp.json()["question"]
-    assert "?" in question, (
-        f"Question field should be interrogative (contain '?'), got: {question}"
-    )
+    assert "?" in question, f"Question field should be interrogative (contain '?'), got: {question}"
 
 
 # ---------------------------------------------------------------------------

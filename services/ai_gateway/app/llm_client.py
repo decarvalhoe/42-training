@@ -91,5 +91,7 @@ def get_mentor_response(
         messages=[{"role": "user", "content": user_message}],
     )
 
-    raw = message.content[0].text.strip()
-    return json.loads(raw)
+    block = message.content[0]
+    raw: str = block.text.strip()  # type: ignore[union-attr]
+    result: dict[str, str] = json.loads(raw)
+    return result
