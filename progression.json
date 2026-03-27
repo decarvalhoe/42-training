@@ -9,6 +9,19 @@
     "professional_context": "Utilise des agents IA pour creer des apps complexes, gerer de l'infra et faire des audits automatises",
     "planning": "Progression acceleree: 3 mois intensifs jusqu'a la Piscine"
   },
+  "learning_plan": {
+    "target_campus": "42 Lausanne",
+    "goal": "prepare_for_piscine_and_new_common_core",
+    "pace_mode": "self_paced",
+    "active_course": "shell",
+    "active_module": "shell-basics",
+    "available_courses": [
+      "shell",
+      "c",
+      "python_ai"
+    ],
+    "profile": "Experienced IT professional restarting hands-on coding after years away from daily implementation"
+  },
   "progress": {
     "current_exercise": "Exercice 2: Manipulation fichiers",
     "current_step": "2.4 - Copier et supprimer fichiers",
