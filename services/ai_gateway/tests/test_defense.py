@@ -64,10 +64,9 @@ def test_start_session_questions_are_socratic() -> None:
     for q in data["questions"]:
         text_lower = q["text"].lower()
         # Should contain explanation-seeking language
-        assert any(
-            word in text_lower
-            for word in ["explain", "what", "how", "describe", "demonstrate"]
-        ), f"Question should be Socratic: {q['text']}"
+        assert any(word in text_lower for word in ["explain", "what", "how", "describe", "demonstrate"]), (
+            f"Question should be Socratic: {q['text']}"
+        )
 
 
 def test_start_session_custom_num_questions() -> None:
@@ -307,7 +306,9 @@ def test_completed_session_rejects_answers() -> None:
 
 def test_score_rewards_explanation() -> None:
     q = DefenseQuestion(id="q-1", text="Explain ls", skill="ls", expected_keywords=["list", "files", "directory"])
-    score, _ = score_answer(q, "The ls command is used to list files in a directory because it reads directory entries.")
+    score, _ = score_answer(
+        q, "The ls command is used to list files in a directory because it reads directory entries."
+    )
     assert score >= 0.5
 
 

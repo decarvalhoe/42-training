@@ -130,7 +130,10 @@ class TestCheckpoint:
     def test_all_checkpoint_types(self) -> None:
         for t in ("exit_criteria", "deliverable", "skill_check"):
             cp = Checkpoint(
-                module_id="m", type=t, prompt="test", success_criteria=["ok"]  # type: ignore[arg-type]
+                module_id="m",
+                type=t,
+                prompt="test",
+                success_criteria=["ok"],  # type: ignore[arg-type]
             )
             assert cp.type == t
 
@@ -199,44 +202,30 @@ class TestReview:
         assert r.score == 75
 
     def test_score_boundaries(self) -> None:
-        r_zero = Review(
-            reviewer_id="r", module_id="m", code_snippet="x", feedback="ok!", score=0
-        )
+        r_zero = Review(reviewer_id="r", module_id="m", code_snippet="x", feedback="ok!", score=0)
         assert r_zero.score == 0
-        r_max = Review(
-            reviewer_id="r", module_id="m", code_snippet="x", feedback="ok!", score=100
-        )
+        r_max = Review(reviewer_id="r", module_id="m", code_snippet="x", feedback="ok!", score=100)
         assert r_max.score == 100
 
     def test_score_below_zero_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            Review(
-                reviewer_id="r", module_id="m", code_snippet="x", feedback="ok", score=-1
-            )
+            Review(reviewer_id="r", module_id="m", code_snippet="x", feedback="ok", score=-1)
 
     def test_score_above_100_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            Review(
-                reviewer_id="r", module_id="m", code_snippet="x", feedback="ok", score=101
-            )
+            Review(reviewer_id="r", module_id="m", code_snippet="x", feedback="ok", score=101)
 
     def test_empty_reviewer_id_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            Review(
-                reviewer_id="", module_id="m", code_snippet="x", feedback="ok"
-            )
+            Review(reviewer_id="", module_id="m", code_snippet="x", feedback="ok")
 
     def test_empty_code_snippet_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            Review(
-                reviewer_id="r", module_id="m", code_snippet="", feedback="ok"
-            )
+            Review(reviewer_id="r", module_id="m", code_snippet="", feedback="ok")
 
     def test_short_feedback_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            Review(
-                reviewer_id="r", module_id="m", code_snippet="x", feedback="ab"
-            )
+            Review(reviewer_id="r", module_id="m", code_snippet="x", feedback="ab")
 
 
 # -- DefenseSession (Issue #36) -----------------------------------------------
@@ -271,7 +260,10 @@ class TestDefenseSession:
     def test_all_statuses(self) -> None:
         for s in ("scheduled", "in_progress", "passed", "failed"):
             ds = DefenseSession(
-                session_id="s", module_id="m", questions=["q"], status=s  # type: ignore[arg-type]
+                session_id="s",
+                module_id="m",
+                questions=["q"],
+                status=s,  # type: ignore[arg-type]
             )
             assert ds.status == s
 
@@ -286,15 +278,11 @@ class TestDefenseSession:
 
     def test_empty_questions_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            DefenseSession(
-                session_id="s", module_id="m", questions=[]
-            )
+            DefenseSession(session_id="s", module_id="m", questions=[])
 
     def test_empty_session_id_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            DefenseSession(
-                session_id="", module_id="m", questions=["q"]
-            )
+            DefenseSession(session_id="", module_id="m", questions=["q"])
 
     def test_scores_are_integers(self) -> None:
         ds = DefenseSession(

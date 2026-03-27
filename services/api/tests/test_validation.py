@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -33,9 +32,27 @@ _CURRICULUM = {
             "why_it_matters": "Fundamentals",
             "modules": [
                 {"id": "shell-basics", "title": "Basics", "phase": "foundation", "prerequisites": [], "skills": []},
-                {"id": "shell-streams", "title": "Streams", "phase": "foundation", "prerequisites": ["shell-basics"], "skills": []},
-                {"id": "shell-permissions", "title": "Permissions", "phase": "foundation", "prerequisites": ["shell-basics"], "skills": []},
-                {"id": "shell-tooling", "title": "Tooling", "phase": "practice", "prerequisites": ["shell-streams", "shell-permissions"], "skills": []},
+                {
+                    "id": "shell-streams",
+                    "title": "Streams",
+                    "phase": "foundation",
+                    "prerequisites": ["shell-basics"],
+                    "skills": [],
+                },
+                {
+                    "id": "shell-permissions",
+                    "title": "Permissions",
+                    "phase": "foundation",
+                    "prerequisites": ["shell-basics"],
+                    "skills": [],
+                },
+                {
+                    "id": "shell-tooling",
+                    "title": "Tooling",
+                    "phase": "practice",
+                    "prerequisites": ["shell-streams", "shell-permissions"],
+                    "skills": [],
+                },
             ],
         },
         {
@@ -44,10 +61,34 @@ _CURRICULUM = {
             "summary": "C track",
             "why_it_matters": "Low-level",
             "modules": [
-                {"id": "c-basics", "title": "Syntax", "phase": "foundation", "prerequisites": ["shell-basics"], "skills": []},
-                {"id": "c-memory", "title": "Memory", "phase": "foundation", "prerequisites": ["c-basics"], "skills": []},
-                {"id": "c-build-debug", "title": "Build", "phase": "practice", "prerequisites": ["c-basics", "shell-streams"], "skills": []},
-                {"id": "c-libft-bridge", "title": "Libft bridge", "phase": "core", "prerequisites": ["c-memory", "c-build-debug"], "skills": []},
+                {
+                    "id": "c-basics",
+                    "title": "Syntax",
+                    "phase": "foundation",
+                    "prerequisites": ["shell-basics"],
+                    "skills": [],
+                },
+                {
+                    "id": "c-memory",
+                    "title": "Memory",
+                    "phase": "foundation",
+                    "prerequisites": ["c-basics"],
+                    "skills": [],
+                },
+                {
+                    "id": "c-build-debug",
+                    "title": "Build",
+                    "phase": "practice",
+                    "prerequisites": ["c-basics", "shell-streams"],
+                    "skills": [],
+                },
+                {
+                    "id": "c-libft-bridge",
+                    "title": "Libft bridge",
+                    "phase": "core",
+                    "prerequisites": ["c-memory", "c-build-debug"],
+                    "skills": [],
+                },
             ],
         },
         {
@@ -56,8 +97,20 @@ _CURRICULUM = {
             "summary": "Python track",
             "why_it_matters": "AI literacy",
             "modules": [
-                {"id": "python-basics", "title": "Basics", "phase": "foundation", "prerequisites": ["shell-basics"], "skills": []},
-                {"id": "python-oop", "title": "OOP", "phase": "practice", "prerequisites": ["python-basics"], "skills": []},
+                {
+                    "id": "python-basics",
+                    "title": "Basics",
+                    "phase": "foundation",
+                    "prerequisites": ["shell-basics"],
+                    "skills": [],
+                },
+                {
+                    "id": "python-oop",
+                    "title": "OOP",
+                    "phase": "practice",
+                    "prerequisites": ["python-basics"],
+                    "skills": [],
+                },
                 {"id": "ai-rag", "title": "RAG", "phase": "advanced", "prerequisites": ["python-oop"], "skills": []},
             ],
         },
@@ -223,17 +276,13 @@ class TestValidateModuleActivation:
         assert "prerequisites" in types
 
     def test_wrong_track(self) -> None:
-        errors = validate_module_activation(
-            _CURRICULUM, _prog("shell"), "c-basics", completed_modules={"shell-basics"}
-        )
+        errors = validate_module_activation(_CURRICULUM, _prog("shell"), "c-basics", completed_modules={"shell-basics"})
         types = {e["type"] for e in errors}
         assert "track_enrollment" in types
 
     def test_phase_ordering_violated(self) -> None:
         """shell-tooling (practice) without completing foundation modules."""
-        errors = validate_module_activation(
-            _CURRICULUM, _prog("shell"), "shell-tooling", completed_modules=set()
-        )
+        errors = validate_module_activation(_CURRICULUM, _prog("shell"), "shell-tooling", completed_modules=set())
         types = {e["type"] for e in errors}
         assert "phase_ordering" in types
         assert "prerequisites" in types
@@ -241,16 +290,12 @@ class TestValidateModuleActivation:
     def test_all_valid_after_completion(self) -> None:
         """shell-tooling valid when all foundation shell modules are done."""
         completed = {"shell-basics", "shell-streams", "shell-permissions"}
-        errors = validate_module_activation(
-            _CURRICULUM, _prog("shell"), "shell-tooling", completed_modules=completed
-        )
+        errors = validate_module_activation(_CURRICULUM, _prog("shell"), "shell-tooling", completed_modules=completed)
         assert errors == []
 
     def test_multiple_errors_reported(self) -> None:
         """c-libft-bridge with no completions: wrong track + prereqs + phase."""
-        errors = validate_module_activation(
-            _CURRICULUM, _prog("shell"), "c-libft-bridge", completed_modules=set()
-        )
+        errors = validate_module_activation(_CURRICULUM, _prog("shell"), "c-libft-bridge", completed_modules=set())
         types = {e["type"] for e in errors}
         assert "track_enrollment" in types
         assert "prerequisites" in types
@@ -336,7 +381,7 @@ class TestProgressionValidation:
         assert len(written) == 0  # no write on validation failure
 
     def test_set_active_module_wrong_track(self) -> None:
-        p_cur, p_load, p_write, _p, written = _patch_repo(_prog("shell", ["shell-basics"]))
+        p_cur, p_load, p_write, _p, _written = _patch_repo(_prog("shell", ["shell-basics"]))
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_module": "c-basics"})
         assert r.status_code == 422
@@ -344,7 +389,7 @@ class TestProgressionValidation:
         assert any(e["type"] == "track_enrollment" for e in detail["validation_errors"])
 
     def test_set_active_module_phase_fail(self) -> None:
-        p_cur, p_load, p_write, _p, written = _patch_repo(_prog("shell"))
+        p_cur, p_load, p_write, _p, _written = _patch_repo(_prog("shell"))
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_module": "shell-tooling"})
         assert r.status_code == 422
@@ -353,7 +398,7 @@ class TestProgressionValidation:
 
     def test_set_active_module_after_completing_prereqs(self) -> None:
         completed = ["shell-basics", "shell-streams", "shell-permissions"]
-        p_cur, p_load, p_write, _p, written = _patch_repo(_prog("shell", completed))
+        p_cur, p_load, p_write, _p, _written = _patch_repo(_prog("shell", completed))
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_module": "shell-tooling"})
         assert r.status_code == 200
@@ -370,7 +415,7 @@ class TestProgressionValidation:
     def test_cross_track_validation_c_after_shell(self) -> None:
         """c-basics needs shell-basics — should pass with correct track + prereqs."""
         completed = ["shell-basics"]
-        p_cur, p_load, p_write, _p, written = _patch_repo(_prog("c", completed))
+        p_cur, p_load, p_write, _p, _written = _patch_repo(_prog("c", completed))
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_module": "c-basics"})
         assert r.status_code == 200

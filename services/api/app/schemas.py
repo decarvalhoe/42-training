@@ -4,7 +4,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-
 # --- Shared type aliases ---
 
 Track = Literal["shell", "c", "python_ai"]

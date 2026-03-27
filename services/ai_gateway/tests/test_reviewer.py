@@ -99,9 +99,7 @@ def test_reviewer_never_returns_corrected_code() -> None:
     ]:
         response = client.post(ENDPOINT, json=payload)
         data = response.json()
-        assert data["corrected_code"] is None, (
-            f"corrected_code must be null, got: {data['corrected_code']}"
-        )
+        assert data["corrected_code"] is None, f"corrected_code must be null, got: {data['corrected_code']}"
 
 
 def test_reviewer_observation_is_factual_not_corrective() -> None:

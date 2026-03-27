@@ -18,9 +18,7 @@ PHASE_ORDER: dict[str, int] = {
 }
 
 
-def find_module(
-    curriculum: dict[str, Any], module_id: str
-) -> tuple[dict[str, Any], dict[str, Any]] | None:
+def find_module(curriculum: dict[str, Any], module_id: str) -> tuple[dict[str, Any], dict[str, Any]] | None:
     """Return (track, module) for a given module_id, or None."""
     for track in curriculum.get("tracks", []):
         for module in track.get("modules", []):
@@ -88,9 +86,7 @@ def check_track_enrollment(
     if result is None:
         return None
     track, _module = result
-    active_course = (
-        progression.get("learning_plan", {}).get("active_course", "")
-    )
+    active_course = progression.get("learning_plan", {}).get("active_course", "")
     if active_course != track["id"]:
         return (
             f"Module '{module_id}' belongs to track '{track['id']}', "
@@ -129,17 +125,21 @@ def validate_module_activation(
     # 3. Prerequisites
     missing_prereqs = check_prerequisites(curriculum, module_id, completed_modules)
     if missing_prereqs:
-        errors.append({
-            "type": "prerequisites",
-            "message": f"Missing prerequisites: {', '.join(missing_prereqs)}",
-        })
+        errors.append(
+            {
+                "type": "prerequisites",
+                "message": f"Missing prerequisites: {', '.join(missing_prereqs)}",
+            }
+        )
 
     # 4. Phase ordering
     missing_phases = check_phase_ordering(curriculum, module_id, completed_modules)
     if missing_phases:
-        errors.append({
-            "type": "phase_ordering",
-            "message": f"Earlier-phase modules not completed: {', '.join(missing_phases)}",
-        })
+        errors.append(
+            {
+                "type": "phase_ordering",
+                "message": f"Earlier-phase modules not completed: {', '.join(missing_phases)}",
+            }
+        )
 
     return errors
