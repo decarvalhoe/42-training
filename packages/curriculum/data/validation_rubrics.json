@@ -1,0 +1,202 @@
+{
+  "metadata": {
+    "description": "Validation rubrics per track. Each rubric defines criteria, proficiency levels and observable indicators aligned with module exit_criteria in 42_lausanne_curriculum.json.",
+    "levels_note": "Levels are progressive: novice → apprentice → competent → proficient. A learner should reach 'competent' before moving to the next module and 'proficient' before considering the track complete.",
+    "updated_on": "2026-03-27"
+  },
+  "levels": [
+    {
+      "id": "novice",
+      "label": "Novice",
+      "description": "Recognizes concepts but cannot apply them independently. Needs step-by-step guidance."
+    },
+    {
+      "id": "apprentice",
+      "label": "Apprentice",
+      "description": "Applies concepts with prompting or reference material. Makes mistakes but can self-correct with hints."
+    },
+    {
+      "id": "competent",
+      "label": "Competent",
+      "description": "Applies concepts independently in familiar situations. Can explain reasoning and catch own errors."
+    },
+    {
+      "id": "proficient",
+      "label": "Proficient",
+      "description": "Applies concepts fluently in new situations. Can teach others and reason about trade-offs."
+    }
+  ],
+  "rubrics": {
+    "shell": {
+      "track_id": "shell",
+      "criteria": [
+        {
+          "id": "shell-command-mastery",
+          "label": "Command mastery",
+          "description": "Fluency with core filesystem commands (pwd, ls, cd, mkdir, touch, cp, mv, rm).",
+          "modules": ["shell-basics"],
+          "indicators": {
+            "novice": "Knows command names but confuses flags. Needs to look up basic usage each time.",
+            "apprentice": "Uses commands correctly with common flags. Occasionally confuses cp/mv or forgets rm -r for directories.",
+            "competent": "Navigates, creates and cleans file trees without hesitation. Uses man to resolve uncommon flags.",
+            "proficient": "Combines commands fluently in one-liners. Understands edge cases (hidden files, symlinks, glob patterns)."
+          }
+        },
+        {
+          "id": "shell-pipeline-fluency",
+          "label": "Pipeline fluency",
+          "description": "Ability to compose redirections, pipes and filters into useful command chains.",
+          "modules": ["shell-streams"],
+          "indicators": {
+            "novice": "Understands that | connects commands but cannot build a working pipeline.",
+            "apprentice": "Builds simple 2-command pipelines (e.g. cat | grep). Confuses > and >>.",
+            "competent": "Builds 3+ stage pipelines. Redirects stderr independently. Uses grep, sort, uniq, wc fluently.",
+            "proficient": "Designs pipelines for real tasks (log analysis, data extraction). Understands when to use tee, xargs or process substitution."
+          }
+        },
+        {
+          "id": "shell-permissions-understanding",
+          "label": "Permissions understanding",
+          "description": "Ability to read, set and diagnose file permissions and execution rights.",
+          "modules": ["shell-permissions"],
+          "indicators": {
+            "novice": "Knows chmod exists but cannot read rwx triads or octal notation.",
+            "apprentice": "Can set basic permissions (chmod +x, chmod 755) but struggles with user/group/other distinctions.",
+            "competent": "Reads ls -l output fluently. Diagnoses permission denied errors. Understands PATH for script execution.",
+            "proficient": "Understands setuid, sticky bit, umask. Can explain security implications of permission choices."
+          }
+        },
+        {
+          "id": "shell-script-autonomy",
+          "label": "Script autonomy",
+          "description": "Ability to work daily in a Linux terminal using find, man, vim and git without GUI dependency.",
+          "modules": ["shell-tooling"],
+          "indicators": {
+            "novice": "Relies on web search for every question. Cannot open or edit a file in vim.",
+            "apprentice": "Uses man for common commands. Can open, edit and save in vim. Runs basic git commands with reference.",
+            "competent": "Answers questions using man without web search. Edits confidently in vim. Uses git for personal versioning.",
+            "proficient": "Uses find with complex predicates. Navigates man efficiently. Has a repeatable git workflow with meaningful commits."
+          }
+        }
+      ]
+    },
+    "c": {
+      "track_id": "c",
+      "criteria": [
+        {
+          "id": "c-syntax-control",
+          "label": "Syntax and control flow",
+          "description": "Ability to write clean, warning-free C code with proper structure.",
+          "modules": ["c-basics"],
+          "indicators": {
+            "novice": "Can write a main() that compiles but ignores warnings. Confuses declaration and assignment.",
+            "apprentice": "Uses if/else and loops correctly. Writes functions but forgets prototypes or header guards.",
+            "competent": "Compiles with -Wall -Wextra -Werror and zero warnings. Splits code across files with proper headers.",
+            "proficient": "Writes norminette-clean code on first pass. Chooses appropriate types and control structures for the problem."
+          }
+        },
+        {
+          "id": "c-pointer-mastery",
+          "label": "Pointer mastery",
+          "description": "Understanding of addresses, pointers, arrays and string manipulation through memory.",
+          "modules": ["c-memory"],
+          "indicators": {
+            "novice": "Knows pointers exist but cannot dereference or pass by reference correctly.",
+            "apprentice": "Uses pointers for simple pass-by-reference. Confuses array indexing and pointer arithmetic.",
+            "competent": "Manipulates strings via pointers. Allocates and frees memory without leaks. Draws memory diagrams.",
+            "proficient": "Understands pointer-to-pointer, function pointers. Recognizes and prevents dangling pointers, double free, buffer overflow."
+          }
+        },
+        {
+          "id": "c-memory-safety",
+          "label": "Memory safety",
+          "description": "Discipline around dynamic allocation, leak prevention and valgrind usage.",
+          "modules": ["c-memory", "c-build-debug"],
+          "indicators": {
+            "novice": "Uses malloc but never frees. Does not know valgrind exists.",
+            "apprentice": "Frees allocated memory in simple cases. Runs valgrind but cannot interpret all errors.",
+            "competent": "Achieves valgrind-clean runs consistently. Frees in all code paths including error handling.",
+            "proficient": "Designs allocation strategies (who owns, who frees). Prevents leaks by construction, not just testing."
+          }
+        },
+        {
+          "id": "c-build-fluency",
+          "label": "Build fluency",
+          "description": "Mastery of compilation, Makefiles and systematic debugging with gdb and valgrind.",
+          "modules": ["c-build-debug"],
+          "indicators": {
+            "novice": "Compiles with cc main.c and hopes for the best. Does not use a Makefile.",
+            "apprentice": "Writes a basic Makefile. Uses -Wall but ignores some warnings. Debugs by adding printf.",
+            "competent": "Makefile with all/clean/fclean/re. Uses gdb to find segfaults. Follows a systematic debug workflow.",
+            "proficient": "Makefile handles dependencies correctly. Uses gdb watchpoints and conditional breakpoints. Combines gdb + valgrind efficiently."
+          }
+        },
+        {
+          "id": "c-library-design",
+          "label": "Library and algorithm design",
+          "description": "Ability to build reusable functions, maintain API consistency and reason about complexity.",
+          "modules": ["c-libft-pushswap-bridge"],
+          "indicators": {
+            "novice": "Writes ad-hoc functions with inconsistent naming. No test strategy.",
+            "apprentice": "Implements basic utility functions (strlen, strcpy). Tests manually with a main.",
+            "competent": "Builds 5+ libft-style functions with consistent prototypes. Writes a test harness. Knows O(n) vs O(n^2).",
+            "proficient": "Designs a coherent function library. Reasons about when to optimize. Tests edge cases systematically."
+          }
+        }
+      ]
+    },
+    "python_ai": {
+      "track_id": "python_ai",
+      "criteria": [
+        {
+          "id": "py-fundamentals",
+          "label": "Python fundamentals",
+          "description": "Fluency with types, control flow, functions and data structures.",
+          "modules": ["python-basics"],
+          "indicators": {
+            "novice": "Can print and assign variables. Writes loops but confuses list and dict syntax.",
+            "apprentice": "Uses if/for/while correctly. Writes functions with parameters. Uses lists and dicts for simple tasks.",
+            "competent": "Uses list comprehensions. Chooses the right data structure. Writes scripts that read files and process data.",
+            "proficient": "Writes idiomatic Python. Uses generators, unpacking, built-in functions fluently. Solves algorithmic problems cleanly."
+          }
+        },
+        {
+          "id": "py-oop-clarity",
+          "label": "OOP clarity",
+          "description": "Ability to design classes, handle files and build command-line tools.",
+          "modules": ["python-oop-scripting"],
+          "indicators": {
+            "novice": "Knows the class keyword but cannot write __init__ or use self correctly.",
+            "apprentice": "Defines classes with attributes and methods. Reads JSON but struggles with nested structures.",
+            "competent": "Designs class hierarchies. Builds CLI tools with argparse. Handles errors with try/except.",
+            "proficient": "Applies OOP principles (encapsulation, composition over inheritance). Structures projects with modules and packages."
+          }
+        },
+        {
+          "id": "py-scripting-autonomy",
+          "label": "Scripting autonomy",
+          "description": "Ability to build useful automation scripts that handle real-world input.",
+          "modules": ["python-basics", "python-oop-scripting"],
+          "indicators": {
+            "novice": "Writes scripts that work for hardcoded input only.",
+            "apprentice": "Handles file I/O and basic command-line arguments. Scripts break on unexpected input.",
+            "competent": "Builds robust scripts with error handling, file validation and structured output.",
+            "proficient": "Writes production-quality scripts with logging, configuration and clear separation of concerns."
+          }
+        },
+        {
+          "id": "ai-integration-readiness",
+          "label": "AI integration readiness",
+          "description": "Understanding of RAG, prompt design, source governance and the boundary between AI assistance and dependency.",
+          "modules": ["ai-rag-agents"],
+          "indicators": {
+            "novice": "Uses AI tools as a black box. Cannot explain what RAG means or why sources matter.",
+            "apprentice": "Understands retrieve-then-generate. Writes basic prompts but cannot evaluate response quality.",
+            "competent": "Builds a minimal RAG pipeline. Evaluates AI responses against sources. Explains source-governance tiers.",
+            "proficient": "Designs prompts with constraints. Detects hallucinations. Applies source policy in practice. Knows when not to use AI."
+          }
+        }
+      ]
+    }
+  }
+}
