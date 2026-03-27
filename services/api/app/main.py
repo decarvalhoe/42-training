@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .repository import load_curriculum, load_progression, write_progression
+from .schemas import ProgressUpdate
 
 app = FastAPI(title="42-training API", version="0.1.0")
 
@@ -73,21 +74,23 @@ def progression() -> dict[str, object]:
 
 
 @app.post("/api/v1/progression")
-def update_progression(payload: dict[str, object]) -> dict[str, object]:
+def update_progression(payload: ProgressUpdate) -> dict[str, object]:
     current = load_progression()
     learning_plan = current.setdefault("learning_plan", {})
     progress = current.setdefault("progress", {})
 
+    updates = payload.model_dump(exclude_none=True)
+
     for key in ("active_course", "active_module", "pace_mode"):
-        if key in payload:
-            learning_plan[key] = payload[key]
+        if key in updates:
+            learning_plan[key] = updates[key]
 
     for key in ("current_exercise", "current_step"):
-        if key in payload:
-            progress[key] = payload[key]
+        if key in updates:
+            progress[key] = updates[key]
 
-    if "next_command" in payload:
-        current["next_command"] = payload["next_command"]
+    if "next_command" in updates:
+        current["next_command"] = updates["next_command"]
 
     write_progression(current)
     return current
