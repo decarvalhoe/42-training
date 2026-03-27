@@ -240,7 +240,242 @@ p {
     padding: 18px;
   }
 
-  .hero-grid {
+  .hero-grid,
+  .prog-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Progression page                                                   */
+/* ------------------------------------------------------------------ */
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  color: var(--ink);
+}
+
+.breadcrumb-sep {
+  opacity: 0.4;
+}
+
+.progression-hero {
+  padding: 32px;
+}
+
+.progression-hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  line-height: 1.1;
+}
+
+.prog-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+/* Progress bar */
+
+.progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Next action */
+
+.prog-next-action {
+  border-left: 5px solid var(--accent);
+}
+
+.prog-next-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.prog-next-content h2 {
+  margin: 0 0 4px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 14px;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+  background: var(--ink);
+  text-decoration: none;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.action-btn:hover {
+  opacity: 0.85;
+}
+
+/* Pill variants */
+
+.pill--done {
+  background: rgba(53, 95, 59, 0.12);
+  border-color: rgba(53, 95, 59, 0.2);
+  color: var(--python);
+}
+
+.pill--in_progress {
+  background: rgba(216, 166, 87, 0.18);
+  border-color: rgba(216, 166, 87, 0.3);
+  color: #7a5a16;
+}
+
+.pill--todo {
+  background: rgba(28, 26, 23, 0.06);
+  border-color: rgba(28, 26, 23, 0.08);
+}
+
+/* Checklist */
+
+.prog-body {
+  grid-template-columns: 1.2fr 0.8fr;
+}
+
+.prog-checklist {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.prog-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  color: var(--ink);
+  transition: background 0.15s;
+}
+
+.prog-checklist-item:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.prog-checklist-item--done {
+  opacity: 0.7;
+}
+
+.prog-checklist-item--blocked {
+  opacity: 0.55;
+}
+
+.prog-checklist-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.prog-checklist-info strong {
+  display: block;
+  font-size: 14px;
+}
+
+.prog-checklist-info .muted {
+  font-size: 12px;
+}
+
+.prog-blocked-label {
+  display: block;
+  font-size: 11px;
+  color: var(--c);
+  margin-top: 2px;
+}
+
+/* Check indicator */
+
+.prog-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.prog-check--done {
+  background: rgba(53, 95, 59, 0.15);
+  color: var(--python);
+}
+
+.prog-check--in_progress {
+  background: rgba(216, 166, 87, 0.2);
+  color: #7a5a16;
+  animation: pulse 2s infinite;
+}
+
+.prog-check--ready {
+  background: rgba(28, 26, 23, 0.06);
+  color: var(--muted);
+}
+
+.prog-check--blocked {
+  background: rgba(178, 76, 43, 0.1);
+  color: var(--c);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Code inline */
+
+.prog-code {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(28, 26, 23, 0.06);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+}
+
+@media (max-width: 1080px) {
+  .prog-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .prog-body {
     grid-template-columns: 1fr;
   }
 
