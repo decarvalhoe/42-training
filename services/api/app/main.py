@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -350,7 +351,7 @@ def submit_checkpoint(payload: CheckpointSubmission) -> CheckpointRecord:
     if module is None:
         raise HTTPException(status_code=404, detail=f"Module '{payload.module_id}' not found")
 
-    exit_criteria = list(module.get("exit_criteria", []))
+    exit_criteria = cast(list[str], module.get("exit_criteria", []))
     if payload.checkpoint_index >= len(exit_criteria):
         raise HTTPException(
             status_code=422,
@@ -385,7 +386,7 @@ def list_checkpoints(module_id: str) -> CheckpointListResponse:
     if module is None:
         raise HTTPException(status_code=404, detail=f"Module '{module_id}' not found")
 
-    exit_criteria = list(module.get("exit_criteria", []))
+    exit_criteria = cast(list[str], module.get("exit_criteria", []))
     progression_data = load_progression()
     submissions = progression_data.get("checkpoints", [])
 
