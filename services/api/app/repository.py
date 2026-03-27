@@ -1,12 +1,27 @@
 from __future__ import annotations
 
 import json
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[3]
+def _find_root() -> Path:
+    """Find project root: use DATA_ROOT env var (Docker) or traverse up from __file__."""
+    env_root = os.environ.get("DATA_ROOT")
+    if env_root:
+        return Path(env_root)
+    # In Docker: /app/app/repository.py -> parents[3] = /
+    # Locally: .../services/api/app/repository.py -> parents[3] = repo root
+    candidate = Path(__file__).resolve().parents[3]
+    if (candidate / "packages" / "curriculum" / "data").exists():
+        return candidate
+    # Docker fallback: data is at /
+    return Path("/")
+
+
+ROOT = _find_root()
 CURRICULUM_PATH = ROOT / "packages" / "curriculum" / "data" / "42_lausanne_curriculum.json"
 PROGRESSION_PATH = ROOT / "progression.json"
 
