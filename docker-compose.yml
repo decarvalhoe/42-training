@@ -34,6 +34,7 @@ services:
       dockerfile: services/api/Dockerfile
     environment:
       API_PORT: 8000
+      DATA_ROOT: /
       DATABASE_URL: postgresql+asyncpg://training:training@postgres:5432/training
       REDIS_URL: redis://redis:6379/0
     depends_on:
