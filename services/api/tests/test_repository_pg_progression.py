@@ -12,7 +12,7 @@ import app.main as main_module
 import app.repository as repository
 from app.db import create_async_db_engine
 from app.main import app
-from app.models import Base, LearnerProfile, Progression
+from app.models import Base, Evidence, LearnerProfile, Progression
 
 client = TestClient(app)
 
@@ -202,3 +202,37 @@ def test_api_progression_and_checkpoints_use_database(sqlite_progression_repo: d
     assert checkpoints.status_code == 200
     assert checkpoints.json()["checkpoints"][0]["submitted"] is True
     assert checkpoints.json()["checkpoints"][0]["self_evaluation"] == "pass"
+
+
+def test_checkpoint_submission_persists_evidence_row(sqlite_progression_repo: dict[str, object]) -> None:
+    checkpoint = client.post(
+        "/api/v1/checkpoints/submit",
+        json={
+            "module_id": "shell-basics",
+            "checkpoint_index": 0,
+            "type": "exit_criteria",
+            "evidence": "pwd => /workspace",
+            "self_evaluation": "pass",
+        },
+    )
+    assert checkpoint.status_code == 200
+
+    session_factory = sqlite_progression_repo["session_factory"]
+
+    async def fetch_evidence() -> tuple[Evidence, Progression]:
+        async with session_factory() as session:
+            evidence_result = await session.execute(select(Evidence))
+            progression_result = await session.execute(select(Progression).where(Progression.module_id == "shell-basics"))
+            evidence = evidence_result.scalar_one()
+            progression = progression_result.scalar_one()
+            return evidence, progression
+
+    evidence, progression = asyncio.run(fetch_evidence())
+    assert evidence.learner_id == repository.DEFAULT_LEARNER_ID
+    assert evidence.progression_id == progression.id
+    assert evidence.module_id == "shell-basics"
+    assert evidence.checkpoint_index == 0
+    assert evidence.evidence_type == "checkpoint_submission"
+    assert evidence.self_evaluation == "pass"
+    assert evidence.expected_content == "Understand pwd"
+    assert evidence.content == "pwd => /workspace"
