@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class MentorRequest(BaseModel):
+    learner_id: str = Field(default="default", min_length=1, max_length=64)
     track_id: str = Field(default="shell")
     module_id: str | None = None
     question: str = Field(min_length=3, max_length=1000)

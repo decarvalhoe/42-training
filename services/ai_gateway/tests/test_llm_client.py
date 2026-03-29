@@ -51,7 +51,9 @@ def test_get_mentor_response_calls_anthropic_sdk() -> None:
     kwargs = fake_client.messages.create.call_args.kwargs
     assert kwargs["model"] == "claude-sonnet-4-20250514"
     assert "Tu es un mentor pedagogique" in kwargs["system"]
-    assert kwargs["messages"][0]["content"][0]["text"].startswith("Track: shell")
+    prompt = kwargs["messages"][0]["content"][0]["text"]
+    assert prompt.startswith("Learner: default")
+    assert "Track: shell" in prompt
 
 
 def test_get_mentor_response_requires_api_key() -> None:

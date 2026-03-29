@@ -5,6 +5,7 @@ import logging
 import os
 from typing import Any
 
+from .mentor_memory import MentorTurn
 from .schemas import MentorRequest
 
 logger = logging.getLogger(__name__)
@@ -51,8 +52,34 @@ Pas de texte avant ou apres le JSON. Pas de markdown autour du JSON.
 """
 
 
-def _build_user_message(request: MentorRequest, track_title: str, module_title: str | None, active_course: str) -> str:
+def _build_history_block(conversation_history: list[MentorTurn]) -> list[str]:
+    if not conversation_history:
+        return []
+
+    lines = ["Historique recent de la session:"]
+    for index, turn in enumerate(conversation_history, start=1):
+        lines.extend(
+            [
+                f"Echange {index} - apprenant: {turn['user_question']}",
+                f"Echange {index} - mentor observation: {turn['mentor_observation']}",
+                f"Echange {index} - mentor question: {turn['mentor_question']}",
+                f"Echange {index} - mentor hint: {turn['mentor_hint']}",
+                f"Echange {index} - mentor next_action: {turn['mentor_next_action']}",
+            ]
+        )
+    lines.append("Utilise cet historique pour eviter de repeter les memes indices et pour construire sur les essais deja faits.")
+    return lines
+
+
+def _build_user_message(
+    request: MentorRequest,
+    track_title: str,
+    module_title: str | None,
+    active_course: str,
+    conversation_history: list[MentorTurn] | None = None,
+) -> str:
     parts = [
+        f"Learner: {request.learner_id}",
         f"Track: {request.track_id} ({track_title})",
         f"Module: {module_title or 'aucun specifie'}",
         f"Phase: {request.phase}",
@@ -60,6 +87,7 @@ def _build_user_message(request: MentorRequest, track_title: str, module_title: 
         f"Cours actif du profil: {active_course}",
         f"Question de l'apprenant: {request.question}",
     ]
+    parts.extend(_build_history_block(conversation_history or []))
     if request.phase == "advanced":
         parts.append(
             "NOTE: Phase advanced — une solution complete est permise UNIQUEMENT si "
@@ -115,6 +143,7 @@ def get_mentor_response(
     track_title: str,
     module_title: str | None,
     active_course: str,
+    conversation_history: list[MentorTurn] | None = None,
 ) -> dict[str, str]:
     """Call Claude API and return structured mentor response.
 
@@ -125,7 +154,13 @@ def get_mentor_response(
         raise RuntimeError("ANTHROPIC_API_KEY not set")
 
     client = _build_anthropic_client(api_key)
-    user_message = _build_user_message(request, track_title, module_title, active_course)
+    user_message = _build_user_message(
+        request,
+        track_title,
+        module_title,
+        active_course,
+        conversation_history=conversation_history,
+    )
 
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
