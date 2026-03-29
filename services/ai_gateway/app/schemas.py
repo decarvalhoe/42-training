@@ -121,6 +121,14 @@ class ReviewerResponse(BaseModel):
         default=None,
         description="Always null — the Reviewer never provides corrected code",
     )
+    guardrail_clean: bool = Field(
+        default=True,
+        description="False when guardrails scrubbed solution leakage from the output",
+    )
+    guardrail_scrubbed_fields: list[str] = Field(
+        default_factory=list,
+        description="Fields that were scrubbed by guardrails",
+    )
 
 
 # --- Defense (oral defense MVP) ---
