@@ -146,6 +146,14 @@ def _build_provenance(
     return sources, confidence, trace
 
 
+def _curriculum_tier_ids(curriculum: dict) -> list[str]:
+    return [tier["id"] for tier in curriculum["source_policy"]["tiers"]]
+
+
+def _mentor_source_policy_ids(curriculum: dict) -> list[str]:
+    return [tier_id for tier_id in _curriculum_tier_ids(curriculum) if tier_id != "blocked_solution_content"]
+
+
 def _normalize_mentor_payload(payload: dict[str, str]) -> dict[str, str]:
     normalized: dict[str, str] = {}
     for field in REQUIRED_MENTOR_FIELDS:
@@ -204,12 +212,7 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
         question=question,
         hint=hint,
         next_action=next_action,
-        source_policy=[
-            "official_42",
-            "community_docs",
-            "testers_and_tooling",
-            "solution_metadata_only",
-        ],
+        source_policy=_mentor_source_policy_ids(curriculum),
         direct_solution_allowed=direct_solution_allowed,
         sources_used=sources_used,
         confidence_level=confidence_level,
@@ -230,7 +233,7 @@ PHASE_RESTRICTED_TIERS: dict[str, set[str]] = {
 def _allowed_tiers(phase: str) -> list[str]:
     """Return tier ids the Librarian is allowed to serve for a given phase."""
     curriculum = load_curriculum()
-    all_tiers = [t["id"] for t in curriculum["source_policy"]["tiers"]]
+    all_tiers = _curriculum_tier_ids(curriculum)
     excluded = BLOCKED_TIERS | PHASE_RESTRICTED_TIERS.get(phase, set())
     return [t for t in all_tiers if t not in excluded]
 

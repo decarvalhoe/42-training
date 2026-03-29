@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { getDashboardData } from "@/lib/api";
 import type { ModuleItem } from "@/lib/api";
+import { SourcePolicyBadge } from "@/app/components/SourcePolicyBadge";
+import { isDisplayableSourcePolicyTier } from "@/lib/sourcePolicy";
 
 /* ------------------------------------------------------------------ */
 /*  Static prerequisite map (from documented dependency graph)         */
@@ -67,25 +69,6 @@ function actionLabel(state: ModuleState): string {
       return "Continue";
     case "todo":
       return "Start module";
-  }
-}
-
-const ALLOWED_TIERS = new Set([
-  "official_42",
-  "community_docs",
-  "testers_and_tooling",
-]);
-
-function tierLabel(tier: string): string {
-  switch (tier) {
-    case "official_42":
-      return "Official 42";
-    case "community_docs":
-      return "Community";
-    case "testers_and_tooling":
-      return "Tooling";
-    default:
-      return tier;
   }
 }
 
@@ -161,8 +144,8 @@ export default async function ModuleDetailPage({
   const moduleResources = foundModule.resources ?? [];
   const globalResources = curriculum.recommended_resources ?? [];
   const authorizedResources = [
-    ...moduleResources.filter((r) => ALLOWED_TIERS.has(r.tier)),
-    ...globalResources.filter((r) => ALLOWED_TIERS.has(r.tier)),
+    ...moduleResources.filter((r) => isDisplayableSourcePolicyTier(r.tier)),
+    ...globalResources.filter((r) => isDisplayableSourcePolicyTier(r.tier)),
   ];
 
   /* Derive skill states from progression */
@@ -287,7 +270,7 @@ export default async function ModuleDetailPage({
                     <a href={r.url} target="_blank" rel="noopener noreferrer">
                       {r.label}
                     </a>
-                    <Pill>{tierLabel(r.tier)}</Pill>
+                    <SourcePolicyBadge tier={r.tier} />
                   </div>
                 ))}
               </div>
