@@ -370,7 +370,7 @@ def submit_checkpoint(payload: CheckpointSubmission) -> CheckpointRecord:
         submitted_at=now,
     )
 
-    # Persist to progression.json under checkpoints key
+    # Persist to the PostgreSQL-backed progression state under the checkpoints key
     progression_data = load_progression()
     checkpoints = progression_data.setdefault("checkpoints", [])
     checkpoints.append(record.model_dump())
