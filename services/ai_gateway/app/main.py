@@ -261,6 +261,7 @@ def reviewer_review(request: ReviewerRequest) -> ReviewerResponse:
         phase=request.phase,
     )
 
+    guardrail = review["guardrail"]
     return ReviewerResponse(
         status="ok",
         observation=review["observation"],
@@ -268,6 +269,8 @@ def reviewer_review(request: ReviewerRequest) -> ReviewerResponse:
         hint=review["hint"],
         next_action=review["next_action"],
         corrected_code=None,
+        guardrail_clean=guardrail.clean,
+        guardrail_scrubbed_fields=guardrail.scrubbed_fields,
     )
 
 
