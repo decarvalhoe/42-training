@@ -11,6 +11,7 @@ This directory stores the key architecture decisions for `42-training`.
 - `0005-api-as-system-of-record.md`
 - `0006-multi-agent-role-model-and-orchestration.md`
 - `0007-postgresql-migration-strategy.md`
+- `0008-official-reference-stack-and-quality-equivalence.md`
 
 ## Purpose
 

@@ -4,6 +4,8 @@ export type ModuleItem = {
   phase: string;
   skills: string[];
   deliverable: string;
+  reference_note?: string;
+  subject_refs?: SubjectRef[];
 };
 
 export type TrackItem = {
@@ -14,17 +16,93 @@ export type TrackItem = {
   modules: ModuleItem[];
 };
 
+export type ReferenceItem = {
+  label: string;
+  url: string;
+  tier: string;
+  confidence?: string;
+  usage?: string;
+  note?: string;
+};
+
+export type SubjectRef = {
+  label: string;
+  document_title: string;
+  url: string;
+  mirror_path?: string;
+  tier: string;
+  confidence: string;
+  coverage: string;
+  note?: string;
+};
+
+export type QualityTool = {
+  id: string;
+  label: string;
+  url: string;
+  language: string;
+  kind: string;
+  authority: string;
+  role: string;
+  note?: string;
+};
+
+export type QualityEquivalent = {
+  language: string;
+  positioning: string;
+  quality_contract: string;
+  automated_gates: string[];
+  human_review_focus: string[];
+};
+
 export type DashboardData = {
   curriculum: {
     metadata: {
       campus: string;
       updated_on: string;
+      status?: string;
+      reference_posture?: string;
     };
     source_policy: {
       tiers: Array<{ id: string; label: string; allowed_usage: string }>;
+      confidence_model?: Array<{ level: string; meaning: string }>;
+    };
+    reference_stack: {
+      official_documents: ReferenceItem[];
+      official_document_mirrors: ReferenceItem[];
+      quality_stack: QualityTool[];
+      quality_equivalents: QualityEquivalent[];
     };
     tracks: TrackItem[];
     bridges: Array<{ id: string; title: string; recommended_modules: string[] }>;
+    curriculum_mapping: {
+      legacy_common_core: {
+        summary: string;
+        preserved_dimensions?: string[];
+      };
+      new_common_core_interpretation: {
+        summary: string;
+        confidence: string;
+        note: string;
+        milestones?: Array<{ milestone: string; projects: string[]; confidence: string }>;
+        style_analogies?: Array<{ legacy_anchor: string; new_project: string; rationale: string }>;
+        predicted_project_models?: Array<{
+          id: string;
+          title: string;
+          milestone: string;
+          confidence: string;
+          legacy_style_anchors: string[];
+          predicted_subject_style: string;
+          predicted_constraints: string[];
+          predicted_deliverables: string[];
+          predicted_core_skills: string[];
+        }>;
+      };
+      synthesis?: {
+        summary: string;
+        principles: string[];
+      };
+    };
   };
   progression: {
     learning_plan?: {
@@ -48,16 +126,124 @@ const fallbackData: DashboardData = {
   curriculum: {
     metadata: {
       campus: "42 Lausanne",
-      updated_on: "2026-03-27",
+      updated_on: "2026-03-29",
+      status: "reference-refresh",
+      reference_posture: "official public documents first, verified mirrors second, community tooling as verification only"
     },
     source_policy: {
       tiers: [
         { id: "official_42", label: "Official 42 sources", allowed_usage: "ground_truth" },
+        {
+          id: "official_document_mirrors",
+          label: "Mirrors of official documents",
+          allowed_usage: "ground_truth_when_origin_is_verified"
+        },
         { id: "community_docs", label: "Community docs", allowed_usage: "explanation_and_mapping" },
         { id: "testers_and_tooling", label: "Testers and tooling", allowed_usage: "verification" },
         { id: "solution_metadata", label: "Solution metadata", allowed_usage: "path_mapping_only" },
         { id: "blocked_solution_content", label: "Direct solution content", allowed_usage: "blocked_by_default" }
       ],
+      confidence_model: [
+        { level: "high", meaning: "Official public page or official normative PDF." },
+        { level: "medium", meaning: "Verified mirror or staff-corroborated signal." },
+        { level: "interpreted", meaning: "Inference kept explicit as interpretation." }
+      ]
+    },
+    reference_stack: {
+      official_documents: [
+        {
+          label: "42 Lausanne - pedagogie",
+          url: "https://42lausanne.ch/pedagogie-42/",
+          tier: "official_42",
+          confidence: "high",
+          usage: "campus pedagogy and learning model"
+        },
+        {
+          label: "The Norm v4.1 (English PDF)",
+          url: "https://github.com/42School/norminette/blob/master/pdf/en.norm.pdf",
+          tier: "official_42",
+          confidence: "high",
+          usage: "absolute C reference"
+        }
+      ],
+      official_document_mirrors: [
+        {
+          label: "Ninjarsenic/42-piscine",
+          url: "https://github.com/Ninjarsenic/42-piscine",
+          tier: "official_document_mirrors",
+          confidence: "medium",
+          note: "Private mirror of official Piscine assets."
+        },
+        {
+          label: "Ninjarsenic/42-Tronc_commun",
+          url: "https://github.com/Ninjarsenic/42-Tronc_commun",
+          tier: "official_document_mirrors",
+          confidence: "medium",
+          note: "Private mirror of Common Core subjects."
+        }
+      ],
+      quality_stack: [
+        {
+          id: "norminette",
+          label: "norminette",
+          url: "https://github.com/42school/norminette",
+          language: "c",
+          kind: "official_checker",
+          authority: "official_tool",
+          role: "Objective Norm checks."
+        },
+        {
+          id: "francinette",
+          label: "francinette",
+          url: "https://github.com/xicodomingues/francinette",
+          language: "c",
+          kind: "community_local_moulinette",
+          authority: "verification_only",
+          role: "Local make + norm + tester battery.",
+          note: "Archived upstream."
+        },
+        {
+          id: "ruff",
+          label: "ruff",
+          url: "https://github.com/astral-sh/ruff",
+          language: "python",
+          kind: "lint_and_format",
+          authority: "equivalent_quality_gate",
+          role: "Formatting and lint baseline for Python."
+        },
+        {
+          id: "shellcheck",
+          label: "ShellCheck",
+          url: "https://www.shellcheck.net/",
+          language: "bash",
+          kind: "lint",
+          authority: "equivalent_quality_gate",
+          role: "Quoting and portability guardrails for shell."
+        }
+      ],
+      quality_equivalents: [
+        {
+          language: "c",
+          positioning: "Absolute reference track.",
+          quality_contract: "The Norm plus norminette plus project-specific testers.",
+          automated_gates: ["norminette", "cc -Wall -Wextra -Werror", "tester suites"],
+          human_review_focus: ["clarity", "defense readiness", "subjective Norm items"]
+        },
+        {
+          language: "python",
+          positioning: "Equivalent rigor, not C mimicry.",
+          quality_contract: "Short explicit functions, typed boundaries, readable flow, test coverage.",
+          automated_gates: ["ruff check", "ruff format", "mypy", "pytest"],
+          human_review_focus: ["algorithmic explanation", "controlled abstraction", "debuggability"]
+        },
+        {
+          language: "bash",
+          positioning: "Terminal-first discipline.",
+          quality_contract: "Readable scripts, explicit quoting, small units, fail-fast habits.",
+          automated_gates: ["shellcheck", "shfmt", "smoke scripts"],
+          human_review_focus: ["pipeline clarity", "error handling", "debugging under shell constraints"]
+        }
+      ]
     },
     tracks: [
       {
@@ -66,9 +252,45 @@ const fallbackData: DashboardData = {
         summary: "Linux-first recovery track before Piscine pressure.",
         why_it_matters: "Rebuild confidence, command fluency and process awareness.",
         modules: [
-          { id: "shell-basics", title: "Navigation and files", phase: "foundation", skills: ["pwd", "ls", "cd", "cp"], deliverable: "Navigate and manipulate files with confidence." },
-          { id: "shell-streams", title: "Redirections and pipes", phase: "foundation", skills: ["stdin", "stdout", "pipe"], deliverable: "Chain commands effectively." }
-        ],
+          {
+            id: "shell-basics",
+            title: "Navigation and files",
+            phase: "foundation",
+            skills: ["pwd", "ls", "cd", "cp"],
+            deliverable: "Navigate and manipulate files with confidence.",
+            reference_note: "Anchored to the exact Shell00 official subject mirror.",
+            subject_refs: [
+              {
+                label: "Shell00 subject PDF",
+                document_title: "Piscine C Shell 00",
+                url: "https://github.com/Ninjarsenic/42-piscine/blob/main/Shell00/fr.subject.pdf",
+                mirror_path: "Shell00/fr.subject.pdf",
+                tier: "official_document_mirrors",
+                confidence: "medium",
+                coverage: "exact_subject"
+              }
+            ]
+          },
+          {
+            id: "shell-streams",
+            title: "Redirections and pipes",
+            phase: "foundation",
+            skills: ["stdin", "stdout", "pipe"],
+            deliverable: "Chain commands effectively.",
+            reference_note: "Extracted from the broader Shell01 official subject.",
+            subject_refs: [
+              {
+                label: "Shell01 subject PDF",
+                document_title: "Piscine C Shell 01",
+                url: "https://github.com/Ninjarsenic/42-piscine/blob/main/Shell01/fr.subject%20(1).pdf",
+                mirror_path: "Shell01/fr.subject (1).pdf",
+                tier: "official_document_mirrors",
+                confidence: "medium",
+                coverage: "partial_subject_mapping"
+              }
+            ]
+          }
+        ]
       },
       {
         id: "c",
@@ -76,9 +298,45 @@ const fallbackData: DashboardData = {
         summary: "Low-level rigor track aligned with the core 42 mindset.",
         why_it_matters: "Build algorithmic reasoning and memory discipline.",
         modules: [
-          { id: "c-basics", title: "Syntax and control flow", phase: "foundation", skills: ["if", "while", "functions"], deliverable: "Write and compile small programs." },
-          { id: "c-memory", title: "Pointers and memory", phase: "foundation", skills: ["pointers", "malloc", "free"], deliverable: "Understand memory choices and avoid basic leaks." }
-        ],
+          {
+            id: "c-basics",
+            title: "Syntax and control flow",
+            phase: "foundation",
+            skills: ["if", "while", "functions"],
+            deliverable: "Write and compile small programs.",
+            reference_note: "Condenses multiple official Piscine C subjects.",
+            subject_refs: [
+              {
+                label: "C00 subject PDF",
+                document_title: "Piscine C C 00",
+                url: "https://github.com/Ninjarsenic/42-piscine/blob/main/C00/fr.subject.pdf",
+                mirror_path: "C00/fr.subject.pdf",
+                tier: "official_document_mirrors",
+                confidence: "medium",
+                coverage: "partial_subject_mapping"
+              }
+            ]
+          },
+          {
+            id: "c-memory",
+            title: "Pointers and memory",
+            phase: "foundation",
+            skills: ["pointers", "malloc", "free"],
+            deliverable: "Understand memory choices and avoid basic leaks.",
+            reference_note: "Spans pointer, string and allocation subjects from the official Piscine.",
+            subject_refs: [
+              {
+                label: "C01 subject PDF",
+                document_title: "Piscine C C 01",
+                url: "https://github.com/Ninjarsenic/42-piscine/blob/main/C01/fr.subject%20(1).pdf",
+                mirror_path: "C01/fr.subject (1).pdf",
+                tier: "official_document_mirrors",
+                confidence: "medium",
+                coverage: "partial_subject_mapping"
+              }
+            ]
+          }
+        ]
       },
       {
         id: "python_ai",
@@ -86,15 +344,105 @@ const fallbackData: DashboardData = {
         summary: "Python foundations plus the modern AI axis.",
         why_it_matters: "Prepare for the new branch while keeping fundamentals intact.",
         modules: [
-          { id: "python-basics", title: "Python foundations", phase: "foundation", skills: ["conditions", "loops", "functions"], deliverable: "Write small scripts confidently." },
-          { id: "ai-rag-agents", title: "AI, RAG and agent literacy", phase: "advanced", skills: ["retrieval", "evaluation", "source policy"], deliverable: "Use AI with discipline." }
-        ],
+          {
+            id: "python-basics",
+            title: "Python foundations",
+            phase: "foundation",
+            skills: ["conditions", "loops", "functions"],
+            deliverable: "Write small scripts confidently.",
+            reference_note: "No exact official Python subject PDF was found in the current mirror pack.",
+            subject_refs: [
+              {
+                label: "42 Lausanne - IA",
+                document_title: "42 Lausanne IA page",
+                url: "https://42lausanne.ch/ia/",
+                mirror_path: "42lausanne.ch/ia",
+                tier: "official_42",
+                confidence: "high",
+                coverage: "official_program_signal"
+              }
+            ]
+          },
+          {
+            id: "ai-rag-agents",
+            title: "AI, RAG and agent literacy",
+            phase: "advanced",
+            skills: ["retrieval", "evaluation", "source policy"],
+            deliverable: "Use AI with discipline.",
+            reference_note: "Grounded in the official Lausanne AI page; exact Common Core AI subjects remain interpreted.",
+            subject_refs: [
+              {
+                label: "42 Lausanne - IA",
+                document_title: "42 Lausanne IA page",
+                url: "https://42lausanne.ch/ia/",
+                mirror_path: "42lausanne.ch/ia",
+                tier: "official_42",
+                confidence: "high",
+                coverage: "official_program_signal"
+              }
+            ]
+          }
+        ]
       }
     ],
     bridges: [
       { id: "before_piscine", title: "Before the Piscine", recommended_modules: ["shell:shell-basics", "c:c-basics"] },
       { id: "before_new_common_core", title: "Before the new common core", recommended_modules: ["c:c-memory", "python_ai:ai-rag-agents"] }
-    ]
+    ],
+    curriculum_mapping: {
+      legacy_common_core: {
+        summary: "Historically C and Unix heavy, then concurrency, graphics, C++, network and devops.",
+        preserved_dimensions: ["terminal autonomy", "memory rigor", "oral defense readiness"]
+      },
+      new_common_core_interpretation: {
+        summary: "Algorithms earlier, Python earlier, AI inside the common core.",
+        confidence: "medium",
+        note: "Project naming is still partially interpreted from mirrored packs and infographic signals.",
+        milestones: [
+          { milestone: "M1", projects: ["libft", "push_swap", "printf", "get_next_line"], confidence: "medium" },
+          { milestone: "M2", projects: ["piscine python", "a maze ing", "born2beroot"], confidence: "interpreted" }
+        ],
+        style_analogies: [
+          {
+            legacy_anchor: "C Piscine modules",
+            new_project: "piscine python",
+            rationale: "Bootcamp role preserved, but translated to Python."
+          }
+        ],
+        predicted_project_models: [
+          {
+            id: "piscine-python",
+            title: "piscine python",
+            milestone: "M2",
+            confidence: "interpreted",
+            legacy_style_anchors: ["C Piscine modules C00-C13", "Shell00", "Shell01"],
+            predicted_subject_style: "Small escalating exercises with strict mastery of foundations.",
+            predicted_constraints: ["small scripts", "stdlib only", "explicit functions"],
+            predicted_deliverables: ["ex00..exNN scripts", "tiny CLIs", "simple tests"],
+            predicted_core_skills: ["syntax", "functions", "strings", "objects"]
+          },
+          {
+            id: "a-maze-ing",
+            title: "a maze ing",
+            milestone: "M2",
+            confidence: "interpreted",
+            legacy_style_anchors: ["so_long", "fdf", "fract'ol"],
+            predicted_subject_style: "Maze or grid project mixing parsing, movement and visuals.",
+            predicted_constraints: ["map parsing", "path validation", "loop handling"],
+            predicted_deliverables: ["maze loader", "visualizer", "solver"],
+            predicted_core_skills: ["graphs", "pathfinding", "state handling"]
+          }
+        ]
+      },
+      synthesis: {
+        summary: "Keep old Common Core rigor while preparing for the Python and AI branch.",
+        principles: [
+          "Preserve legacy C rigor.",
+          "Make Python and Bash quality expectations explicit.",
+          "Surface confidence levels for interpreted curriculum elements."
+        ]
+      }
+    }
   },
   progression: {
     learning_plan: {

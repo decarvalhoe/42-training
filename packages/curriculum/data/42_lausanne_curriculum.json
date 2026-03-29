@@ -1,9 +1,10 @@
 {
   "metadata": {
     "campus": "42 Lausanne",
-    "updated_on": "2026-03-27",
-    "status": "mvp",
-    "positioning": "triple-track learning app for shell, C, Python and AI literacy"
+    "updated_on": "2026-03-29",
+    "status": "reference-refresh",
+    "positioning": "triple-track learning app for shell, legacy C rigor, emerging Python and AI literacy",
+    "reference_posture": "official public documents first, verified mirrors second, community tooling as verification only"
   },
   "source_policy": {
     "tiers": [
@@ -11,6 +12,11 @@
         "id": "official_42",
         "label": "Official 42 sources",
         "allowed_usage": "ground_truth"
+      },
+      {
+        "id": "official_document_mirrors",
+        "label": "Mirrors of official documents",
+        "allowed_usage": "ground_truth_when_origin_is_verified"
       },
       {
         "id": "community_docs",
@@ -32,6 +38,216 @@
         "label": "Direct solution content",
         "allowed_usage": "blocked_by_default"
       }
+    ],
+    "confidence_model": [
+      {
+        "level": "high",
+        "meaning": "Official public 42 page or official normative PDF."
+      },
+      {
+        "level": "medium",
+        "meaning": "Official document mirrored in a private reference repository or corroborated by staff discussion."
+      },
+      {
+        "level": "interpreted",
+        "meaning": "Curriculum hypothesis inferred from infographic, naming leaks or community mapping and kept explicit as interpretation."
+      }
+    ]
+  },
+  "reference_stack": {
+    "official_documents": [
+      {
+        "label": "42 Lausanne - pedagogie",
+        "url": "https://42lausanne.ch/pedagogie-42/",
+        "tier": "official_42",
+        "confidence": "high",
+        "usage": "campus pedagogy and learning model"
+      },
+      {
+        "label": "42 Lausanne - IA",
+        "url": "https://42lausanne.ch/ia/",
+        "tier": "official_42",
+        "confidence": "high",
+        "usage": "public signal that AI is now inside the Lausanne positioning"
+      },
+      {
+        "label": "The Norm v4.1 (English PDF)",
+        "url": "https://github.com/42School/norminette/blob/master/pdf/en.norm.pdf",
+        "tier": "official_42",
+        "confidence": "high",
+        "usage": "absolute code-quality and pedagogical reference for C projects"
+      },
+      {
+        "label": "42School/norminette",
+        "url": "https://github.com/42school/norminette",
+        "tier": "official_42",
+        "confidence": "high",
+        "usage": "reference implementation of objective Norm checks"
+      }
+    ],
+    "official_document_mirrors": [
+      {
+        "label": "Ninjarsenic/42-Tronc_commun",
+        "url": "https://github.com/Ninjarsenic/42-Tronc_commun",
+        "tier": "official_document_mirrors",
+        "confidence": "medium",
+        "usage": "private mirror of current official Common Core subjects and support files",
+        "note": "Treat document content as authoritative only when the mirrored file origin is explicit."
+      },
+      {
+        "label": "Ninjarsenic/42-piscine",
+        "url": "https://github.com/Ninjarsenic/42-piscine",
+        "tier": "official_document_mirrors",
+        "confidence": "medium",
+        "usage": "private mirror of current official Piscine exercises and supporting assets",
+        "note": "Useful for shell and early C foundations, but still distinct from public official publication."
+      }
+    ],
+    "quality_stack": [
+      {
+        "id": "norm_v4_1",
+        "label": "The Norm v4.1",
+        "url": "https://github.com/42School/norminette/blob/master/pdf/en.norm.pdf",
+        "language": "c",
+        "kind": "official_standard",
+        "authority": "absolute_reference",
+        "role": "Defines naming, formatting, function, header, macro and file constraints for Common Core C."
+      },
+      {
+        "id": "norminette",
+        "label": "norminette",
+        "url": "https://github.com/42school/norminette",
+        "language": "c",
+        "kind": "official_checker",
+        "authority": "official_tool",
+        "role": "Automates objective Norm checks; starred subjective rules still require human review."
+      },
+      {
+        "id": "francinette",
+        "label": "francinette",
+        "url": "https://github.com/xicodomingues/francinette",
+        "language": "c",
+        "kind": "community_local_moulinette",
+        "authority": "verification_only",
+        "role": "Runs norminette, make, project detection and project-specific tester suites locally.",
+        "note": "Archived and outdated upstream, but still useful to understand expected pre-submit checks."
+      },
+      {
+        "id": "mini_moulinette",
+        "label": "mini-moulinette / mini-norminette variants",
+        "url": "https://github.com/k11q/mini-moulinette",
+        "language": "c",
+        "kind": "community_micro_tester",
+        "authority": "verification_only",
+        "role": "Fast local assignment harness for Piscine-style exercises with bundled edge cases.",
+        "note": "Campus naming may vary; model this family as representative rather than canonical."
+      },
+      {
+        "id": "ruff",
+        "label": "ruff",
+        "url": "https://github.com/astral-sh/ruff",
+        "language": "python",
+        "kind": "lint_and_format",
+        "authority": "equivalent_quality_gate",
+        "role": "Closest Python equivalent to objective formatting plus obvious bad-pattern enforcement."
+      },
+      {
+        "id": "mypy",
+        "label": "mypy",
+        "url": "https://github.com/python/mypy",
+        "language": "python",
+        "kind": "type_checker",
+        "authority": "equivalent_quality_gate",
+        "role": "Keeps interfaces explicit and reduces hidden dynamic behavior in learning code."
+      },
+      {
+        "id": "pytest",
+        "label": "pytest",
+        "url": "https://pytest.org/",
+        "language": "python",
+        "kind": "test_runner",
+        "authority": "equivalent_quality_gate",
+        "role": "Makes understanding observable through explicit examples and edge-case checks."
+      },
+      {
+        "id": "shellcheck",
+        "label": "ShellCheck",
+        "url": "https://www.shellcheck.net/",
+        "language": "bash",
+        "kind": "lint",
+        "authority": "equivalent_quality_gate",
+        "role": "Catches quoting, globbing, subshell and portability mistakes in shell scripts."
+      },
+      {
+        "id": "shfmt",
+        "label": "shfmt",
+        "url": "https://github.com/mvdan/sh",
+        "language": "bash",
+        "kind": "formatter",
+        "authority": "equivalent_quality_gate",
+        "role": "Provides a stable shell formatting baseline analogous to Norm look-and-feel discipline."
+      },
+      {
+        "id": "bats",
+        "label": "bats",
+        "url": "https://github.com/bats-core/bats-core",
+        "language": "bash",
+        "kind": "test_runner",
+        "authority": "equivalent_quality_gate",
+        "role": "Makes shell behavior testable instead of relying only on manual terminal checks."
+      }
+    ],
+    "quality_equivalents": [
+      {
+        "language": "c",
+        "positioning": "Absolute reference track. Keep the historical 42 rigor intact.",
+        "quality_contract": "The Norm v4.1 is the default source of truth, norminette checks the objective subset, and project-specific testers plus evaluator review cover behavior and subjective quality.",
+        "automated_gates": [
+          "norminette",
+          "cc -Wall -Wextra -Werror",
+          "project testers",
+          "valgrind or leak checks when relevant"
+        ],
+        "human_review_focus": [
+          "clarity of decomposition",
+          "reasoning under constraints",
+          "defense readiness",
+          "starred Norm items not enforced by norminette"
+        ]
+      },
+      {
+        "language": "python",
+        "positioning": "Equivalent rigor without pretending Python should mimic C syntax.",
+        "quality_contract": "Prefer short explicit functions, predictable IO, typed boundaries, no hidden magic, and tests for happy path plus edge cases.",
+        "automated_gates": [
+          "ruff check",
+          "ruff format",
+          "mypy",
+          "pytest"
+        ],
+        "human_review_focus": [
+          "data-flow readability",
+          "controlled abstraction",
+          "algorithmic explanations",
+          "no blind framework dependence"
+        ]
+      },
+      {
+        "language": "bash",
+        "positioning": "Terminal-first discipline aligned with Piscine pressure and automation habits.",
+        "quality_contract": "Scripts must be explicit, quote correctly, fail loudly, stay small, and remain readable under shell constraints.",
+        "automated_gates": [
+          "shellcheck",
+          "shfmt",
+          "bats or smoke scripts"
+        ],
+        "human_review_focus": [
+          "command composition",
+          "quoting and expansion safety",
+          "error-path handling",
+          "debuggability in a terminal session"
+        ]
+      }
     ]
   },
   "tracks": [
@@ -46,93 +262,351 @@
           "title": "Navigation and files",
           "phase": "foundation",
           "skills": ["pwd", "ls", "cd", "mkdir", "touch", "cp", "mv", "rm"],
-          "deliverable": "Navigate, create, copy and clean files without hesitation."
+          "deliverable": "Navigate, create, copy and clean files without hesitation.",
+          "reference_note": "This app module aligns directly with the first official Shell Piscine subject available in the mirrored repository.",
+          "subject_refs": [
+            {
+              "label": "Shell00 subject PDF",
+              "document_title": "Piscine C Shell 00",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/Shell00/fr.subject.pdf",
+              "mirror_path": "Shell00/fr.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "exact_subject"
+            }
+          ]
         },
         {
           "id": "shell-streams",
           "title": "Redirections and pipes",
           "phase": "foundation",
           "skills": ["stdin", "stdout", "stderr", "redirect", "append", "pipe", "grep"],
-          "deliverable": "Compose useful shell chains and inspect text quickly."
+          "deliverable": "Compose useful shell chains and inspect text quickly.",
+          "reference_note": "This app module is extracted from the broader Shell01 official subject.",
+          "subject_refs": [
+            {
+              "label": "Shell01 subject PDF",
+              "document_title": "Piscine C Shell 01",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/Shell01/fr.subject%20(1).pdf",
+              "mirror_path": "Shell01/fr.subject (1).pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            }
+          ]
         },
         {
           "id": "shell-permissions",
           "title": "Permissions and execution",
           "phase": "foundation",
           "skills": ["chmod", "ownership", "executable bit", "PATH"],
-          "deliverable": "Understand why a script runs or fails."
+          "deliverable": "Understand why a script runs or fails.",
+          "reference_note": "Permissions and execution habits are modeled from the official Shell01 subject because the app splits the official subject into finer pedagogical modules.",
+          "subject_refs": [
+            {
+              "label": "Shell01 subject PDF",
+              "document_title": "Piscine C Shell 01",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/Shell01/fr.subject%20(1).pdf",
+              "mirror_path": "Shell01/fr.subject (1).pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            }
+          ]
         },
         {
           "id": "shell-tooling",
           "title": "Linux work habits",
           "phase": "practice",
           "skills": ["find", "history", "man", "vim basics", "git basics"],
-          "deliverable": "Operate daily in Linux without depending on GUI reflexes."
+          "deliverable": "Operate daily in Linux without depending on GUI reflexes.",
+          "reference_note": "This module synthesizes habits spread across the official Shell00 and Shell01 subjects rather than corresponding to a single official PDF.",
+          "subject_refs": [
+            {
+              "label": "Shell00 subject PDF",
+              "document_title": "Piscine C Shell 00",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/Shell00/fr.subject.pdf",
+              "mirror_path": "Shell00/fr.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            },
+            {
+              "label": "Shell01 subject PDF",
+              "document_title": "Piscine C Shell 01",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/Shell01/fr.subject%20(1).pdf",
+              "mirror_path": "Shell01/fr.subject (1).pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            }
+          ]
         }
       ]
     },
     {
       "id": "c",
       "title": "C / Core 42",
-      "summary": "Low-level rigor track aligned with the core 42 mindset.",
-      "why_it_matters": "Build algorithmic reasoning, memory discipline and debugging habits.",
+      "summary": "Low-level rigor track aligned with the historical and still essential 42 backbone.",
+      "why_it_matters": "Build algorithmic reasoning, memory discipline, debugging habits and defense-ready explanations.",
       "modules": [
         {
           "id": "c-basics",
           "title": "Syntax and control flow",
           "phase": "foundation",
           "skills": ["variables", "conditions", "loops", "functions", "headers"],
-          "deliverable": "Write small programs cleanly and compile with warnings enabled."
+          "deliverable": "Write small programs cleanly and compile with warnings enabled.",
+          "reference_note": "This app module condenses several official Piscine subjects that collectively build syntax, expressions, functions and control flow.",
+          "subject_refs": [
+            {
+              "label": "C00 subject PDF",
+              "document_title": "Piscine C C 00",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/C00/fr.subject.pdf",
+              "mirror_path": "C00/fr.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            },
+            {
+              "label": "C03 subject PDF",
+              "document_title": "C Piscine C 03",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/C03/en.subject.pdf",
+              "mirror_path": "C03/en.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            },
+            {
+              "label": "C04 subject PDF",
+              "document_title": "Piscine C C 04",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/C04/fr.subject.pdf",
+              "mirror_path": "C04/fr.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            },
+            {
+              "label": "C05 subject PDF",
+              "document_title": "Piscine C C 05",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/C05/fr.subject%20(1).pdf",
+              "mirror_path": "C05/fr.subject (1).pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            },
+            {
+              "label": "C06 subject PDF",
+              "document_title": "Piscine C C 06",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/C06/fr.subject.pdf",
+              "mirror_path": "C06/fr.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            }
+          ]
         },
         {
           "id": "c-memory",
           "title": "Pointers and memory",
           "phase": "foundation",
           "skills": ["addresses", "pointers", "arrays", "strings", "malloc", "free"],
-          "deliverable": "Explain memory decisions and avoid basic leaks."
+          "deliverable": "Explain memory decisions and avoid basic leaks.",
+          "reference_note": "This app module spans the official pointer, string and allocation parts of the Piscine rather than one single subject.",
+          "subject_refs": [
+            {
+              "label": "C01 subject PDF",
+              "document_title": "Piscine C C 01",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/C01/fr.subject%20(1).pdf",
+              "mirror_path": "C01/fr.subject (1).pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            },
+            {
+              "label": "C02 subject PDF",
+              "document_title": "Piscine C C 02",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/C02/fr.subject.pdf",
+              "mirror_path": "C02/fr.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            },
+            {
+              "label": "C07 subject PDF",
+              "document_title": "C Piscine C 07",
+              "url": "https://github.com/Ninjarsenic/42-piscine/blob/main/C07/en.subject.pdf",
+              "mirror_path": "C07/en.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            }
+          ]
         },
         {
           "id": "c-build-debug",
           "title": "Build, tests and debug",
           "phase": "practice",
           "skills": ["cc", "Wall", "Wextra", "Werror", "gdb", "valgrind"],
-          "deliverable": "Investigate failures instead of guessing."
+          "deliverable": "Investigate failures instead of guessing.",
+          "reference_note": "This module ties the official Norm to the first Common Core projects where build discipline, fd debugging and constrained APIs become concrete.",
+          "subject_refs": [
+            {
+              "label": "The Norm v4.1 PDF",
+              "document_title": "The Norm",
+              "url": "https://github.com/42School/norminette/blob/master/pdf/en.norm.pdf",
+              "mirror_path": "42school/norminette/pdf/en.norm.pdf",
+              "tier": "official_42",
+              "confidence": "high",
+              "coverage": "exact_subject"
+            },
+            {
+              "label": "Libft subject PDF",
+              "document_title": "Libft",
+              "url": "https://github.com/Ninjarsenic/42-Tronc_commun/blob/main/Libft/en.subject.pdf",
+              "mirror_path": "Libft/en.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            },
+            {
+              "label": "ft_printf subject PDF",
+              "document_title": "ft_printf",
+              "url": "https://github.com/Ninjarsenic/42-Tronc_commun/blob/main/Zpdf_cursus_c/Cercle%201/en.subject%20(1).pdf",
+              "mirror_path": "Zpdf_cursus_c/Cercle 1/en.subject (1).pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            },
+            {
+              "label": "Get Next Line subject PDF",
+              "document_title": "Get Next Line",
+              "url": "https://github.com/Ninjarsenic/42-Tronc_commun/blob/main/Zpdf_cursus_c/Cercle%201/en.subject.pdf",
+              "mirror_path": "Zpdf_cursus_c/Cercle 1/en.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "partial_subject_mapping"
+            }
+          ]
         },
         {
           "id": "c-libft-pushswap-bridge",
           "title": "Library and algorithm bridge",
           "phase": "core",
           "skills": ["libft mindset", "API naming", "sorting logic", "complexity intuition"],
-          "deliverable": "Prepare for libft, printf, gnl and push_swap logic."
+          "deliverable": "Prepare for libft, printf, gnl and push_swap logic.",
+          "reference_note": "This module is intentionally bound to the exact first Common Core project subjects that bridge utility libraries, file descriptors and constrained sorting.",
+          "subject_refs": [
+            {
+              "label": "Libft subject PDF",
+              "document_title": "Libft",
+              "url": "https://github.com/Ninjarsenic/42-Tronc_commun/blob/main/Libft/en.subject.pdf",
+              "mirror_path": "Libft/en.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "exact_subject"
+            },
+            {
+              "label": "ft_printf subject PDF",
+              "document_title": "ft_printf",
+              "url": "https://github.com/Ninjarsenic/42-Tronc_commun/blob/main/Zpdf_cursus_c/Cercle%201/en.subject%20(1).pdf",
+              "mirror_path": "Zpdf_cursus_c/Cercle 1/en.subject (1).pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "exact_subject"
+            },
+            {
+              "label": "Get Next Line subject PDF",
+              "document_title": "Get Next Line",
+              "url": "https://github.com/Ninjarsenic/42-Tronc_commun/blob/main/Zpdf_cursus_c/Cercle%201/en.subject.pdf",
+              "mirror_path": "Zpdf_cursus_c/Cercle 1/en.subject.pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "exact_subject"
+            },
+            {
+              "label": "Push_swap subject PDF",
+              "document_title": "Push_swap",
+              "url": "https://github.com/Ninjarsenic/42-Tronc_commun/blob/main/Zpdf_cursus_c/Cercle%202/Push_swap/en.subject%20(3).pdf",
+              "mirror_path": "Zpdf_cursus_c/Cercle 2/Push_swap/en.subject (3).pdf",
+              "tier": "official_document_mirrors",
+              "confidence": "medium",
+              "coverage": "exact_subject"
+            }
+          ]
         }
       ]
     },
     {
       "id": "python_ai",
       "title": "Python + AI",
-      "summary": "Python foundations plus the modern AI axis now present in 42 Lausanne.",
-      "why_it_matters": "Prepare for the new branch without weakening shell and C fundamentals.",
+      "summary": "Python foundations plus the modern AI axis now visible in 42 Lausanne.",
+      "why_it_matters": "Prepare for the emerging branch without weakening shell and C fundamentals.",
       "modules": [
         {
           "id": "python-basics",
           "title": "Python foundations",
           "phase": "foundation",
           "skills": ["variables", "conditions", "loops", "functions", "collections"],
-          "deliverable": "Write and explain small scripts confidently."
+          "deliverable": "Write and explain small scripts confidently.",
+          "reference_note": "No exact official Python subject PDF was found in the currently available official mirrors on 2026-03-29. This module is therefore anchored to the official Lausanne AI program page and to the interpreted new Common Core mapping.",
+          "subject_refs": [
+            {
+              "label": "42 Lausanne - IA",
+              "document_title": "42 Lausanne IA page",
+              "url": "https://42lausanne.ch/ia/",
+              "mirror_path": "42lausanne.ch/ia",
+              "tier": "official_42",
+              "confidence": "high",
+              "coverage": "official_program_signal"
+            }
+          ]
         },
         {
           "id": "python-oop-scripting",
           "title": "Objects and automation",
           "phase": "practice",
           "skills": ["classes", "methods", "files", "json", "argparse"],
-          "deliverable": "Build useful utilities and simple models."
+          "deliverable": "Build useful utilities and simple models.",
+          "reference_note": "No exact official Python OOP subject PDF is present in the current mirrored packs. This module stays tied to the official Lausanne AI axis while awaiting exact subject publication.",
+          "subject_refs": [
+            {
+              "label": "42 Lausanne - IA",
+              "document_title": "42 Lausanne IA page",
+              "url": "https://42lausanne.ch/ia/",
+              "mirror_path": "42lausanne.ch/ia",
+              "tier": "official_42",
+              "confidence": "high",
+              "coverage": "official_program_signal"
+            }
+          ]
         },
         {
           "id": "ai-rag-agents",
           "title": "AI, RAG and agent literacy",
           "phase": "advanced",
           "skills": ["prompt design", "retrieval", "evaluation", "agent workflow", "source policy"],
-          "deliverable": "Use AI as a disciplined tool without outsourcing understanding."
+          "deliverable": "Use AI as a disciplined tool without outsourcing understanding.",
+          "reference_note": "The official public anchor is the Lausanne AI page. Exact Common Core AI subject PDFs are not yet present in the currently available mirror pack, so the app keeps the downstream project names explicitly interpreted.",
+          "subject_refs": [
+            {
+              "label": "42 Lausanne - IA",
+              "document_title": "42 Lausanne IA page",
+              "url": "https://42lausanne.ch/ia/",
+              "mirror_path": "42lausanne.ch/ia",
+              "tier": "official_42",
+              "confidence": "high",
+              "coverage": "official_program_signal"
+            },
+            {
+              "label": "42 Lausanne - pedagogie",
+              "document_title": "42 Lausanne pedagogie page",
+              "url": "https://42lausanne.ch/pedagogie-42/",
+              "mirror_path": "42lausanne.ch/pedagogie-42",
+              "tier": "official_42",
+              "confidence": "high",
+              "coverage": "official_program_signal"
+            }
+          ]
         }
       ]
     }
@@ -178,12 +652,19 @@
         "webserv or irc",
         "inception",
         "transcendance"
+      ],
+      "preserved_dimensions": [
+        "terminal autonomy",
+        "memory rigor",
+        "algorithmic discipline",
+        "system and network intuition",
+        "oral defense readiness"
       ]
     },
     "new_common_core_interpretation": {
       "summary": "Algorithms earlier, Python earlier, AI inside the common core, still grounded in systems thinking.",
       "confidence": "medium",
-      "note": "Project names beyond official public category statements come from infographic interpretation and community mapping.",
+      "note": "Project names beyond official public category statements come from infographic interpretation, mirrored documents and school discussion.",
       "examples": [
         "libft",
         "push_swap",
@@ -202,6 +683,275 @@
         "the answer protocol",
         "agent smith",
         "transcendance"
+      ],
+      "milestones": [
+        {
+          "milestone": "M1",
+          "projects": ["libft", "push_swap", "printf", "get_next_line"],
+          "confidence": "medium"
+        },
+        {
+          "milestone": "M2",
+          "projects": ["piscine python", "a maze ing", "born2beroot"],
+          "confidence": "interpreted"
+        },
+        {
+          "milestone": "M3",
+          "projects": ["codexion", "fly in", "call me maybe"],
+          "confidence": "interpreted"
+        },
+        {
+          "milestone": "M4",
+          "projects": ["net_practice", "pacman", "RAG against the machine"],
+          "confidence": "interpreted"
+        },
+        {
+          "milestone": "M5+",
+          "projects": ["inception", "the answer protocol", "agent smith", "transcendance"],
+          "confidence": "interpreted"
+        }
+      ],
+      "style_analogies": [
+        {
+          "legacy_anchor": "C Piscine modules",
+          "new_project": "piscine python",
+          "rationale": "Same bootcamp role, but likely translated from low-level drills into Python fundamentals and OOP ramp-up."
+        },
+        {
+          "legacy_anchor": "so_long / fdf / fract'ol",
+          "new_project": "a maze ing",
+          "rationale": "Graphical or spatial reasoning project with a friendlier Python surface and stronger maze/game semantics."
+        },
+        {
+          "legacy_anchor": "philo",
+          "new_project": "codexion",
+          "rationale": "Concurrency slot remains present, likely reframed around Python execution models, coordination or agent scheduling."
+        },
+        {
+          "legacy_anchor": "push_swap",
+          "new_project": "fly in",
+          "rationale": "Algorithm slot persists and probably keeps the optimization mindset while changing the thematic wrapper."
+        },
+        {
+          "legacy_anchor": "pipex / minitalk",
+          "new_project": "call me maybe",
+          "rationale": "Communication and system-interaction style challenge may be reinterpreted as Python protocol, messaging or model-calling flows."
+        },
+        {
+          "legacy_anchor": "cub3d / mini_rt",
+          "new_project": "pacman",
+          "rationale": "A later graphical project remains, but the new name suggests game AI and grid behavior rather than pure rendering bravado."
+        },
+        {
+          "legacy_anchor": "net_practice / irc / webserv",
+          "new_project": "the answer protocol",
+          "rationale": "Network and protocol literacy appears preserved, possibly in a more application-protocol or agent-interaction framing."
+        },
+        {
+          "legacy_anchor": "advanced orchestration capstones",
+          "new_project": "agent smith",
+          "rationale": "The IA capstone slot likely expects multi-agent thinking, workflow control and autonomy under constraints."
+        }
+      ],
+      "predicted_project_models": [
+        {
+          "id": "piscine-python",
+          "title": "piscine python",
+          "milestone": "M2",
+          "confidence": "interpreted",
+          "legacy_style_anchors": ["C Piscine modules C00-C13", "Shell00", "Shell01"],
+          "predicted_subject_style": "Series of small exercises with escalating difficulty, explicit IO, deterministic outputs and strict basic language mastery.",
+          "predicted_constraints": [
+            "small standalone Python files",
+            "stdlib only or near-stdlib-only",
+            "explicit function decomposition",
+            "manual edge-case handling before abstraction"
+          ],
+          "predicted_deliverables": [
+            "ex00..exNN scripts",
+            "tiny reusable functions",
+            "simple CLI-oriented programs",
+            "light local tests or examples"
+          ],
+          "predicted_core_skills": ["python syntax", "functions", "strings", "lists", "dicts", "basic objects"]
+        },
+        {
+          "id": "a-maze-ing",
+          "title": "a maze ing",
+          "milestone": "M2",
+          "confidence": "interpreted",
+          "legacy_style_anchors": ["so_long", "fdf", "fract'ol"],
+          "predicted_subject_style": "Maze or grid-based graphical project where parsing, movement rules and algorithmic traversal matter as much as rendering.",
+          "predicted_constraints": [
+            "map parsing",
+            "event loop or turn loop",
+            "path validity checks",
+            "clear separation between model, rules and display"
+          ],
+          "predicted_deliverables": [
+            "maze loader",
+            "playable or solvable maze experience",
+            "pathfinding helper or validator",
+            "graphical or terminal visualizer"
+          ],
+          "predicted_core_skills": ["graphs", "pathfinding", "state machines", "Python graphics tooling", "clean module boundaries"]
+        },
+        {
+          "id": "codexion",
+          "title": "codexion",
+          "milestone": "M3",
+          "confidence": "interpreted",
+          "legacy_style_anchors": ["philo"],
+          "predicted_subject_style": "Concurrency project with Python-specific coordination tradeoffs rather than raw pthread mechanics.",
+          "predicted_constraints": [
+            "threading or multiprocessing",
+            "timeouts and lifecycle control",
+            "shared-state discipline",
+            "observable logs for debugging races"
+          ],
+          "predicted_deliverables": [
+            "task orchestrator",
+            "worker pool or actor model",
+            "concurrency-safe simulation",
+            "debuggable execution traces"
+          ],
+          "predicted_core_skills": ["threads", "processes", "queues", "locks", "resource contention", "reproducibility"]
+        },
+        {
+          "id": "fly-in",
+          "title": "fly in",
+          "milestone": "M3",
+          "confidence": "interpreted",
+          "legacy_style_anchors": ["push_swap"],
+          "predicted_subject_style": "Algorithm project scored on solution quality, where Python is allowed but the optimization pressure remains.",
+          "predicted_constraints": [
+            "strict scoring metric",
+            "limited action model",
+            "deterministic algorithm explanation",
+            "tradeoff analysis between correctness and efficiency"
+          ],
+          "predicted_deliverables": [
+            "solver",
+            "action trace",
+            "benchmark mode",
+            "explanation of chosen strategy"
+          ],
+          "predicted_core_skills": ["algorithms", "heuristics", "complexity", "search", "benchmarking"]
+        },
+        {
+          "id": "call-me-maybe",
+          "title": "call me maybe",
+          "milestone": "M3",
+          "confidence": "interpreted",
+          "legacy_style_anchors": ["pipex", "minitalk"],
+          "predicted_subject_style": "Communication-oriented Python exercise centered on message exchange, tool calling or controlled AI interaction.",
+          "predicted_constraints": [
+            "protocol contract",
+            "input validation",
+            "retry or failure handling",
+            "tight logging of calls and outputs"
+          ],
+          "predicted_deliverables": [
+            "message router or caller",
+            "structured payload format",
+            "mock or real model interaction",
+            "traceable conversation or execution log"
+          ],
+          "predicted_core_skills": ["serialization", "protocol design", "subprocess or API calls", "observability", "guardrails"]
+        },
+        {
+          "id": "pacman",
+          "title": "pacman",
+          "milestone": "M4",
+          "confidence": "interpreted",
+          "legacy_style_anchors": ["cub3d", "so_long"],
+          "predicted_subject_style": "Game-oriented graphical project where Python is used to manage entities, movement rules and maybe simple AI.",
+          "predicted_constraints": [
+            "real-time or tick-based updates",
+            "entity movement rules",
+            "collision checks",
+            "playable loop with readable architecture"
+          ],
+          "predicted_deliverables": [
+            "game map",
+            "player and enemy logic",
+            "score or objective system",
+            "visual runtime"
+          ],
+          "predicted_core_skills": ["game loops", "state updates", "event handling", "graphical assets", "light AI behavior"]
+        },
+        {
+          "id": "rag-against-the-machine",
+          "title": "RAG against the machine",
+          "milestone": "M4",
+          "confidence": "interpreted",
+          "legacy_style_anchors": ["research-heavy capstone extension"],
+          "predicted_subject_style": "RAG system project where learners must index sources, retrieve context and evaluate answer quality instead of just calling a model blindly.",
+          "predicted_constraints": [
+            "explicit corpus management",
+            "retrieval before generation",
+            "source attribution",
+            "evaluation set or benchmark"
+          ],
+          "predicted_deliverables": [
+            "ingestion pipeline",
+            "retriever",
+            "answer generator with citations",
+            "evaluation report"
+          ],
+          "predicted_core_skills": ["embeddings", "chunking", "ranking", "prompting", "evaluation", "source governance"]
+        },
+        {
+          "id": "the-answer-protocol",
+          "title": "the answer protocol",
+          "milestone": "M5+",
+          "confidence": "interpreted",
+          "legacy_style_anchors": ["net_practice", "ft_irc", "webserv"],
+          "predicted_subject_style": "Protocol design and networked communication project, likely focused on structured exchanges for modern systems or AI services.",
+          "predicted_constraints": [
+            "client/server contract",
+            "message framing",
+            "error codes or negotiation rules",
+            "interoperable test scenarios"
+          ],
+          "predicted_deliverables": [
+            "protocol spec",
+            "reference server or broker",
+            "test client",
+            "conformance tests"
+          ],
+          "predicted_core_skills": ["network IO", "protocol semantics", "serialization", "testing distributed behavior"]
+        },
+        {
+          "id": "agent-smith",
+          "title": "agent smith",
+          "milestone": "M5+",
+          "confidence": "interpreted",
+          "legacy_style_anchors": ["inception", "advanced orchestrated projects"],
+          "predicted_subject_style": "Autonomous multi-agent capstone where orchestration, tools, memory and safeguards matter more than raw model calls.",
+          "predicted_constraints": [
+            "multiple cooperating roles",
+            "tool use and context passing",
+            "policy constraints",
+            "observable success criteria"
+          ],
+          "predicted_deliverables": [
+            "agent architecture",
+            "role prompts or policies",
+            "tool adapters",
+            "evaluation scenario suite"
+          ],
+          "predicted_core_skills": ["orchestration", "multi-agent workflows", "tooling", "memory", "evaluation", "safety"]
+        }
+      ]
+    },
+    "synthesis": {
+      "summary": "The product keeps the old Common Core depth while modeling the emerging Python and AI lane as a coherent extension, not a replacement.",
+      "principles": [
+        "Preserve legacy C rigor even when the learner path is Python-first.",
+        "Treat the Norm as absolute for C and use principled equivalents for Python and Bash.",
+        "Expose confidence levels whenever the new curriculum naming is still interpreted rather than public and canonical.",
+        "Use official subject mirrors to enrich pedagogy without claiming they are public official publication endpoints."
       ]
     }
   },
@@ -217,19 +967,39 @@
       "tier": "official_42"
     },
     {
-      "label": "awesome-42",
-      "url": "https://github.com/leeoocca/awesome-42",
-      "tier": "community_docs"
+      "label": "The Norm v4.1 (English PDF)",
+      "url": "https://github.com/42School/norminette/blob/master/pdf/en.norm.pdf",
+      "tier": "official_42"
+    },
+    {
+      "label": "Ninjarsenic/42-Tronc_commun",
+      "url": "https://github.com/Ninjarsenic/42-Tronc_commun",
+      "tier": "official_document_mirrors"
+    },
+    {
+      "label": "Ninjarsenic/42-piscine",
+      "url": "https://github.com/Ninjarsenic/42-piscine",
+      "tier": "official_document_mirrors"
     },
     {
       "label": "norminette",
       "url": "https://github.com/42school/norminette",
+      "tier": "official_42"
+    },
+    {
+      "label": "francinette",
+      "url": "https://github.com/xicodomingues/francinette",
       "tier": "testers_and_tooling"
     },
     {
-      "label": "libftTester",
-      "url": "https://github.com/Tripouille/libftTester",
+      "label": "mini-moulinette",
+      "url": "https://github.com/k11q/mini-moulinette",
       "tier": "testers_and_tooling"
+    },
+    {
+      "label": "awesome-42",
+      "url": "https://github.com/leeoocca/awesome-42",
+      "tier": "community_docs"
     }
   ]
 }
