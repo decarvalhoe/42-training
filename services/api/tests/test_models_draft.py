@@ -1,6 +1,6 @@
-"""Draft tests for SQLAlchemy model preparation in issue #49."""
+"""Draft tests for SQLAlchemy model preparation in issue #49 and #128."""
 
-from app.models import Base, Evidence, LearnerProfile, Progression, Review
+from app.models import Base, DefenseSession, Evidence, LearnerProfile, Progression, Review, ReviewAttempt
 
 
 def test_core_model_classes_exist() -> None:
@@ -9,3 +9,5 @@ def test_core_model_classes_exist() -> None:
     assert Progression.__tablename__ == "progression"
     assert Evidence.__tablename__ == "evidence"
     assert Review.__tablename__ == "review"
+    assert DefenseSession.__tablename__ == "defense_session"
+    assert ReviewAttempt.__tablename__ == "review_attempt"

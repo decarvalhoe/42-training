@@ -3,11 +3,16 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import cast
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .auth import router as auth_router
+from .db import get_db_session
+from .models import DefenseSession as DefenseSessionModel
+from .models import ReviewAttempt as ReviewAttemptModel
 from .progression_state import canonicalize_progression, get_completed_module_ids, get_module_statuses
 from .repository import load_curriculum, load_progression, write_progression
 from .schemas import (
@@ -15,6 +20,8 @@ from .schemas import (
     CheckpointRecord,
     CheckpointSubmission,
     DashboardResponse,
+    DefenseSessionCreate,
+    DefenseSessionRecord,
     HealthResponse,
     MetaResponse,
     ModuleCompleteRequest,
@@ -24,6 +31,8 @@ from .schemas import (
     ModuleStatusResponse,
     ProgressionResponse,
     ProgressUpdate,
+    ReviewAttemptCreate,
+    ReviewAttemptRecord,
     TrackDetail,
     TrackSummary,
 )
@@ -182,6 +191,37 @@ def _check_prerequisites(module_id: str, track: dict[str, object], progression: 
     return missing
 
 
+def _serialize_defense_session(defense_session: DefenseSessionModel) -> DefenseSessionRecord:
+    return DefenseSessionRecord(
+        session_id=defense_session.session_id,
+        learner_id=defense_session.learner_id,
+        module_id=defense_session.module_id,
+        questions=list(defense_session.questions or []),
+        answers=list(defense_session.answers or []),
+        scores=list(defense_session.scores or []),
+        status=defense_session.status,
+        evidence_artifacts=list(defense_session.evidence_artifacts or []),
+        created_at=defense_session.created_at,
+        updated_at=defense_session.updated_at,
+    )
+
+
+def _serialize_review_attempt(review_attempt: ReviewAttemptModel) -> ReviewAttemptRecord:
+    return ReviewAttemptRecord(
+        id=review_attempt.id,
+        learner_id=review_attempt.learner_id,
+        reviewer_id=review_attempt.reviewer_id,
+        module_id=review_attempt.module_id,
+        code_snippet=review_attempt.code_snippet,
+        feedback=review_attempt.feedback,
+        questions=list(review_attempt.questions or []),
+        score=review_attempt.score,
+        evidence_artifacts=list(review_attempt.evidence_artifacts or []),
+        created_at=review_attempt.created_at,
+        updated_at=review_attempt.updated_at,
+    )
+
+
 # --- Module progression endpoints (Issue #24) ---
 
 
@@ -307,6 +347,126 @@ def validate_module(module_id: str) -> dict[str, object]:
         "valid": len(errors) == 0,
         "errors": errors,
     }
+
+
+# ---------------------------------------------------------------------------
+# Defense sessions and review attempts persistence (Issue #128)
+# ---------------------------------------------------------------------------
+
+
+@app.post(
+    "/api/v1/defense-sessions",
+    response_model=DefenseSessionRecord,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_defense_session(
+    payload: DefenseSessionCreate,
+    db: AsyncSession = Depends(get_db_session),
+) -> DefenseSessionRecord:
+    existing = await db.execute(select(DefenseSessionModel).where(DefenseSessionModel.session_id == payload.session_id))
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Defense session already exists")
+
+    defense_session = DefenseSessionModel(
+        session_id=payload.session_id,
+        learner_id=payload.learner_id,
+        module_id=payload.module_id,
+        questions=payload.questions,
+        answers=payload.answers,
+        scores=payload.scores,
+        status=payload.status,
+        evidence_artifacts=payload.evidence_artifacts,
+    )
+    db.add(defense_session)
+    await db.commit()
+    await db.refresh(defense_session)
+    return _serialize_defense_session(defense_session)
+
+
+@app.get("/api/v1/defense-sessions", response_model=list[DefenseSessionRecord])
+async def list_defense_sessions(
+    module_id: str | None = None,
+    learner_id: str | None = None,
+    db: AsyncSession = Depends(get_db_session),
+) -> list[DefenseSessionRecord]:
+    stmt = select(DefenseSessionModel).order_by(DefenseSessionModel.created_at.desc())
+    if module_id is not None:
+        stmt = stmt.where(DefenseSessionModel.module_id == module_id)
+    if learner_id is not None:
+        stmt = stmt.where(DefenseSessionModel.learner_id == learner_id)
+
+    result = await db.execute(stmt)
+    return [_serialize_defense_session(item) for item in result.scalars().all()]
+
+
+@app.get("/api/v1/defense-sessions/{session_id}", response_model=DefenseSessionRecord)
+async def get_defense_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db_session),
+) -> DefenseSessionRecord:
+    result = await db.execute(select(DefenseSessionModel).where(DefenseSessionModel.session_id == session_id))
+    defense_session = result.scalar_one_or_none()
+    if defense_session is None:
+        raise HTTPException(status_code=404, detail="Defense session not found")
+
+    return _serialize_defense_session(defense_session)
+
+
+@app.post(
+    "/api/v1/review-attempts",
+    response_model=ReviewAttemptRecord,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_review_attempt(
+    payload: ReviewAttemptCreate,
+    db: AsyncSession = Depends(get_db_session),
+) -> ReviewAttemptRecord:
+    review_attempt = ReviewAttemptModel(
+        learner_id=payload.learner_id,
+        reviewer_id=payload.reviewer_id,
+        module_id=payload.module_id,
+        code_snippet=payload.code_snippet,
+        feedback=payload.feedback,
+        questions=payload.questions,
+        score=payload.score,
+        evidence_artifacts=payload.evidence_artifacts,
+    )
+    db.add(review_attempt)
+    await db.commit()
+    await db.refresh(review_attempt)
+    return _serialize_review_attempt(review_attempt)
+
+
+@app.get("/api/v1/review-attempts", response_model=list[ReviewAttemptRecord])
+async def list_review_attempts(
+    module_id: str | None = None,
+    learner_id: str | None = None,
+    reviewer_id: str | None = None,
+    db: AsyncSession = Depends(get_db_session),
+) -> list[ReviewAttemptRecord]:
+    stmt = select(ReviewAttemptModel).order_by(ReviewAttemptModel.created_at.desc())
+    if module_id is not None:
+        stmt = stmt.where(ReviewAttemptModel.module_id == module_id)
+    if learner_id is not None:
+        stmt = stmt.where(ReviewAttemptModel.learner_id == learner_id)
+    if reviewer_id is not None:
+        stmt = stmt.where(ReviewAttemptModel.reviewer_id == reviewer_id)
+
+    result = await db.execute(stmt)
+    return [_serialize_review_attempt(item) for item in result.scalars().all()]
+
+
+@app.get("/api/v1/review-attempts/{attempt_id}", response_model=ReviewAttemptRecord)
+async def get_review_attempt(
+    attempt_id: str,
+    db: AsyncSession = Depends(get_db_session),
+) -> ReviewAttemptRecord:
+    result = await db.execute(select(ReviewAttemptModel).where(ReviewAttemptModel.id == attempt_id))
+    review_attempt = result.scalar_one_or_none()
+    if review_attempt is None:
+        raise HTTPException(status_code=404, detail="Review attempt not found")
+
+    return _serialize_review_attempt(review_attempt)
 
 
 # ---------------------------------------------------------------------------
