@@ -6,6 +6,8 @@ const NAV_LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/progression", label: "Progression" },
   { href: "/defense", label: "Defense" },
+  { href: "/review", label: "Review" },
+  { href: "/evidence", label: "Evidence" },
   { href: "/profiles", label: "Profiles" },
   { href: "/analytics", label: "Analytics" },
   { href: "/login", label: "Login" },
