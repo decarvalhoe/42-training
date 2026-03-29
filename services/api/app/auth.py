@@ -139,7 +139,7 @@ def build_token_response(user: UserAccount, *, profile_id: str | None = None) ->
         access_token=create_access_token(user, profile_id=effective_profile_id),
         expires_in=ACCESS_TOKEN_TTL_MINUTES * 60,
         user=serialize_user(user),
-        learner_profile=serialize_learner_profile(user.active_profile),
+        learner_profile=serialize_learner_profile(user.active_profile),  # type: ignore[arg-type]
         profiles=serialize_profiles(user.profiles),
     )
 
