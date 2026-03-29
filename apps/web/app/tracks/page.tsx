@@ -45,10 +45,10 @@ const STATE_ICON: Record<ModuleState, string> = {
   locked: "◇",
 };
 
-const TRACK_CLASS: Record<string, string> = {
-  shell: "track-shell",
-  c: "track-c",
-  python_ai: "track-python",
+const TRACK_COLORS: Record<string, string> = {
+  shell: "var(--shell)",
+  c: "var(--c)",
+  python_ai: "var(--python)",
 };
 
 /* ------------------------------------------------------------------ */
@@ -59,17 +59,19 @@ function TalentNode({
   mod,
   state,
   isLast,
+  trackColor,
 }: {
   mod: ModuleItem;
   state: ModuleState;
   isLast: boolean;
+  trackColor: string;
 }) {
   const phaseLabel = mod.phase.charAt(0).toUpperCase() + mod.phase.slice(1);
 
   return (
     <div className="talent-node-wrapper">
       <div className={`talent-node talent-node--${state}`}>
-        <div className="talent-node-icon">
+        <div className="talent-node-icon" style={{ "--track-color": state === "locked" ? "var(--muted)" : trackColor } as React.CSSProperties}>
           {STATE_ICON[state]}
         </div>
         <div className="talent-node-body">
@@ -99,7 +101,7 @@ function TalentNode({
         </div>
       </div>
       {!isLast && (
-        <div className="talent-edge" />
+        <div className="talent-edge" style={{ "--track-color": trackColor } as React.CSSProperties} />
       )}
     </div>
   );
@@ -114,7 +116,7 @@ function TrackTree({
   activeTrack: string | undefined;
   activeModule: string | undefined;
 }) {
-  const trackCls = TRACK_CLASS[track.id] ?? "";
+  const trackColor = TRACK_COLORS[track.id] ?? "var(--accent)";
   const phases = [...new Set(track.modules.map((m) => m.phase))].sort(
     (a, b) => (PHASE_ORDER[a] ?? 99) - (PHASE_ORDER[b] ?? 99),
   );
@@ -125,8 +127,8 @@ function TrackTree({
   const pct = track.modules.length > 0 ? Math.round((doneCount / track.modules.length) * 100) : 0;
 
   return (
-    <article className={`talent-track ${trackCls}`}>
-      <div className="talent-track-header">
+    <article className="talent-track">
+      <div className="talent-track-header" style={{ "--track-color": trackColor } as React.CSSProperties}>
         <div>
           <p className="eyebrow">{track.id}</p>
           <h2>{track.title}</h2>
@@ -136,7 +138,7 @@ function TrackTree({
           <div className="talent-track-bar">
             <div
               className="talent-track-bar-fill"
-              style={{ width: `${pct}%` }}
+              style={{ "--track-color": trackColor, "--bar-width": `${pct}%` } as React.CSSProperties}
             />
           </div>
           <span className="muted">
@@ -162,6 +164,7 @@ function TrackTree({
                     mod={mod}
                     state={state}
                     isLast={isLastInPhase && isLastPhase}
+                    trackColor={trackColor}
                   />
                 );
               })}
@@ -187,7 +190,7 @@ export default async function TracksPage() {
 
   return (
     <main className="page-shell">
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Tracks</span>

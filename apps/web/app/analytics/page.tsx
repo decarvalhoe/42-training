@@ -9,6 +9,12 @@ const TRACK_CLASS: Record<string, string> = {
   python_ai: "track-python",
 };
 
+const TRACK_COLORS: Record<string, string> = {
+  shell: "var(--shell)",
+  c: "var(--c)",
+  python_ai: "var(--python)",
+};
+
 function formatMinutes(value: number): string {
   if (value >= 60) {
     return `${(value / 60).toFixed(1)} h`;
@@ -67,7 +73,7 @@ function AnalyticsBarChart({
                 <div className={`analytics-bar-track ${TRACK_CLASS[row.track_id] ?? ""}`}>
                   <div
                     className="analytics-bar-fill"
-                    style={{ width }}
+                    style={{ "--bar-width": width, "--bar-color": TRACK_COLORS[row.track_id] ?? "var(--accent)" } as React.CSSProperties}
                   />
                 </div>
               </div>
@@ -94,7 +100,7 @@ export default async function AnalyticsPage() {
 
   return (
     <main className="page-shell">
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Analytics</span>
