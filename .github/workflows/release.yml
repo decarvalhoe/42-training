@@ -449,6 +449,12 @@ jobs:
             echo "RELEASE_EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Generate SHA256 checksums
+        run: |
+          cd release-assets
+          find . -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \) \
+            -exec sha256sum {} + | sed 's|  \./|  |' | sort -k2 | tee SHA256SUMS
+
       - name: Create release with assets
         uses: softprops/action-gh-release@v2
         with:
@@ -462,3 +468,40 @@ jobs:
             release-assets/**/*.dmg
             release-assets/**/*.deb
             release-assets/**/*.AppImage
+            release-assets/SHA256SUMS
+
+      - name: Append checksums to release notes
+        if: hashFiles('release-assets/SHA256SUMS') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const checksums = fs.readFileSync('release-assets/SHA256SUMS', 'utf8').trim();
+            if (!checksums) return;
+
+            const { owner, repo } = context.repo;
+            const tag = process.env.GITHUB_REF.replace('refs/tags/', '');
+
+            const release = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+            const body = release.data.body || '';
+
+            const block = [
+              '',
+              '---',
+              '',
+              '## SHA256 Checksums',
+              '',
+              '```',
+              checksums,
+              '```',
+              '',
+              'Verify: `sha256sum -c SHA256SUMS`',
+            ].join('\n');
+
+            const cleanBody = body.replace(/\n---\n\n## SHA256 Checksums[\s\S]*$/, '');
+
+            await github.rest.repos.updateRelease({
+              owner, repo,
+              release_id: release.data.id,
+              body: cleanBody + block,
+            });
