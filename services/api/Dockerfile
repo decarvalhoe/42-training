@@ -11,6 +11,8 @@ RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r re
 
 # Copy application code
 COPY services/api/app ./app
+COPY services/api/alembic.ini ./alembic.ini
+COPY services/api/alembic ./alembic
 
 # Copy data files that repository.py needs (parents[3] = /app -> needs /packages and /progression.json)
 COPY packages/curriculum/data /packages/curriculum/data
