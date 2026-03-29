@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
+from app.db import get_db_session
 from app.main import app
 
 client = TestClient(app)
@@ -169,6 +170,44 @@ class TestCurriculumDashboard:
         with p_cur, p_load, p_write:
             data = client.get("/api/v1/curriculum/dashboard").json()
         assert data["progression"]["learning_plan"]["active_course"] == "shell"
+
+
+class TestAnalyticsDashboard:
+    def test_analytics_dashboard_happy_path(self) -> None:
+        async def fake_db():
+            yield object()
+
+        app.dependency_overrides[get_db_session] = fake_db
+        try:
+            with (
+                patch("app.main.load_curriculum", return_value=_CURRICULUM),
+                patch("app.main.fetch_pedagogical_events", new=AsyncMock(return_value=[])),
+                patch(
+                    "app.main.build_analytics_dashboard",
+                    return_value={
+                        "summary": {
+                            "total_events": 4,
+                            "module_completions": 2,
+                            "average_completion_minutes": 42.5,
+                            "checkpoint_success_rate": 66.7,
+                            "mentor_queries": 1,
+                            "defenses_started": 1,
+                        },
+                        "modules_completed": [],
+                        "average_time": [],
+                        "success_rate": [],
+                    },
+                ),
+            ):
+                r = client.get("/api/v1/analytics/dashboard")
+        finally:
+            app.dependency_overrides.clear()
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["summary"]["total_events"] == 4
+        assert data["summary"]["module_completions"] == 2
+        assert data["summary"]["checkpoint_success_rate"] == 66.7
 
 
 # ---------------------------------------------------------------------------
