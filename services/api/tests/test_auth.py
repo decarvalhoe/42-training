@@ -364,3 +364,139 @@ def test_profiles_switch_changes_active_profile_only_within_user_scope(
     )
 
     assert forbidden_response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# JWT profile-binding tests (issue #127)
+# ---------------------------------------------------------------------------
+
+
+def test_jwt_contains_active_profile_id_after_login(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    """Login JWT should embed the active_profile_id when one exists."""
+    client, session_factory = auth_client
+    reg = client.post("/api/v1/auth/register", json={"email": "jwt@example.com", "password": "supersecret"})
+    user_id = reg.json()["user"]["id"]
+
+    asyncio.run(
+        _create_profile_for_user(session_factory, user_id=user_id, login="jwt-shell", track="shell", activate=True)
+    )
+
+    login_resp = client.post("/api/v1/auth/login", json={"email": "jwt@example.com", "password": "supersecret"})
+    assert login_resp.status_code == 200
+    token_payload = jwt.decode(login_resp.json()["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    assert "profile_id" in token_payload
+
+
+def test_jwt_omits_profile_id_when_none_active(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    """Register JWT (no profiles yet) should not contain profile_id."""
+    client, _session_factory = auth_client
+    reg = client.post("/api/v1/auth/register", json={"email": "noprofile@example.com", "password": "supersecret"})
+    token_payload = jwt.decode(reg.json()["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    assert "profile_id" not in token_payload
+
+
+def test_auth_switch_profile_returns_new_jwt_with_profile_id(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    """POST /auth/switch-profile should return a new JWT bound to the target profile."""
+    client, session_factory = auth_client
+    reg = client.post("/api/v1/auth/register", json={"email": "switch@example.com", "password": "supersecret"})
+    token = reg.json()["access_token"]
+    user_id = reg.json()["user"]["id"]
+
+    asyncio.run(
+        _create_profile_for_user(session_factory, user_id=user_id, login="switch-shell", track="shell", activate=True)
+    )
+    c_profile = asyncio.run(_create_profile_for_user(session_factory, user_id=user_id, login="switch-c", track="c"))
+
+    resp = client.post(
+        "/api/v1/auth/switch-profile",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"profile_id": c_profile.id},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user"]["id"] == user_id
+
+    new_payload = jwt.decode(data["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    assert new_payload["profile_id"] == c_profile.id
+
+
+def test_auth_switch_profile_rejects_foreign_profile(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    """Switching to another user's profile should return 404."""
+    client, session_factory = auth_client
+    first = client.post("/api/v1/auth/register", json={"email": "a@example.com", "password": "supersecret"})
+    first_token = first.json()["access_token"]
+
+    second = client.post("/api/v1/auth/register", json={"email": "b@example.com", "password": "supersecret"})
+    second_user_id = second.json()["user"]["id"]
+    foreign = asyncio.run(
+        _create_profile_for_user(
+            session_factory, user_id=second_user_id, login="foreign-shell", track="shell", activate=True
+        )
+    )
+
+    resp = client.post(
+        "/api/v1/auth/switch-profile",
+        headers={"Authorization": f"Bearer {first_token}"},
+        json={"profile_id": foreign.id},
+    )
+    assert resp.status_code == 404
+
+
+def test_auth_refresh_preserves_profile_id(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    """POST /auth/refresh should return a new JWT keeping the same profile_id."""
+    client, session_factory = auth_client
+    reg = client.post("/api/v1/auth/register", json={"email": "refresh@example.com", "password": "supersecret"})
+    user_id = reg.json()["user"]["id"]
+
+    profile = asyncio.run(
+        _create_profile_for_user(session_factory, user_id=user_id, login="refresh-shell", track="shell", activate=True)
+    )
+
+    # Login to get a token with profile_id
+    login_resp = client.post("/api/v1/auth/login", json={"email": "refresh@example.com", "password": "supersecret"})
+    token = login_resp.json()["access_token"]
+
+    resp = client.post("/api/v1/auth/refresh", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+
+    new_payload = jwt.decode(resp.json()["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    assert new_payload["profile_id"] == profile.id
+
+
+def test_me_reflects_jwt_bound_profile(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    """GET /auth/me should show the profile from the JWT, not necessarily the DB active one."""
+    client, session_factory = auth_client
+    reg = client.post("/api/v1/auth/register", json={"email": "me-jwt@example.com", "password": "supersecret"})
+    user_id = reg.json()["user"]["id"]
+
+    asyncio.run(
+        _create_profile_for_user(session_factory, user_id=user_id, login="me-shell", track="shell", activate=True)
+    )
+    c_profile = asyncio.run(_create_profile_for_user(session_factory, user_id=user_id, login="me-c", track="c"))
+
+    # Switch to C profile via auth endpoint (gets new JWT)
+    login_resp = client.post("/api/v1/auth/login", json={"email": "me-jwt@example.com", "password": "supersecret"})
+    token = login_resp.json()["access_token"]
+
+    switch_resp = client.post(
+        "/api/v1/auth/switch-profile",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"profile_id": c_profile.id},
+    )
+    new_token = switch_resp.json()["access_token"]
+
+    me_resp = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {new_token}"})
+    assert me_resp.status_code == 200
+    assert me_resp.json()["learner_profile"]["id"] == c_profile.id

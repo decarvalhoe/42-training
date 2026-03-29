@@ -81,14 +81,17 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))  # type: ignore[no-any-return]
 
 
-def create_access_token(user: UserAccount) -> str:
+def create_access_token(user: UserAccount, *, profile_id: str | None = None) -> str:
     now = datetime.now(UTC)
-    payload = {
+    active_pid = profile_id if profile_id is not None else user.active_profile_id
+    payload: dict[str, object] = {
         "sub": user.id,
         "email": user.email,
         "iat": now,
         "exp": now + timedelta(minutes=ACCESS_TOKEN_TTL_MINUTES),
     }
+    if active_pid is not None:
+        payload["profile_id"] = active_pid
     return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)  # type: ignore[no-any-return]
 
 
@@ -120,12 +123,23 @@ def serialize_profiles(profiles: list[LearnerProfile]) -> list[AuthLearnerProfil
     ]
 
 
-def build_token_response(user: UserAccount) -> AuthTokenResponse:
+def get_jwt_active_profile(user: UserAccount) -> LearnerProfile | None:
+    """Return the profile bound to the current JWT, falling back to the DB active_profile."""
+    return getattr(user, "_jwt_active_profile", None) or user.active_profile  # type: ignore[no-any-return]
+
+
+def get_jwt_active_profile_id(user: UserAccount) -> str | None:
+    """Return the profile id bound to the current JWT, falling back to the DB active_profile_id."""
+    return getattr(user, "_jwt_active_profile_id", None) or user.active_profile_id  # type: ignore[no-any-return]
+
+
+def build_token_response(user: UserAccount, *, profile_id: str | None = None) -> AuthTokenResponse:
+    effective_profile_id = profile_id or user.active_profile_id
     return AuthTokenResponse(
-        access_token=create_access_token(user),
+        access_token=create_access_token(user, profile_id=effective_profile_id),
         expires_in=ACCESS_TOKEN_TTL_MINUTES * 60,
         user=serialize_user(user),
-        learner_profile=serialize_learner_profile(user.active_profile),
+        learner_profile=serialize_learner_profile(user.active_profile),  # type: ignore[arg-type]
         profiles=serialize_profiles(user.profiles),
     )
 
@@ -173,6 +187,16 @@ async def get_current_user(
     if user is None:
         raise unauthorized()
 
+    # Resolve active profile from JWT claim so the session stays bound to the
+    # profile that was active when the token was issued.
+    jwt_profile_id = payload.get("profile_id")
+    if isinstance(jwt_profile_id, str) and jwt_profile_id:
+        profiles_by_id = {p.id: p for p in user.profiles}
+        jwt_profile = profiles_by_id.get(jwt_profile_id)
+        if jwt_profile is not None:
+            object.__setattr__(user, "_jwt_active_profile", jwt_profile)
+            object.__setattr__(user, "_jwt_active_profile_id", jwt_profile_id)
+
     return user
 
 
@@ -219,6 +243,38 @@ async def login(
 async def me(current_user: UserAccount = Depends(get_current_user)) -> AuthMeResponse:
     return AuthMeResponse(
         user=serialize_user(current_user),
-        learner_profile=serialize_learner_profile(current_user.active_profile),
+        learner_profile=serialize_learner_profile(get_jwt_active_profile(current_user)),
         profiles=serialize_profiles(current_user.profiles),
     )
+
+
+class SwitchProfileRequest(BaseModel):
+    profile_id: str = Field(min_length=1, max_length=64)
+
+
+@router.post("/switch-profile", response_model=AuthTokenResponse)
+async def switch_profile(
+    payload: SwitchProfileRequest,
+    current_user: UserAccount = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> AuthTokenResponse:
+    """Switch active profile and return a new JWT bound to that profile."""
+    profiles_by_id = {p.id: p for p in current_user.profiles}
+    target_profile = profiles_by_id.get(payload.profile_id)
+    if target_profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+
+    current_user.active_profile_id = target_profile.id
+    await db.commit()
+
+    user = await load_user_with_profiles(db, user_id=current_user.id)
+    assert user is not None
+    return build_token_response(user, profile_id=target_profile.id)
+
+
+@router.post("/refresh", response_model=AuthTokenResponse)
+async def refresh(
+    current_user: UserAccount = Depends(get_current_user),
+) -> AuthTokenResponse:
+    """Return a fresh JWT preserving the current active profile."""
+    return build_token_response(current_user, profile_id=get_jwt_active_profile_id(current_user))
