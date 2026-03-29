@@ -309,3 +309,29 @@ class PedagogicalEventCreate(BaseModel):
 class PedagogicalEventResponse(BaseModel):
     status: str
     event_id: str | None = None
+
+
+class AnalyticsSummary(BaseModel):
+    total_events: int
+    module_completions: int
+    average_completion_minutes: float
+    checkpoint_success_rate: float
+    mentor_queries: int
+    defenses_started: int
+
+
+class AnalyticsChartRow(BaseModel):
+    module_id: str
+    module_title: str
+    track_id: str
+    phase: str
+    value: float
+    count: int
+    suffix: str
+
+
+class AnalyticsDashboardResponse(BaseModel):
+    summary: AnalyticsSummary
+    modules_completed: list[AnalyticsChartRow]
+    average_time: list[AnalyticsChartRow]
+    success_rate: list[AnalyticsChartRow]

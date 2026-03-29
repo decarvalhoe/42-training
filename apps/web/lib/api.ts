@@ -57,6 +57,32 @@ export type DashboardData = {
   };
 };
 
+export type AnalyticsSummary = {
+  total_events: number;
+  module_completions: number;
+  average_completion_minutes: number;
+  checkpoint_success_rate: number;
+  mentor_queries: number;
+  defenses_started: number;
+};
+
+export type AnalyticsChartRow = {
+  module_id: string;
+  module_title: string;
+  track_id: string;
+  phase: string;
+  value: number;
+  count: number;
+  suffix: string;
+};
+
+export type AnalyticsData = {
+  summary: AnalyticsSummary;
+  modules_completed: AnalyticsChartRow[];
+  average_time: AnalyticsChartRow[];
+  success_rate: AnalyticsChartRow[];
+};
+
 const fallbackData: DashboardData = {
   curriculum: {
     metadata: {
@@ -127,6 +153,104 @@ const fallbackData: DashboardData = {
   }
 };
 
+const fallbackAnalyticsData: AnalyticsData = {
+  summary: {
+    total_events: 24,
+    module_completions: 7,
+    average_completion_minutes: 48.5,
+    checkpoint_success_rate: 71.4,
+    mentor_queries: 11,
+    defenses_started: 2,
+  },
+  modules_completed: [
+    {
+      module_id: "shell-basics",
+      module_title: "Navigation and files",
+      track_id: "shell",
+      phase: "foundation",
+      value: 4,
+      count: 4,
+      suffix: " completions",
+    },
+    {
+      module_id: "c-basics",
+      module_title: "Syntax and control flow",
+      track_id: "c",
+      phase: "foundation",
+      value: 2,
+      count: 2,
+      suffix: " completions",
+    },
+    {
+      module_id: "python-basics",
+      module_title: "Python foundations",
+      track_id: "python_ai",
+      phase: "foundation",
+      value: 1,
+      count: 1,
+      suffix: " completions",
+    }
+  ],
+  average_time: [
+    {
+      module_id: "c-basics",
+      module_title: "Syntax and control flow",
+      track_id: "c",
+      phase: "foundation",
+      value: 72,
+      count: 2,
+      suffix: " min",
+    },
+    {
+      module_id: "python-basics",
+      module_title: "Python foundations",
+      track_id: "python_ai",
+      phase: "foundation",
+      value: 55,
+      count: 1,
+      suffix: " min",
+    },
+    {
+      module_id: "shell-basics",
+      module_title: "Navigation and files",
+      track_id: "shell",
+      phase: "foundation",
+      value: 38,
+      count: 4,
+      suffix: " min",
+    }
+  ],
+  success_rate: [
+    {
+      module_id: "shell-basics",
+      module_title: "Navigation and files",
+      track_id: "shell",
+      phase: "foundation",
+      value: 83.3,
+      count: 6,
+      suffix: "%",
+    },
+    {
+      module_id: "python-basics",
+      module_title: "Python foundations",
+      track_id: "python_ai",
+      phase: "foundation",
+      value: 75,
+      count: 4,
+      suffix: "%",
+    },
+    {
+      module_id: "c-basics",
+      module_title: "Syntax and control flow",
+      track_id: "c",
+      phase: "foundation",
+      value: 60,
+      count: 5,
+      suffix: "%",
+    }
+  ]
+};
+
 export async function getDashboardData(): Promise<DashboardData> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -138,5 +262,19 @@ export async function getDashboardData(): Promise<DashboardData> {
     return (await response.json()) as DashboardData;
   } catch {
     return fallbackData;
+  }
+}
+
+export async function getAnalyticsData(): Promise<AnalyticsData> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+  try {
+    const response = await fetch(`${apiUrl}/api/v1/analytics/dashboard`, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+    return (await response.json()) as AnalyticsData;
+  } catch {
+    return fallbackAnalyticsData;
   }
 }

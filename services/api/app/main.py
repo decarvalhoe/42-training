@@ -9,6 +9,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .analytics import build_analytics_dashboard, fetch_pedagogical_events
 from .auth import router as auth_router
 from .db import get_db_session
 from .events import _emit_event_async, emit_event  # noqa: F401
@@ -18,6 +19,7 @@ from .profiles import router as profiles_router
 from .progression_state import canonicalize_progression, get_completed_module_ids, get_module_statuses
 from .repository import load_curriculum, load_progression, write_progression
 from .schemas import (
+    AnalyticsDashboardResponse,
     CheckpointListResponse,
     CheckpointRecord,
     CheckpointSubmission,
@@ -94,6 +96,13 @@ def curriculum_dashboard() -> DashboardResponse:
         curriculum=load_curriculum(),
         progression=load_progression(),
     )
+
+
+@app.get("/api/v1/analytics/dashboard", response_model=AnalyticsDashboardResponse)
+async def analytics_dashboard(db: AsyncSession = Depends(get_db_session)) -> AnalyticsDashboardResponse:
+    curriculum = load_curriculum()
+    events = await fetch_pedagogical_events(db)
+    return build_analytics_dashboard(curriculum, events)
 
 
 @app.get("/api/v1/curriculum/tracks")
