@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Iterator
+from http.cookies import SimpleCookie
 from pathlib import Path
 from unittest.mock import patch
 
@@ -14,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.main as main_module
+from app.auth import AUTH_COOKIE_NAME
 from app.db import get_db_session
 from app.main import app
 from app.models import Base, UserAccount
@@ -77,6 +79,16 @@ def _tamper_token(token: str) -> str:
         flipped = "".join("X" if c != "X" else "Y" for c in parts[1])
         return f"{parts[0]}.{flipped}"
     return token + "INVALID"
+
+
+def _extract_access_token(response) -> str:
+    cookie_header = response.headers.get("set-cookie")
+    assert cookie_header is not None
+    cookie = SimpleCookie()
+    cookie.load(cookie_header)
+    morsel = cookie.get(AUTH_COOKIE_NAME)
+    assert morsel is not None
+    return morsel.value
 
 
 @pytest.fixture
@@ -153,7 +165,7 @@ def test_auth_flow_rejects_invalid_login_and_tampered_bearer(
     stored_user = asyncio.run(_get_user_by_email(session_factory, "student@example.com"))
     assert stored_user.last_login_at is None
 
-    tampered_token = _tamper_token(register_response.json()["access_token"])
+    tampered_token = _tamper_token(_extract_access_token(register_response))
     me_response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {tampered_token}"})
     assert me_response.status_code == 401
     assert me_response.json()["detail"] == "Invalid authentication credentials"

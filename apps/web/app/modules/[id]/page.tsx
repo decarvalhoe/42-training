@@ -277,8 +277,8 @@ export default async function ModuleDetailPage({
               <p className="muted">No authorized resources available.</p>
             ) : (
               <div className="resource-list">
-                {authorizedResources.map((r) => (
-                  <div key={r.url} className="resource-item">
+                {authorizedResources.map((r, index) => (
+                  <div key={`${r.url}-${index}`} className="resource-item">
                     <a href={r.url} target="_blank" rel="noopener noreferrer">
                       {r.label}
                     </a>

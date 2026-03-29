@@ -250,7 +250,7 @@ export default function ReviewClient({ modules }: Props) {
             <p className="eyebrow">Submission</p>
             <h2>Submit a guided review</h2>
           </div>
-          <span className="pill">{sourceMode === "live" ? "API live" : "Mocked fallback"}</span>
+          <span className="pill">{sourceMode === "live" ? "API live" : "Demo mode"}</span>
         </div>
 
         <form className="review-form" noValidate onSubmit={handleSubmit}>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -64,9 +65,18 @@ ERROR_CODES_BY_STATUS = {
 
 app = FastAPI(title="42-training API", version="0.1.0")
 
+
+def _cors_origins() -> list[str]:
+    configured = os.getenv("CORS_ALLOW_ORIGINS")
+    if configured:
+        origins = [origin.strip() for origin in configured.split(",") if origin.strip()]
+        if origins:
+            return origins
+    return ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

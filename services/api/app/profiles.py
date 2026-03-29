@@ -3,13 +3,13 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from .auth import get_current_user
+from .auth import get_current_user, set_auth_cookie
 from .db import get_db_session
 from .models import LearnerProfile, UserAccount
 from .repository import load_curriculum
@@ -88,6 +88,7 @@ async def list_profiles(current_user: UserAccount = Depends(get_current_user)) -
 
 @router.post("", response_model=ProfilesResponse, status_code=status.HTTP_201_CREATED)
 async def create_profile(
+    response: Response,
     payload: ProfileCreateRequest,
     current_user: UserAccount = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
@@ -136,11 +137,14 @@ async def create_profile(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Unable to create profile") from exc
 
     user = await _load_user_with_profiles(db, current_user.id)
+    if user.active_profile_id is not None:
+        set_auth_cookie(response, user, profile_id=user.active_profile_id)
     return serialize_profiles_response(user)
 
 
 @router.post("/{profile_id}/switch", response_model=ProfilesResponse)
 async def switch_profile(
+    response: Response,
     profile_id: str,
     current_user: UserAccount = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
@@ -158,4 +162,6 @@ async def switch_profile(
     await db.commit()
 
     user = await _load_user_with_profiles(db, current_user.id)
+    if user.active_profile_id is not None:
+        set_auth_cookie(response, user, profile_id=user.active_profile_id)
     return serialize_profiles_response(user)

@@ -141,7 +141,7 @@ export default function EvidenceClient({ modules }: Props) {
             <p className="eyebrow">Consolidated feed</p>
             <h2>Artifact overview</h2>
           </div>
-          <span className="pill">{mocked ? "Mocked fallback" : "API live"}</span>
+          <span className="pill">{mocked ? "Demo mode" : "API live"}</span>
         </div>
 
         <div className="hero-grid">

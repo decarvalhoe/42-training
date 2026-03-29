@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { ACCESS_TOKEN_COOKIE_KEY } from "@/services/auth";
+const AUTH_SESSION_COOKIE_KEY = "training_session";
 
 function normalizeNextPath(pathname: string, search: string) {
   return `${pathname}${search}`;
@@ -12,7 +12,7 @@ function isSafeRelativePath(value: string | null): value is string {
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const token = request.cookies.get(ACCESS_TOKEN_COOKIE_KEY)?.value;
+  const token = request.cookies.get(AUTH_SESSION_COOKIE_KEY)?.value;
 
   if (pathname === "/login") {
     if (!token) {
