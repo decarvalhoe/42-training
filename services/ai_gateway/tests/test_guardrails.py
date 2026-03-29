@@ -35,9 +35,7 @@ SOLUTION_GIVEAWAY_PATTERNS = [
 ]
 
 ALLOWED_SOURCE_TIERS = {
-    tier["id"]
-    for tier in load_curriculum()["source_policy"]["tiers"]
-    if tier["id"] != "blocked_solution_content"
+    tier["id"] for tier in load_curriculum()["source_policy"]["tiers"] if tier["id"] != "blocked_solution_content"
 }
 
 BLOCKED_SOURCE_TIERS = {
