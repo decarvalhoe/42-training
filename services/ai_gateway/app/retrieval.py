@@ -17,6 +17,7 @@ class SourceResult(BaseModel):
     """A single result returned by a source provider."""
 
     content: str
+    source_label: str | None = None
     source_url: str | None = None
     tier: str = Field(description="Source tier id from the source policy (e.g. official_42, community_docs)")
     confidence: float = Field(ge=0.0, le=1.0, description="Relevance confidence between 0 and 1")
@@ -91,6 +92,7 @@ class StaticSourceProvider(SourceProvider):
             results.append(
                 SourceResult(
                     content=f"Track: {track['title']} — {track.get('summary', '')}",
+                    source_label="42 Lausanne curriculum data",
                     tier="official_42",
                     confidence=0.7,
                 )
@@ -105,6 +107,7 @@ class StaticSourceProvider(SourceProvider):
                 results.append(
                     SourceResult(
                         content=f"Module: {module['title']} (track: {track['id']}, phase: {module.get('phase', 'unknown')}) — Skills: {', '.join(module.get('skills', []))}",
+                        source_label="42 Lausanne curriculum data",
                         tier="official_42",
                         confidence=0.8,
                     )
@@ -116,6 +119,7 @@ class StaticSourceProvider(SourceProvider):
             results.append(
                 SourceResult(
                     content=f"Resource: {resource['label']}",
+                    source_label=resource["label"],
                     source_url=resource.get("url"),
                     tier=resource.get("tier", "community_docs"),
                     confidence=0.6,
