@@ -309,6 +309,31 @@ class TestSubmitCheckpoint:
         assert r.status_code == 200
         assert r.json()["type"] == "deliverable"
 
+    def test_submit_emits_pedagogical_event(self) -> None:
+        p_cur, p_load, p_write, _prog_data, _written = _patch_repo()
+        with p_cur, p_load, p_write, patch("app.main.emit_event") as mock_emit:
+            r = client.post(
+                "/api/v1/checkpoints/submit",
+                json={
+                    "module_id": "shell-basics",
+                    "checkpoint_index": 0,
+                    "type": "exit_criteria",
+                    "evidence": "pwd => /tmp",
+                    "self_evaluation": "pass",
+                },
+            )
+        assert r.status_code == 200
+        mock_emit.assert_called_once()
+        args, kwargs = mock_emit.call_args
+        assert args == ("checkpoint_submitted",)
+        assert kwargs["learner_id"] == "default"
+        assert kwargs["track_id"] == "shell"
+        assert kwargs["module_id"] == "shell-basics"
+        assert kwargs["checkpoint_index"] == 0
+        assert kwargs["payload"]["type"] == "exit_criteria"
+        assert kwargs["payload"]["self_evaluation"] == "pass"
+        assert "submitted_at" in kwargs["payload"]
+
 
 # ---------------------------------------------------------------------------
 # GET /api/v1/checkpoints/{module_id}

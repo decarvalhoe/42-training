@@ -151,6 +151,20 @@ class TestModuleStart:
             r = client.post("/api/v1/modules/nonexistent/start")
         assert r.status_code == 404
 
+    def test_start_emits_pedagogical_event(self) -> None:
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
+        with p_cur, p_load, p_write, patch("app.main.emit_event") as mock_emit:
+            r = client.post("/api/v1/modules/shell-basics/start", json={"learner_id": "learner-42"})
+        assert r.status_code == 200
+        mock_emit.assert_called_once()
+        args, kwargs = mock_emit.call_args
+        assert args == ("module_started",)
+        assert kwargs["learner_id"] == "learner-42"
+        assert kwargs["track_id"] == "shell"
+        assert kwargs["module_id"] == "shell-basics"
+        assert kwargs["payload"]["status"] == "in_progress"
+        assert "started_at" in kwargs["payload"]
+
 
 class TestModuleComplete:
     def test_complete_in_progress_module(self) -> None:
@@ -181,6 +195,23 @@ class TestModuleComplete:
             r = client.post("/api/v1/modules/shell-basics/complete")
         assert r.status_code == 409
 
+    def test_complete_emits_pedagogical_event(self) -> None:
+        prog = _make_progression(
+            module_status={"shell-basics": {"status": "in_progress", "started_at": "2026-01-01T00:00:00+00:00"}}
+        )
+        p_cur, p_load, p_write, _prog, _written = _patch_repo(prog)
+        with p_cur, p_load, p_write, patch("app.main.emit_event") as mock_emit:
+            r = client.post("/api/v1/modules/shell-basics/complete", json={"learner_id": "learner-42"})
+        assert r.status_code == 200
+        mock_emit.assert_called_once()
+        args, kwargs = mock_emit.call_args
+        assert args == ("module_completed",)
+        assert kwargs["learner_id"] == "learner-42"
+        assert kwargs["track_id"] == "shell"
+        assert kwargs["module_id"] == "shell-basics"
+        assert kwargs["payload"]["status"] == "completed"
+        assert "completed_at" in kwargs["payload"]
+
 
 class TestModuleSkip:
     def test_skip_module(self) -> None:
@@ -205,3 +236,20 @@ class TestModuleSkip:
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/modules/nonexistent/skip")
         assert r.status_code == 404
+
+    def test_skip_emits_pedagogical_event(self) -> None:
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
+        with p_cur, p_load, p_write, patch("app.main.emit_event") as mock_emit:
+            r = client.post(
+                "/api/v1/modules/shell-basics/skip", json={"learner_id": "learner-42", "reason": "reviewed"}
+            )
+        assert r.status_code == 200
+        mock_emit.assert_called_once()
+        args, kwargs = mock_emit.call_args
+        assert args == ("module_skipped",)
+        assert kwargs["learner_id"] == "learner-42"
+        assert kwargs["track_id"] == "shell"
+        assert kwargs["module_id"] == "shell-basics"
+        assert kwargs["payload"]["status"] == "skipped"
+        assert kwargs["payload"]["skip_reason"] == "reviewed"
+        assert "skipped_at" in kwargs["payload"]
