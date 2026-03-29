@@ -9,6 +9,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 DEFAULT_API_BASE_URL = "http://localhost:8000"
+PEDAGOGICAL_EVENTS_PATH = "/api/v1/events"
 
 
 def emit_event(
@@ -25,7 +26,7 @@ def emit_event(
     api_base_url = os.getenv("AI_GATEWAY_API_BASE_URL", DEFAULT_API_BASE_URL).rstrip("/")
     try:
         response = httpx.post(
-            f"{api_base_url}/api/v1/internal/pedagogical-events",
+            f"{api_base_url}{PEDAGOGICAL_EVENTS_PATH}",
             json={
                 "event_type": event_type,
                 "learner_id": learner_id,
