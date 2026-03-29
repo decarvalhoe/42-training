@@ -433,6 +433,259 @@ a {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Dashboard skill graph (Issue #185)                                  */
+/* ------------------------------------------------------------------ */
+
+.dashboard-page {
+  max-width: 1300px;
+}
+
+.dashboard-hero {
+  display: grid;
+  gap: 20px;
+}
+
+.dashboard-hero-copy h1 {
+  margin: 8px 0 6px;
+  font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+  line-height: 1.1;
+}
+
+.dashboard-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-body {
+  align-items: start;
+}
+
+.dashboard-main {
+  display: grid;
+  gap: 20px;
+}
+
+.dashboard-sidebar {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.dashboard-track {
+  display: grid;
+  gap: 18px;
+}
+
+.dashboard-track-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dashboard-track-header h2 {
+  margin: 4px 0 0;
+}
+
+.dashboard-track-progress {
+  display: grid;
+  gap: 6px;
+  min-width: 120px;
+  text-align: right;
+}
+
+.dashboard-track-pct {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Skill graph layout */
+
+.skill-graph {
+  display: grid;
+  gap: 14px;
+}
+
+.skill-graph-node-group {
+  display: grid;
+  gap: 8px;
+}
+
+.skill-graph-module {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  color: var(--ink);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.skill-graph-module:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.skill-graph-module--done {
+  border-left: 4px solid var(--python);
+}
+
+.skill-graph-module--in_progress {
+  border-left: 4px solid var(--accent);
+  background: rgba(216, 166, 87, 0.06);
+}
+
+.skill-graph-module--todo {
+  border-left: 4px solid var(--line);
+  opacity: 0.75;
+}
+
+.skill-graph-module-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.skill-graph-module-header strong {
+  flex: 1;
+  min-width: 0;
+}
+
+.skill-graph-state {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.skill-graph-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.skill-graph-dot--done {
+  background: var(--python);
+}
+
+.skill-graph-dot--in_progress {
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+
+.skill-graph-dot--todo {
+  background: var(--line);
+}
+
+.skill-graph-prereqs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.skill-graph-prereq-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(28, 26, 23, 0.06);
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+/* Skill nodes */
+
+.skill-graph-skills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-left: 20px;
+}
+
+.skill-graph-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+}
+
+.skill-graph-skill--done {
+  background: rgba(53, 95, 59, 0.08);
+  border-color: rgba(53, 95, 59, 0.18);
+}
+
+.skill-graph-skill--in_progress {
+  background: rgba(216, 166, 87, 0.1);
+  border-color: rgba(216, 166, 87, 0.25);
+}
+
+.skill-graph-skill--todo {
+  opacity: 0.6;
+}
+
+.skill-graph-skill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skill-graph-skill-dot--done {
+  background: var(--python);
+}
+
+.skill-graph-skill-dot--in_progress {
+  background: var(--accent);
+}
+
+.skill-graph-skill-dot--todo {
+  background: var(--line);
+}
+
+/* Legend */
+
+.dashboard-legend {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.dashboard-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.dashboard-next-cmd {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+@media (min-width: 600px) {
+  .dashboard-hero-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .dashboard-body {
+    grid-template-columns: 1.4fr 0.6fr;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Progression page                                                   */
 /* ------------------------------------------------------------------ */
 
