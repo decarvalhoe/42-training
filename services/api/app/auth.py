@@ -65,6 +65,10 @@ class AuthMeResponse(BaseModel):
     profiles: list[AuthLearnerProfileResponse] = Field(default_factory=list)
 
 
+class SwitchProfileRequest(BaseModel):
+    profile_id: str = Field(min_length=1, max_length=64)
+
+
 def get_jwt_secret() -> str:
     return os.getenv("JWT_SECRET", "dev-secret-change-me")
 
@@ -81,11 +85,34 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))  # type: ignore[no-any-return]
 
 
+def get_active_profile_id(user: UserAccount) -> str | None:
+    jwt_profile_id = getattr(user, "_jwt_active_profile_id", None)
+    if isinstance(jwt_profile_id, str) and jwt_profile_id:
+        return jwt_profile_id
+    return user.active_profile_id or user.learner_profile_id
+
+
+def get_active_profile(user: UserAccount) -> LearnerProfile | None:
+    jwt_profile = getattr(user, "_jwt_active_profile", None)
+    if isinstance(jwt_profile, LearnerProfile):
+        return jwt_profile
+
+    if user.active_profile is not None:
+        return user.active_profile
+
+    active_profile_id = user.active_profile_id or user.learner_profile_id
+    if active_profile_id is None:
+        return None
+
+    return next((profile for profile in user.profiles if profile.id == active_profile_id), None)
+
+
 def create_access_token(user: UserAccount) -> str:
     now = datetime.now(UTC)
     payload = {
         "sub": user.id,
         "email": user.email,
+        "profile_id": get_active_profile_id(user),
         "iat": now,
         "exp": now + timedelta(minutes=ACCESS_TOKEN_TTL_MINUTES),
     }
@@ -125,7 +152,7 @@ def build_token_response(user: UserAccount) -> AuthTokenResponse:
         access_token=create_access_token(user),
         expires_in=ACCESS_TOKEN_TTL_MINUTES * 60,
         user=serialize_user(user),
-        learner_profile=serialize_learner_profile(user.active_profile),
+        learner_profile=serialize_learner_profile(get_active_profile(user)),
         profiles=serialize_profiles(user.profiles),
     )
 
@@ -138,10 +165,24 @@ def unauthorized(detail: str = "Invalid authentication credentials") -> HTTPExce
     )
 
 
+def clear_jwt_profile_context(user: UserAccount) -> UserAccount:
+    user.__dict__.pop("_jwt_active_profile_id", None)
+    user.__dict__.pop("_jwt_active_profile", None)
+    return user
+
+
 async def load_user_with_profiles(
     db: AsyncSession, *, user_id: str | None = None, email: str | None = None
 ) -> UserAccount | None:
-    query = select(UserAccount).options(selectinload(UserAccount.active_profile), selectinload(UserAccount.profiles))
+    query = (
+        select(UserAccount)
+        .execution_options(populate_existing=True)
+        .options(
+            selectinload(UserAccount.active_profile),
+            selectinload(UserAccount.profiles),
+            selectinload(UserAccount.learner_profile),
+        )
+    )
     if user_id is not None:
         query = query.where(UserAccount.id == user_id)
     elif email is not None:
@@ -150,7 +191,10 @@ async def load_user_with_profiles(
         raise ValueError("load_user_with_profiles requires user_id or email")
 
     result = await db.execute(query)
-    return result.scalar_one_or_none()
+    user = result.scalar_one_or_none()
+    if user is None:
+        return None
+    return clear_jwt_profile_context(user)
 
 
 async def get_current_user(
@@ -166,13 +210,31 @@ async def get_current_user(
         raise unauthorized() from exc
 
     user_id = payload.get("sub")
+    profile_id = payload.get("profile_id")
     if not isinstance(user_id, str) or not user_id:
+        raise unauthorized()
+    if profile_id is not None and not isinstance(profile_id, str):
         raise unauthorized()
 
     user = await load_user_with_profiles(db, user_id=user_id)
     if user is None:
         raise unauthorized()
 
+    if profile_id is None:
+        return user
+
+    resolved_profile = next((profile for profile in user.profiles if profile.id == profile_id), None)
+    if resolved_profile is None and user.learner_profile_id == profile_id:
+        profile_result = await db.execute(select(LearnerProfile).where(LearnerProfile.id == profile_id))
+        resolved_profile = profile_result.scalar_one_or_none()
+
+    if resolved_profile is None or (
+        resolved_profile.user_account_id is not None and resolved_profile.user_account_id != user.id
+    ):
+        raise unauthorized("Active profile is not available for this user")
+
+    user._jwt_active_profile_id = resolved_profile.id  # type: ignore[attr-defined]
+    user._jwt_active_profile = resolved_profile  # type: ignore[attr-defined]
     return user
 
 
@@ -219,6 +281,32 @@ async def login(
 async def me(current_user: UserAccount = Depends(get_current_user)) -> AuthMeResponse:
     return AuthMeResponse(
         user=serialize_user(current_user),
-        learner_profile=serialize_learner_profile(current_user.active_profile),
+        learner_profile=serialize_learner_profile(get_active_profile(current_user)),
         profiles=serialize_profiles(current_user.profiles),
     )
+
+
+@router.post("/switch-profile", response_model=AuthTokenResponse)
+async def switch_profile(
+    payload: SwitchProfileRequest,
+    current_user: UserAccount = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> AuthTokenResponse:
+    current_user = await load_user_with_profiles(db, user_id=current_user.id)
+    assert current_user is not None
+
+    result = await db.execute(
+        select(LearnerProfile).where(
+            LearnerProfile.id == payload.profile_id, LearnerProfile.user_account_id == current_user.id
+        )
+    )
+    profile = result.scalar_one_or_none()
+    if profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+
+    current_user.active_profile_id = profile.id
+    await db.commit()
+
+    refreshed_user = await load_user_with_profiles(db, user_id=current_user.id)
+    assert refreshed_user is not None
+    return build_token_response(refreshed_user)
