@@ -134,6 +134,7 @@ class UserAccount(Base):
     learner_profile_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("learner_profile.id"), nullable=True, unique=True
     )
+    active_profile_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("learner_profile.id"), nullable=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -143,6 +144,11 @@ class UserAccount(Base):
     learner_profile: Mapped[LearnerProfile | None] = relationship(
         foreign_keys="UserAccount.learner_profile_id",
         uselist=False,
+    )
+    active_profile: Mapped[LearnerProfile | None] = relationship(
+        foreign_keys="UserAccount.active_profile_id",
+        uselist=False,
+        viewonly=True,
     )
     profiles: Mapped[list[LearnerProfile]] = relationship(
         back_populates="user_account",
