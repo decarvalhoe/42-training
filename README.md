@@ -14,6 +14,7 @@ Le depot contient maintenant deux couches qui coexistent:
 Documentation principale:
 
 - `docs/RUNBOOK_LOCAL.md` — demarrage local en 3 commandes et depannage
+- `docs/PRODUCT_METRICS.md` — KPIs produit et pedagogiques, SQL analytics et structure de dashboard
 - `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
 - `ARCHITECTURE_TARGET.md`
 - `docs/DEVOPS_RBOK_ADAPTATION.md`
@@ -141,6 +142,7 @@ The repository now contains two coexisting layers:
 Core documentation:
 
 - `docs/RUNBOOK_LOCAL.md` — 3-command local setup and troubleshooting
+- `docs/PRODUCT_METRICS.md` — product and pedagogical KPIs, analytics SQL and dashboard structure
 - `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
 - `ARCHITECTURE_TARGET.md`
 - `docs/DEVOPS_RBOK_ADAPTATION.md`
