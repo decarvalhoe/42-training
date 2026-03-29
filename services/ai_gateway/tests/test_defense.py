@@ -545,6 +545,56 @@ def test_score_rewards_explanation() -> None:
     assert score >= 0.5
 
 
+def test_score_answer_uses_llm_when_api_key_available() -> None:
+    q = DefenseQuestion(id="q-1", text="Explain ls", skill="ls", expected_keywords=["list", "files", "directory"])
+
+    with (
+        patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=False),
+        patch(
+            "app.defense.get_defense_evaluation",
+            return_value={"score": 0.91, "feedback": "Bonne maitrise, ajoute encore un exemple concret."},
+        ) as mock_evaluation,
+    ):
+        score, feedback = score_answer(
+            q,
+            "ls liste les fichiers d'un dossier et permet de verifier rapidement l'etat du repertoire courant.",
+            track_id="shell",
+            module_id="shell-basics",
+            phase="foundation",
+        )
+
+    assert score == 0.91
+    assert feedback == "Bonne maitrise, ajoute encore un exemple concret."
+    mock_evaluation.assert_called_once_with(
+        track_id="shell",
+        module_id="shell-basics",
+        phase="foundation",
+        question_text="Explain ls",
+        skill="ls",
+        expected_keywords=["list", "files", "directory"],
+        answer="ls liste les fichiers d'un dossier et permet de verifier rapidement l'etat du repertoire courant.",
+    )
+
+
+def test_score_answer_falls_back_to_rule_based_when_llm_fails() -> None:
+    q = DefenseQuestion(id="q-1", text="Explain ls", skill="ls", expected_keywords=["list", "files", "directory"])
+
+    with (
+        patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=False),
+        patch("app.defense.get_defense_evaluation", side_effect=RuntimeError("Claude unavailable")),
+    ):
+        score, feedback = score_answer(
+            q,
+            "The ls command is used to list files in a directory because it reads directory entries.",
+            track_id="shell",
+            module_id="shell-basics",
+            phase="foundation",
+        )
+
+    assert score >= 0.5
+    assert "understanding" in feedback.lower() or "explanation" in feedback.lower()
+
+
 def test_score_rewards_examples() -> None:
     q = DefenseQuestion(id="q-1", text="Explain ls", skill="ls", expected_keywords=["list", "files", "directory"])
     score_with, _ = score_answer(

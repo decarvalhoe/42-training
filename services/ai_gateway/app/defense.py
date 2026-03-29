@@ -11,10 +11,16 @@ replace this once the database is available.
 
 from __future__ import annotations
 
+import logging
+import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
+from .llm_client import get_defense_evaluation
+
+logger = logging.getLogger(__name__)
 
 
 def _utc_now() -> datetime:
@@ -88,15 +94,8 @@ def create_session(
     return session
 
 
-def score_answer(question: DefenseQuestion, answer: str) -> tuple[float, str]:
-    """Score a learner's answer and produce pedagogical feedback.
-
-    Scoring is rule-based (MVP). A future version will use LLM evaluation.
-    The scorer never reveals the correct answer — it only assesses whether
-    the learner demonstrated understanding.
-
-    Returns (score, feedback) where score is 0.0 to 1.0.
-    """
+def _score_answer_rule_based(question: DefenseQuestion, answer: str) -> tuple[float, str]:
+    """Fallback defense scorer used when LLM evaluation is unavailable."""
     answer_lower = answer.lower().strip()
 
     if len(answer_lower) < 10:
@@ -139,6 +138,34 @@ def score_answer(question: DefenseQuestion, answer: str) -> tuple[float, str]:
         feedback = f"Your explanation of '{question.skill}' needs more depth. Think about what this concept does, why it exists, and how you would demonstrate it."
 
     return round(score, 2), feedback
+
+
+def score_answer(
+    question: DefenseQuestion,
+    answer: str,
+    *,
+    track_id: str = "shell",
+    module_id: str = "unknown-module",
+    phase: str = "foundation",
+) -> tuple[float, str]:
+    """Score a learner's answer with Claude, then fall back to rules."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return _score_answer_rule_based(question, answer)
+
+    try:
+        evaluation = get_defense_evaluation(
+            track_id=track_id,
+            module_id=module_id,
+            phase=phase,
+            question_text=question.text,
+            skill=question.skill,
+            expected_keywords=question.expected_keywords,
+            answer=answer,
+        )
+        return float(evaluation["score"]), str(evaluation["feedback"])
+    except Exception:
+        logger.warning("Defense LLM scoring failed, using rule-based fallback", exc_info=True)
+        return _score_answer_rule_based(question, answer)
 
 
 def compute_session_result(session: DefenseSession) -> dict[str, Any]:
@@ -232,7 +259,13 @@ def submit_answer(session: DefenseSession, question_id: str, answer: str) -> dic
         )
     else:
         current_question.answer = answer
-        score_val, feedback = score_answer(current_question, answer)
+        score_val, feedback = score_answer(
+            current_question,
+            answer,
+            track_id=session.track_id,
+            module_id=session.module_id,
+            phase=session.phase,
+        )
 
     current_question.score = score_val
     current_question.feedback = feedback
