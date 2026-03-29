@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
+from .progression_state import canonicalize_progression, get_completed_module_ids, get_module_statuses
 from .repository import load_curriculum, load_progression, write_progression
 from .schemas import (
     CheckpointListResponse,
@@ -111,12 +112,12 @@ def curriculum_track_detail(track_id: str) -> TrackDetail:
 
 @app.get("/api/v1/progression")
 def progression() -> ProgressionResponse:
-    return ProgressionResponse(**load_progression())
+    return ProgressionResponse(**canonicalize_progression(load_progression()))
 
 
 @app.post("/api/v1/progression")
 def update_progression(payload: ProgressUpdate) -> ProgressionResponse:
-    current = load_progression()
+    current = canonicalize_progression(load_progression())
     learning_plan = current.setdefault("learning_plan", {})
     progress = current.setdefault("progress", {})
 
@@ -137,7 +138,7 @@ def update_progression(payload: ProgressUpdate) -> ProgressionResponse:
     if "active_module" in updates:
         target_module = updates["active_module"]
         curriculum = load_curriculum()
-        completed = set(progress.get("completed_modules", []))
+        completed = get_completed_module_ids(current)
         errors = validate_module_activation(curriculum, current, target_module, completed)
         if errors:
             raise HTTPException(status_code=422, detail={"validation_errors": errors})
@@ -159,11 +160,6 @@ def _find_module(module_id: str) -> tuple[dict[str, object], dict[str, object]]:
     raise HTTPException(status_code=404, detail=f"Module '{module_id}' not found")
 
 
-def _get_module_statuses(progression: dict[str, object]) -> dict[str, dict[str, object]]:
-    """Return the module_status dict from progression, creating it if absent."""
-    return progression.setdefault("module_status", {})  # type: ignore[return-value]
-
-
 def _check_prerequisites(module_id: str, track: dict[str, object], progression: dict[str, object]) -> list[str]:
     """Return list of prerequisite module IDs that are not completed/skipped."""
     modules: list[dict[str, object]] = track.get("modules", [])  # type: ignore[assignment]
@@ -173,7 +169,7 @@ def _check_prerequisites(module_id: str, track: dict[str, object], progression: 
     idx = module_ids.index(module_id)
     if idx == 0:
         return []
-    statuses = _get_module_statuses(progression)
+    statuses = get_module_statuses(progression)
     missing: list[str] = []
     for prev_id in module_ids[:idx]:
         prev_status = statuses.get(prev_id, {})
@@ -189,8 +185,8 @@ def _check_prerequisites(module_id: str, track: dict[str, object], progression: 
 @app.get("/api/v1/modules/{module_id}/status")
 def module_status(module_id: str) -> ModuleStatusResponse:
     track, _module = _find_module(module_id)
-    progression_data = load_progression()
-    statuses = _get_module_statuses(progression_data)
+    progression_data = canonicalize_progression(load_progression())
+    statuses = get_module_statuses(progression_data)
     entry = statuses.get(module_id, {})
     if not isinstance(entry, dict):
         entry = {}
@@ -208,7 +204,7 @@ def module_status(module_id: str) -> ModuleStatusResponse:
 @app.post("/api/v1/modules/{module_id}/start")
 def module_start(module_id: str, payload: ModuleStartRequest | None = None) -> ModuleProgressionResponse:
     track, _module = _find_module(module_id)
-    progression_data = load_progression()
+    progression_data = canonicalize_progression(load_progression())
 
     missing = _check_prerequisites(module_id, track, progression_data)
     if missing:
@@ -221,7 +217,7 @@ def module_start(module_id: str, payload: ModuleStartRequest | None = None) -> M
             },
         )
 
-    statuses = _get_module_statuses(progression_data)
+    statuses = get_module_statuses(progression_data)
     current = statuses.get(module_id, {})
     if isinstance(current, dict) and current.get("status") == "in_progress":
         return ModuleProgressionResponse(
@@ -246,8 +242,8 @@ def module_start(module_id: str, payload: ModuleStartRequest | None = None) -> M
 @app.post("/api/v1/modules/{module_id}/complete")
 def module_complete(module_id: str, payload: ModuleCompleteRequest | None = None) -> ModuleProgressionResponse:
     track, _module = _find_module(module_id)
-    progression_data = load_progression()
-    statuses = _get_module_statuses(progression_data)
+    progression_data = canonicalize_progression(load_progression())
+    statuses = get_module_statuses(progression_data)
     current = statuses.get(module_id, {})
 
     if not isinstance(current, dict) or current.get("status") != "in_progress":
@@ -273,8 +269,8 @@ def module_complete(module_id: str, payload: ModuleCompleteRequest | None = None
 @app.post("/api/v1/modules/{module_id}/skip")
 def module_skip(module_id: str, payload: ModuleSkipRequest | None = None) -> ModuleProgressionResponse:
     track, _module = _find_module(module_id)
-    progression_data = load_progression()
-    statuses = _get_module_statuses(progression_data)
+    progression_data = canonicalize_progression(load_progression())
+    statuses = get_module_statuses(progression_data)
 
     now = datetime.now(UTC).isoformat()
     entry: dict[str, object] = {"status": "skipped", "skipped_at": now}
@@ -300,8 +296,8 @@ def validate_module(module_id: str) -> dict[str, object]:
     curriculum = load_curriculum()
     if find_module(curriculum, module_id) is None:
         raise HTTPException(status_code=404, detail=f"Module '{module_id}' not found")
-    progression_data = load_progression()
-    completed = set(progression_data.get("progress", {}).get("completed_modules", []))
+    progression_data = canonicalize_progression(load_progression())
+    completed = get_completed_module_ids(progression_data)
     errors = validate_module_activation(curriculum, progression_data, module_id, completed)
     return {
         "module_id": module_id,

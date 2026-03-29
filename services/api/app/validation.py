@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .progression_state import get_completed_module_ids
+
 # Ordered phases — a module's phase must not precede the latest completed phase
 # within the same track without all prior-phase modules being done.
 PHASE_ORDER: dict[str, int] = {
@@ -108,7 +110,7 @@ def validate_module_activation(
     An empty list means all validations pass.
     """
     if completed_modules is None:
-        completed_modules = set(progression.get("progress", {}).get("completed_modules", []))
+        completed_modules = get_completed_module_ids(progression)
 
     errors: list[dict[str, str]] = []
 
