@@ -1,0 +1,507 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (build + validate only, no publish)"
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/42-training
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # -------------------------------------------------------------------
+  # 1. Unit tests across platforms
+  # -------------------------------------------------------------------
+  test-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    name: test (${{ matrix.platform }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install API deps
+        working-directory: services/api
+        run: pip install -r requirements.txt
+
+      - name: Run API tests
+        working-directory: services/api
+        run: pytest tests -q
+
+      - name: Install AI gateway deps
+        working-directory: services/ai_gateway
+        run: pip install -r requirements.txt
+
+      - name: Run AI gateway tests
+        working-directory: services/ai_gateway
+        run: pytest tests -q
+
+      - name: Install web deps
+        working-directory: apps/web
+        run: npm ci
+
+      - name: TypeScript check
+        working-directory: apps/web
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        working-directory: apps/web
+        run: npx eslint .
+
+  # -------------------------------------------------------------------
+  # 2. Docker build + validation (linux only)
+  # -------------------------------------------------------------------
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [test-matrix]
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: api
+            dockerfile: services/api/Dockerfile
+            context: .
+            port: 8000
+          - name: ai-gateway
+            dockerfile: services/ai_gateway/Dockerfile
+            context: .
+            port: 8100
+          - name: web
+            dockerfile: apps/web/Dockerfile
+            context: ./apps/web
+            port: 3000
+    name: docker (${{ matrix.service.name }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=dev-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+            echo "version=0.0.0-dev.${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          target: ${{ matrix.service.name == 'web' && 'runner' || '' }}
+          load: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}:${{ steps.version.outputs.tag }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Validate image starts
+        if: matrix.service.name != 'web'
+        run: |
+          IMAGE="${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}:${{ steps.version.outputs.tag }}"
+          echo "Starting $IMAGE..."
+          docker run -d --name test-${{ matrix.service.name }} \
+            -p ${{ matrix.service.port }}:${{ matrix.service.port }} \
+            -e DATABASE_URL="sqlite+aiosqlite:///test.db" \
+            -e REDIS_URL="redis://localhost:6379/0" \
+            -e ANTHROPIC_API_KEY="test-key" \
+            -e AI_GATEWAY_API_BASE_URL="http://localhost:8000" \
+            "$IMAGE"
+
+          echo "Waiting for health..."
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:${{ matrix.service.port }}/health; then
+              echo ""
+              echo "Health check passed"
+              docker stop test-${{ matrix.service.name }}
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Health check failed"
+          docker logs test-${{ matrix.service.name }}
+          docker stop test-${{ matrix.service.name }}
+          exit 1
+
+      - name: Push image
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && (inputs.dry_run != 'true')
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          target: ${{ matrix.service.name == 'web' && 'runner' || '' }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}:${{ steps.version.outputs.tag }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # -------------------------------------------------------------------
+  # 3. Integration smoke test (full stack via docker-compose.prod.yml)
+  # -------------------------------------------------------------------
+  integration:
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build all images
+        run: docker compose -f docker-compose.prod.yml build
+
+      - name: Start infra
+        run: docker compose -f docker-compose.prod.yml up -d postgres redis
+
+      - name: Wait for infra healthy
+        run: |
+          for i in $(seq 1 20); do
+            HEALTHY=$(docker compose -f docker-compose.prod.yml ps --format json | grep -c '"Health":"healthy"' || true)
+            if [ "$HEALTHY" -ge 2 ]; then
+              echo "Infra healthy"
+              break
+            fi
+            sleep 3
+          done
+
+      - name: Start application services
+        run: |
+          docker compose -f docker-compose.prod.yml up -d api
+          sleep 5
+          docker compose -f docker-compose.prod.yml up -d ai_gateway web
+          sleep 10
+
+      - name: Validate all health endpoints
+        run: |
+          set -e
+          echo "=== API ==="
+          curl -sf http://localhost:8000/health | python3 -m json.tool
+          echo "=== AI Gateway ==="
+          curl -sf http://localhost:8100/health | python3 -m json.tool
+          echo "=== Endpoints ==="
+          curl -sf http://localhost:8000/api/v1/meta | python3 -m json.tool
+          curl -sf http://localhost:8100/api/v1/source-policy | python3 -m json.tool
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose -f docker-compose.prod.yml logs --tail=20
+          docker compose -f docker-compose.prod.yml down -v
+
+  # -------------------------------------------------------------------
+  # 4. Installability validation (pip + npm on each platform)
+  # -------------------------------------------------------------------
+  install-validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    needs: [test-matrix]
+    name: install (${{ matrix.platform }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Validate API deps install
+        working-directory: services/api
+        run: |
+          python -m venv .venv
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -c "from app.main import app; print('API import OK')"
+
+      - name: Validate AI gateway deps install
+        working-directory: services/ai_gateway
+        run: |
+          pip install -r requirements.txt
+          python -c "from app.main import app; print('AI gateway import OK')"
+
+      - name: Validate web deps install + build
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
+  # -------------------------------------------------------------------
+  # 5. Desktop builds (Windows, macOS, Linux)
+  # -------------------------------------------------------------------
+  desktop-windows:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-latest
+    needs: [test-matrix]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Build Next.js standalone
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Windows distributable
+        working-directory: desktop
+        run: |
+          npm ci
+          npx electron-builder --win --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: |
+            desktop/dist/*.exe
+          retention-days: 5
+
+  desktop-macos:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: macos-latest
+    needs: [test-matrix]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build macOS distributable
+        run: bash scripts/build-macos.sh
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos
+          path: |
+            desktop/dist/*.dmg
+          retention-days: 5
+
+  desktop-linux:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs: [test-matrix]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y dpkg fakeroot
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build .deb package
+        run: bash packaging/deb/build-deb.sh "${{ steps.version.outputs.version }}"
+
+      - name: Build AppImage
+        run: bash packaging/appimage/build-appimage.sh "${{ steps.version.outputs.version }}"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux
+          path: |
+            packaging/deb/dist/*.deb
+            packaging/appimage/dist/*.AppImage
+          retention-days: 5
+
+  # -------------------------------------------------------------------
+  # 6. Create GitHub release and attach all artifacts (tag pushes only)
+  # -------------------------------------------------------------------
+  github-release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs: [docker-build, integration, install-validate, desktop-windows, desktop-macos, desktop-linux]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Download all desktop artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: desktop-*
+          merge-multiple: true
+
+      - name: List release assets
+        run: find release-assets -type f | head -20
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
+          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "${{ steps.version.outputs.tag }}" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${PREV_TAG}..HEAD"
+          fi
+          {
+            echo "notes<<RELEASE_EOF"
+            echo "## What's changed"
+            echo ""
+            git log "$RANGE" --pretty=format:"- %s (%h)" --no-merges | head -50
+            echo ""
+            echo ""
+            echo "## Desktop downloads"
+            echo ""
+            echo "| Platform | Format |"
+            echo "|----------|--------|"
+            echo "| Windows  | .exe (NSIS installer + portable) |"
+            echo "| macOS    | .dmg (universal) |"
+            echo "| Linux    | .deb (Debian/Ubuntu) + .AppImage |"
+            echo ""
+            echo "## Docker images"
+            echo ""
+            echo '```'
+            echo "docker pull ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.tag }}"
+            echo "docker pull ${{ env.IMAGE_PREFIX }}-ai-gateway:${{ steps.version.outputs.tag }}"
+            echo "docker pull ${{ env.IMAGE_PREFIX }}-web:${{ steps.version.outputs.tag }}"
+            echo '```'
+            echo "RELEASE_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate SHA256 checksums
+        run: |
+          cd release-assets
+          find . -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \) \
+            -exec sha256sum {} + | sed 's|  \./|  |' | sort -k2 | tee SHA256SUMS
+
+      - name: Create release with assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body: ${{ steps.notes.outputs.notes }}
+          draft: true
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+          files: |
+            release-assets/**/*.exe
+            release-assets/**/*.dmg
+            release-assets/**/*.deb
+            release-assets/**/*.AppImage
+            release-assets/SHA256SUMS
+
+      - name: Append checksums to release notes
+        if: hashFiles('release-assets/SHA256SUMS') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const checksums = fs.readFileSync('release-assets/SHA256SUMS', 'utf8').trim();
+            if (!checksums) return;
+
+            const { owner, repo } = context.repo;
+            const tag = process.env.GITHUB_REF.replace('refs/tags/', '');
+
+            const release = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+            const body = release.data.body || '';
+
+            const block = [
+              '',
+              '---',
+              '',
+              '## SHA256 Checksums',
+              '',
+              '```',
+              checksums,
+              '```',
+              '',
+              'Verify: `sha256sum -c SHA256SUMS`',
+            ].join('\n');
+
+            const cleanBody = body.replace(/\n---\n\n## SHA256 Checksums[\s\S]*$/, '');
+
+            await github.rest.repos.updateRelease({
+              owner, repo,
+              release_id: release.data.id,
+              body: cleanBody + block,
+            });
