@@ -118,7 +118,7 @@ def get_conversation_store() -> ConversationStore:
     try:
         import redis
 
-        return redis.Redis.from_url(redis_url, decode_responses=True)  # type: ignore[return-value]
+        return redis.Redis.from_url(redis_url, decode_responses=True)  # type: ignore[return-value,no-any-return]
     except Exception:
         logger.warning("Redis unavailable for mentor memory, using in-memory fallback", exc_info=True)
         return _fallback_store()
