@@ -11,8 +11,16 @@ from .defense import (
     create_session,
     get_current_question,
     get_current_question_deadline,
-    get_session,
     submit_answer,
+)
+from .defense_persistence import (
+    DefensePersistenceError,
+    load_defense_session,
+    persist_review_attempt,
+    sync_defense_session,
+)
+from .defense_persistence import (
+    create_defense_session as persist_defense_session,
 )
 from .intent import route_intent
 from .librarian import search_librarian
@@ -292,9 +300,16 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
         track,
         module,
         request.phase,
+        request.learner_id,
+        request.reviewer_id,
         request.num_questions,
         request.question_time_limit_seconds,
     )
+    try:
+        persist_defense_session(session)
+    except DefensePersistenceError as exc:
+        logger.warning("Defense session persistence failed during start", exc_info=True)
+        raise HTTPException(status_code=503, detail="Defense persistence unavailable") from exc
 
     return DefenseStartResponse(
         status="ok",
@@ -320,7 +335,11 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
 
 @app.post("/api/v1/defense/answer", response_model=DefenseAnswerResponse)
 def defense_answer(request: DefenseAnswerRequest) -> DefenseAnswerResponse:
-    session = get_session(request.session_id)
+    try:
+        session = load_defense_session(request.session_id)
+    except DefensePersistenceError as exc:
+        logger.warning("Defense session load failed during answer", exc_info=True)
+        raise HTTPException(status_code=503, detail="Defense persistence unavailable") from exc
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
     if session.completed:
@@ -334,6 +353,13 @@ def defense_answer(request: DefenseAnswerRequest) -> DefenseAnswerResponse:
         raise HTTPException(status_code=409, detail="Questions must be answered in order")
 
     result = submit_answer(session, request.question_id, request.answer)
+    try:
+        sync_defense_session(session)
+        if session.completed:
+            persist_review_attempt(session)
+    except DefensePersistenceError as exc:
+        logger.warning("Defense session persistence failed during answer", exc_info=True)
+        raise HTTPException(status_code=503, detail="Defense persistence unavailable") from exc
 
     return DefenseAnswerResponse(
         status="ok",
@@ -350,11 +376,20 @@ def defense_answer(request: DefenseAnswerRequest) -> DefenseAnswerResponse:
 
 @app.get("/api/v1/defense/{session_id}/result", response_model=DefenseResultResponse)
 def defense_result(session_id: str) -> DefenseResultResponse:
-    session = get_session(session_id)
+    try:
+        session = load_defense_session(session_id)
+    except DefensePersistenceError as exc:
+        logger.warning("Defense session load failed during result", exc_info=True)
+        raise HTTPException(status_code=503, detail="Defense persistence unavailable") from exc
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
     result = compute_session_result(session)
+    if session.completed and not session.review_attempt_persisted:
+        try:
+            persist_review_attempt(session)
+        except DefensePersistenceError:
+            logger.warning("Defense review-attempt persistence failed during result", exc_info=True)
 
     return DefenseResultResponse(
         status="ok",

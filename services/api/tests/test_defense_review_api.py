@@ -78,6 +78,45 @@ def test_create_and_get_defense_session(persistence_client: TestClient) -> None:
     assert get_response.json()["module_id"] == "shell-basics"
 
 
+def test_update_defense_session(persistence_client: TestClient) -> None:
+    create_response = persistence_client.post(
+        "/api/v1/defense-sessions",
+        json={
+            "session_id": "def-004",
+            "learner_id": "learner-1",
+            "module_id": "shell-basics",
+            "questions": ["What does pwd do?"],
+            "answers": [],
+            "scores": [],
+            "status": "in_progress",
+            "evidence_artifacts": [{"type": "defense_session_state", "track_id": "shell"}],
+        },
+    )
+    assert create_response.status_code == 201
+
+    update_response = persistence_client.put(
+        "/api/v1/defense-sessions/def-004",
+        json={
+            "learner_id": "learner-1",
+            "module_id": "shell-basics",
+            "questions": ["What does pwd do?"],
+            "answers": ["It prints the current working directory."],
+            "scores": [0.85],
+            "status": "passed",
+            "evidence_artifacts": [
+                {"type": "defense_session_state", "track_id": "shell", "completed": True},
+                {"type": "defense_session_result", "overall_score": 0.85, "passed": True},
+            ],
+        },
+    )
+
+    assert update_response.status_code == 200
+    data = update_response.json()
+    assert data["answers"] == ["It prints the current working directory."]
+    assert data["scores"] == [0.85]
+    assert data["status"] == "passed"
+
+
 def test_list_defense_sessions_can_filter_by_module(persistence_client: TestClient) -> None:
     persistence_client.post(
         "/api/v1/defense-sessions",
