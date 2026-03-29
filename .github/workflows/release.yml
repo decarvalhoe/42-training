@@ -283,12 +283,119 @@ jobs:
           npm run build
 
   # -------------------------------------------------------------------
-  # 5. Create GitHub release (tag pushes only)
+  # 5. Desktop builds (Windows, macOS, Linux)
+  # -------------------------------------------------------------------
+  desktop-windows:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-latest
+    needs: [test-matrix]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Build Next.js standalone
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Windows distributable
+        working-directory: desktop
+        run: |
+          npm ci
+          npx electron-builder --win --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: |
+            desktop/dist/*.exe
+          retention-days: 5
+
+  desktop-macos:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: macos-latest
+    needs: [test-matrix]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build macOS distributable
+        run: bash scripts/build-macos.sh
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos
+          path: |
+            desktop/dist/*.dmg
+          retention-days: 5
+
+  desktop-linux:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs: [test-matrix]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y dpkg fakeroot
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build .deb package
+        run: bash packaging/deb/build-deb.sh "${{ steps.version.outputs.version }}"
+
+      - name: Build AppImage
+        run: bash packaging/appimage/build-appimage.sh "${{ steps.version.outputs.version }}"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux
+          path: |
+            packaging/deb/dist/*.deb
+            packaging/appimage/dist/*.AppImage
+          retention-days: 5
+
+  # -------------------------------------------------------------------
+  # 6. Create GitHub release and attach all artifacts (tag pushes only)
   # -------------------------------------------------------------------
   github-release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    needs: [docker-build, integration, install-validate]
+    needs: [docker-build, integration, install-validate, desktop-windows, desktop-macos, desktop-linux]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -297,6 +404,16 @@ jobs:
       - name: Extract version
         id: version
         run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Download all desktop artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: desktop-*
+          merge-multiple: true
+
+      - name: List release assets
+        run: find release-assets -type f | head -20
 
       - name: Generate release notes
         id: notes
@@ -314,6 +431,14 @@ jobs:
             git log "$RANGE" --pretty=format:"- %s (%h)" --no-merges | head -50
             echo ""
             echo ""
+            echo "## Desktop downloads"
+            echo ""
+            echo "| Platform | Format |"
+            echo "|----------|--------|"
+            echo "| Windows  | .exe (NSIS installer + portable) |"
+            echo "| macOS    | .dmg (universal) |"
+            echo "| Linux    | .deb (Debian/Ubuntu) + .AppImage |"
+            echo ""
             echo "## Docker images"
             echo ""
             echo '```'
@@ -324,7 +449,7 @@ jobs:
             echo "RELEASE_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Create release
+      - name: Create release with assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -332,3 +457,8 @@ jobs:
           body: ${{ steps.notes.outputs.notes }}
           draft: true
           prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+          files: |
+            release-assets/**/*.exe
+            release-assets/**/*.dmg
+            release-assets/**/*.deb
+            release-assets/**/*.AppImage
