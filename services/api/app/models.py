@@ -104,7 +104,11 @@ class LearnerProfile(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    user_account: Mapped[UserAccount | None] = relationship(back_populates="learner_profile", uselist=False)
+    user_account: Mapped[UserAccount | None] = relationship(
+        back_populates="learner_profile",
+        uselist=False,
+        foreign_keys="LearnerProfile.user_account_id",
+    )
     progressions: Mapped[list[Progression]] = relationship(back_populates="learner")
     evidence_items: Mapped[list[Evidence]] = relationship(back_populates="learner")
     reviews_authored: Mapped[list[Review]] = relationship(back_populates="reviewer", foreign_keys="Review.reviewer_id")
@@ -136,7 +140,10 @@ class UserAccount(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    learner_profile: Mapped[LearnerProfile | None] = relationship(back_populates="user_account")
+    learner_profile: Mapped[LearnerProfile | None] = relationship(
+        back_populates="user_account",
+        foreign_keys="UserAccount.learner_profile_id",
+    )
     profiles: Mapped[list[LearnerProfile]] = relationship(
         back_populates="user_account",
         foreign_keys="LearnerProfile.user_account_id",
