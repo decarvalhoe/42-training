@@ -116,7 +116,7 @@ def persist_checkpoint_evidence(record: CheckpointRecord) -> str | None:
                 expected_content=record.prompt,
             )
             await session.commit()
-            return evidence.id
+            return str(evidence.id)
 
     try:
         return asyncio.run(_persist())
@@ -159,12 +159,13 @@ async def persist_defense_evidence(session: AsyncSession, defense_session: Defen
         description=f"Defense session {defense_session.session_id} finished with status {defense_session.status}.",
         expected_content="\n".join(str(question) for question in list(defense_session.questions or [])),
     )
+    evidence_id = str(evidence.id)
     defense_session.evidence_artifacts = _append_artifact(
         defense_session.evidence_artifacts,
         artifact_type="defense_summary",
-        evidence_id=evidence.id,
+        evidence_id=evidence_id,
     )
-    return evidence.id
+    return evidence_id
 
 
 async def persist_review_evidence(session: AsyncSession, review_attempt: ReviewAttempt) -> str:
@@ -177,9 +178,10 @@ async def persist_review_evidence(session: AsyncSession, review_attempt: ReviewA
         description=review_attempt.feedback,
         expected_content="\n".join(str(question) for question in list(review_attempt.questions or [])),
     )
+    evidence_id = str(evidence.id)
     review_attempt.evidence_artifacts = _append_artifact(
         review_attempt.evidence_artifacts,
         artifact_type="review_feedback",
-        evidence_id=evidence.id,
+        evidence_id=evidence_id,
     )
-    return evidence.id
+    return evidence_id
