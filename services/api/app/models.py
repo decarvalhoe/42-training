@@ -95,13 +95,20 @@ class LearnerProfile(Base):
     login: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     track: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     current_module: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    user_account_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("user_accounts.id"), nullable=True, index=True
+    )
     runtime_state: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    user_account: Mapped[UserAccount | None] = relationship(back_populates="learner_profile", uselist=False)
+    user_account: Mapped[UserAccount | None] = relationship(
+        foreign_keys="LearnerProfile.user_account_id",
+        uselist=False,
+        viewonly=True,
+    )
     progressions: Mapped[list[Progression]] = relationship(back_populates="learner")
     evidence_items: Mapped[list[Evidence]] = relationship(back_populates="learner")
     reviews_authored: Mapped[list[Review]] = relationship(back_populates="reviewer", foreign_keys="Review.reviewer_id")
@@ -127,13 +134,27 @@ class UserAccount(Base):
     learner_profile_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("learner_profile.id"), nullable=True, unique=True
     )
+    active_profile_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("learner_profile.id"), nullable=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    learner_profile: Mapped[LearnerProfile | None] = relationship(back_populates="user_account")
+    learner_profile: Mapped[LearnerProfile | None] = relationship(
+        foreign_keys="UserAccount.learner_profile_id",
+        uselist=False,
+    )
+    active_profile: Mapped[LearnerProfile | None] = relationship(
+        foreign_keys="UserAccount.active_profile_id",
+        uselist=False,
+        viewonly=True,
+    )
+    profiles: Mapped[list[LearnerProfile]] = relationship(
+        back_populates="user_account",
+        foreign_keys="LearnerProfile.user_account_id",
+        viewonly=True,
+    )
 
 
 class Progression(Base):

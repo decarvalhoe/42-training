@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import jwt
@@ -17,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.auth import JWT_ALGORITHM, get_jwt_secret
 from app.db import get_db_session
 from app.main import app
-from app.models import Base, UserAccount
+from app.models import Base, LearnerProfile, UserAccount
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -59,6 +60,37 @@ async def _get_user_by_email(
         return result.scalar_one()
 
 
+async def _create_profile_for_user(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    user_id: str,
+    login: str,
+    track: str,
+    current_module: str | None = None,
+    activate: bool = False,
+) -> LearnerProfile:
+    async with session_factory() as session:
+        profile = LearnerProfile(
+            login=login,
+            track=track,
+            current_module=current_module,
+            user_account_id=user_id,
+            started_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        session.add(profile)
+        await session.flush()
+
+        if activate:
+            user = await session.get(UserAccount, user_id)
+            assert user is not None
+            user.active_profile_id = profile.id
+
+        await session.commit()
+        await session.refresh(profile)
+        return profile
+
+
 def test_register_creates_user_with_bcrypt_hash(
     auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
 ) -> None:
@@ -74,6 +106,7 @@ def test_register_creates_user_with_bcrypt_hash(
     assert data["token_type"] == "bearer"
     assert data["expires_in"] == 900
     assert data["user"]["email"] == "student@example.com"
+    assert data["profiles"] == []
 
     token_payload = jwt.decode(data["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
     assert token_payload["email"] == "student@example.com"
@@ -143,6 +176,7 @@ def test_me_returns_current_user_from_bearer_token(
             "status": "active",
         },
         "learner_profile": None,
+        "profiles": [],
     }
 
 
@@ -179,3 +213,154 @@ def test_alembic_upgrade_head_creates_user_accounts_table(tmp_path: Path) -> Non
         "created_at",
         "updated_at",
     } <= columns
+
+
+def test_profiles_list_returns_active_profile_and_all_profiles(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "student@example.com", "password": "supersecret"},
+    )
+    token = register_response.json()["access_token"]
+    user_id = register_response.json()["user"]["id"]
+
+    active_profile = asyncio.run(
+        _create_profile_for_user(
+            session_factory,
+            user_id=user_id,
+            login="student-shell",
+            track="shell",
+            current_module="shell-basics",
+            activate=True,
+        )
+    )
+    asyncio.run(
+        _create_profile_for_user(
+            session_factory,
+            user_id=user_id,
+            login="student-c",
+            track="c",
+        )
+    )
+
+    response = client.get("/api/v1/profiles", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["active_profile_id"] == active_profile.id
+    assert data["active_profile"]["track"] == "shell"
+    assert {profile["track"] for profile in data["profiles"]} == {"shell", "c"}
+
+
+def test_profiles_create_links_profile_to_current_user_and_activates_it(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, _session_factory = auth_client
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "student@example.com", "password": "supersecret"},
+    )
+    token = register_response.json()["access_token"]
+
+    response = client.post(
+        "/api/v1/profiles",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"track": "python_ai"},
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["active_profile_id"] is not None
+    assert data["active_profile"]["track"] == "python_ai"
+    assert data["profiles"][0]["login"].startswith("student-python-ai")
+
+
+def test_profiles_create_rejects_duplicate_track_for_same_user(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "student@example.com", "password": "supersecret"},
+    )
+    token = register_response.json()["access_token"]
+    user_id = register_response.json()["user"]["id"]
+
+    asyncio.run(
+        _create_profile_for_user(
+            session_factory,
+            user_id=user_id,
+            login="student-shell",
+            track="shell",
+            activate=True,
+        )
+    )
+
+    response = client.post(
+        "/api/v1/profiles",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"track": "shell"},
+    )
+
+    assert response.status_code == 409
+    assert "already has a profile" in response.json()["detail"]
+
+
+def test_profiles_switch_changes_active_profile_only_within_user_scope(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+
+    first_user = client.post("/api/v1/auth/register", json={"email": "first@example.com", "password": "supersecret"})
+    first_token = first_user.json()["access_token"]
+    first_user_id = first_user.json()["user"]["id"]
+
+    shell_profile = asyncio.run(
+        _create_profile_for_user(
+            session_factory,
+            user_id=first_user_id,
+            login="first-shell",
+            track="shell",
+            activate=True,
+        )
+    )
+    c_profile = asyncio.run(
+        _create_profile_for_user(
+            session_factory,
+            user_id=first_user_id,
+            login="first-c",
+            track="c",
+        )
+    )
+
+    second_user = client.post("/api/v1/auth/register", json={"email": "second@example.com", "password": "supersecret"})
+    second_user_id = second_user.json()["user"]["id"]
+    foreign_profile = asyncio.run(
+        _create_profile_for_user(
+            session_factory,
+            user_id=second_user_id,
+            login="second-python",
+            track="python_ai",
+            activate=True,
+        )
+    )
+
+    switch_response = client.post(
+        f"/api/v1/profiles/{c_profile.id}/switch",
+        headers={"Authorization": f"Bearer {first_token}"},
+    )
+
+    assert switch_response.status_code == 200
+    switched = switch_response.json()
+    assert switched["active_profile_id"] == c_profile.id
+    assert switched["active_profile"]["track"] == "c"
+    assert shell_profile.id != switched["active_profile_id"]
+
+    forbidden_response = client.post(
+        f"/api/v1/profiles/{foreign_profile.id}/switch",
+        headers={"Authorization": f"Bearer {first_token}"},
+    )
+
+    assert forbidden_response.status_code == 404

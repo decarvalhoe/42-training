@@ -14,6 +14,7 @@ from .db import get_db_session
 from .events import _emit_event_async, emit_event  # noqa: F401
 from .models import DefenseSession as DefenseSessionModel
 from .models import ReviewAttempt as ReviewAttemptModel
+from .profiles import router as profiles_router
 from .progression_state import canonicalize_progression, get_completed_module_ids, get_module_statuses
 from .repository import load_curriculum, load_progression, write_progression
 from .schemas import (
@@ -52,6 +53,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(profiles_router)
 
 
 # ---------------------------------------------------------------------------

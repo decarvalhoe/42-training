@@ -9,6 +9,8 @@ from app.schemas import (
     Checkpoint,
     DefenseSession,
     LearnerProfile,
+    ProfileCreateRequest,
+    ProfilesResponse,
     ProgressState,
     ProgressUpdate,
     Review,
@@ -78,6 +80,23 @@ class TestLearnerProfile:
                 started_at="2026-03-27T08:30:00Z",
                 updated_at="2026-03-27T08:45:00Z",
             )
+
+
+# -- ProfileCreateRequest / ProfilesResponse -------------------------------
+
+
+class TestProfileSchemas:
+    def test_profile_create_request_defaults_activate(self) -> None:
+        payload = ProfileCreateRequest(track="shell")
+        assert payload.track == "shell"
+        assert payload.login is None
+        assert payload.activate is True
+
+    def test_profiles_response_defaults_empty_list(self) -> None:
+        response = ProfilesResponse()
+        assert response.active_profile_id is None
+        assert response.active_profile is None
+        assert response.profiles == []
 
 
 # -- ProgressState ------------------------------------------------------------
