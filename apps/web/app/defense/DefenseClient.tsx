@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+import { TerminalPane } from "@/app/components/TerminalPane";
+
 /* ------------------------------------------------------------------ */
 /*  Types matching the AI Gateway defense API                          */
 /* ------------------------------------------------------------------ */
@@ -73,20 +75,28 @@ type ModuleOption = {
   trackTitle: string;
 };
 
+type TmuxSessionOption = {
+  name: string;
+  status: string;
+  attached: boolean;
+};
+
 type Props = {
   modules: ModuleOption[];
   apiUrl: string;
+  tmuxSessions?: TmuxSessionOption[];
 };
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export default function DefenseClient({ modules, apiUrl }: Props) {
+export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Props) {
   /* Setup state */
   const [selectedModule, setSelectedModule] = useState(modules[0]?.id ?? "");
   const [numQuestions, setNumQuestions] = useState(3);
   const [timeLimit, setTimeLimit] = useState(60);
+  const [selectedTmux, setSelectedTmux] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,6 +157,24 @@ export default function DefenseClient({ modules, apiUrl }: Props) {
     const modulePhase = currentModule?.phase ?? "foundation";
 
     try {
+      /* Capture terminal context if a tmux session is selected */
+      let terminalContext: Record<string, unknown> | undefined;
+      if (selectedTmux) {
+        try {
+          const paneRes = await fetch(
+            `${apiUrl}/api/v1/tmux/pane/${encodeURIComponent(selectedTmux)}`
+          );
+          if (paneRes.ok) {
+            const pane = await paneRes.json();
+            terminalContext = {
+              panes: { [selectedTmux]: pane.content },
+            };
+          }
+        } catch {
+          /* Terminal context is optional — proceed without it */
+        }
+      }
+
       const res = await fetch(`${apiUrl}/api/v1/defense/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -156,6 +184,7 @@ export default function DefenseClient({ modules, apiUrl }: Props) {
           phase: modulePhase,
           num_questions: numQuestions,
           question_time_limit_seconds: timeLimit,
+          ...(terminalContext && { terminal_context: terminalContext }),
         }),
       });
 
@@ -342,6 +371,23 @@ export default function DefenseClient({ modules, apiUrl }: Props) {
             </label>
           </div>
 
+          {tmuxSessions.length > 0 && (
+            <label className="defense-field">
+              <span>Terminal session (optional)</span>
+              <select
+                value={selectedTmux}
+                onChange={(e) => setSelectedTmux(e.target.value)}
+              >
+                <option value="">None — no terminal context</option>
+                {tmuxSessions.map((s) => (
+                  <option key={s.name} value={s.name}>
+                    {s.name} ({s.status}{s.attached ? ", attached" : ""})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <button
             className="action-btn"
             onClick={handleStart}
@@ -362,8 +408,8 @@ export default function DefenseClient({ modules, apiUrl }: Props) {
     const timerWarning = secondsLeft <= 15 && secondsLeft > 0;
     const timerCritical = secondsLeft <= 5;
 
-    return (
-      <section className="defense-active">
+    const qaColumn = (
+      <div className="defense-qa-column">
         {/* Progress bar */}
         <div className="defense-progress panel">
           <div className="defense-progress-header">
@@ -434,6 +480,17 @@ export default function DefenseClient({ modules, apiUrl }: Props) {
             >
               {submitting ? "Submitting..." : "Submit answer"}
             </button>
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <section className={`defense-active ${selectedTmux ? "defense-active--split" : ""}`}>
+        {qaColumn}
+        {selectedTmux && (
+          <div className="defense-terminal-column">
+            <TerminalPane session={selectedTmux} />
           </div>
         )}
       </section>

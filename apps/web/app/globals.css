@@ -1620,6 +1620,10 @@ a {
   max-width: 900px;
 }
 
+.defense-page:has(.defense-active--split) {
+  max-width: 1400px;
+}
+
 .defense-hero h1 {
   margin: 0 0 8px;
   font-size: clamp(1.8rem, 4vw, 2.8rem);
@@ -1675,6 +1679,30 @@ a {
 .defense-active {
   display: grid;
   gap: 16px;
+}
+
+.defense-active--split {
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+
+.defense-qa-column {
+  display: grid;
+  gap: 16px;
+}
+
+.defense-terminal-column {
+  position: sticky;
+  top: 80px;
+}
+
+@media (max-width: 900px) {
+  .defense-active--split {
+    grid-template-columns: 1fr;
+  }
+  .defense-terminal-column {
+    position: static;
+  }
 }
 
 .defense-progress {
