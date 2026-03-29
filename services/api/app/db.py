@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncGenerator
 from functools import lru_cache
-from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
@@ -46,7 +46,7 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(get_async_engine(), class_=AsyncSession, expire_on_commit=False)
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_db_session() -> AsyncGenerator[AsyncSession]:
     """Yield an async SQLAlchemy session for future DB-backed routes."""
 
     async with get_session_factory()() as session:
