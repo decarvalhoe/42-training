@@ -67,7 +67,9 @@ def _build_history_block(conversation_history: list[MentorTurn]) -> list[str]:
                 f"Echange {index} - mentor next_action: {turn['mentor_next_action']}",
             ]
         )
-    lines.append("Utilise cet historique pour eviter de repeter les memes indices et pour construire sur les essais deja faits.")
+    lines.append(
+        "Utilise cet historique pour eviter de repeter les memes indices et pour construire sur les essais deja faits."
+    )
     return lines
 
 
