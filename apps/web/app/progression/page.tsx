@@ -177,7 +177,7 @@ export default async function ProgressionPage() {
               <div className="progress-bar">
                 <div
                   className="progress-bar-fill"
-                  style={{ "--bar-width": `${ts.percent}%` } as React.CSSProperties}
+                  style={{ "--bar-width": `${ts.percent}%`, "--bar-color": TRACK_COLORS[ts.id] ?? "var(--accent)" } as React.CSSProperties}
                 />
               </div>
               <p className="muted">{ts.done} / {ts.total} modules</p>

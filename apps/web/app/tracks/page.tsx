@@ -71,7 +71,7 @@ function TalentNode({
   return (
     <div className="talent-node-wrapper">
       <div className={`talent-node talent-node--${state}`}>
-        <div className="talent-node-icon">
+        <div className="talent-node-icon" style={{ "--track-color": state === "locked" ? "var(--muted)" : trackColor } as React.CSSProperties}>
           {STATE_ICON[state]}
         </div>
         <div className="talent-node-body">
@@ -101,7 +101,7 @@ function TalentNode({
         </div>
       </div>
       {!isLast && (
-        <div className="talent-edge" />
+        <div className="talent-edge" style={{ "--track-color": trackColor } as React.CSSProperties} />
       )}
     </div>
   );
@@ -127,8 +127,8 @@ function TrackTree({
   const pct = track.modules.length > 0 ? Math.round((doneCount / track.modules.length) * 100) : 0;
 
   return (
-    <article className={`talent-track ${trackCls}`}>
-      <div className="talent-track-header">
+    <article className="talent-track">
+      <div className="talent-track-header" style={{ "--track-color": trackColor } as React.CSSProperties}>
         <div>
           <p className="eyebrow">{track.id}</p>
           <h2>{track.title}</h2>
@@ -138,7 +138,7 @@ function TrackTree({
           <div className="talent-track-bar">
             <div
               className="talent-track-bar-fill"
-              style={{ "--bar-width": `${pct}%` } as React.CSSProperties}
+              style={{ "--track-color": trackColor, "--bar-width": `${pct}%` } as React.CSSProperties}
             />
           </div>
           <span className="muted">
