@@ -330,5 +330,5 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
           body: ${{ steps.notes.outputs.notes }}
-          draft: false
+          draft: true
           prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
