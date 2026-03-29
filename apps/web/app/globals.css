@@ -4,15 +4,106 @@
 
 :root {
   color-scheme: light;
+
+  /* --- Base palette --- */
   --bg: #f7f0e5;
+  --bg-warm: var(--bg-warm);
   --panel: rgba(255, 252, 247, 0.86);
+  --white: #fff;
   --ink: #1c1a17;
   --muted: #645f58;
   --line: rgba(28, 26, 23, 0.12);
+
+  /* --- Track colors --- */
   --shell: #1c5d63;
   --c: #b24c2b;
   --python: #355f3b;
   --accent: #d8a657;
+  --accent-warm: #7a5a16;
+
+  /* --- Semantic surfaces (ink-based) --- */
+  --ink-04: rgba(28, 26, 23, 0.04);
+  --ink-05: rgba(28, 26, 23, 0.05);
+  --ink-06: rgba(28, 26, 23, 0.06);
+  --ink-08: rgba(28, 26, 23, 0.08);
+  --ink-14: rgba(28, 26, 23, 0.14);
+  --ink-18: rgba(28, 26, 23, 0.18);
+
+  /* --- Semantic surfaces (white-based) --- */
+  --white-40: rgba(255, 255, 255, 0.4);
+  --white-48: rgba(255, 255, 255, 0.48);
+  --white-50: rgba(255, 255, 255, 0.5);
+  --white-54: rgba(255, 255, 255, 0.54);
+  --white-56: rgba(255, 255, 255, 0.56);
+  --white-58: rgba(255, 255, 255, 0.58);
+  --white-60: rgba(255, 255, 255, 0.6);
+  --white-62: rgba(255, 255, 255, 0.62);
+  --white-70: rgba(255, 255, 255, 0.7);
+  --white-85: rgba(255, 255, 255, 0.85);
+  --white-92: rgba(255, 255, 255, 0.92);
+
+  /* --- Track surface variants --- */
+  --accent-06: rgba(216, 166, 87, 0.06);
+  --accent-08: rgba(216, 166, 87, 0.08);
+  --accent-10: rgba(216, 166, 87, 0.1);
+  --accent-12: rgba(216, 166, 87, 0.12);
+  --accent-14: rgba(216, 166, 87, 0.14);
+  --accent-15: rgba(216, 166, 87, 0.15);
+  --accent-16: rgba(216, 166, 87, 0.16);
+  --accent-18: rgba(216, 166, 87, 0.18);
+  --accent-20: rgba(216, 166, 87, 0.2);
+  --accent-25: rgba(216, 166, 87, 0.25);
+  --accent-30: rgba(216, 166, 87, 0.3);
+  --accent-32: rgba(216, 166, 87, 0.32);
+  --accent-42: rgba(216, 166, 87, 0.42);
+  --accent-45: rgba(216, 166, 87, 0.45);
+  --accent-70: rgba(216, 166, 87, 0.7);
+
+  --shell-10: rgba(28, 93, 99, 0.1);
+  --shell-12: rgba(28, 93, 99, 0.12);
+  --shell-18: rgba(28, 93, 99, 0.18);
+  --shell-20: rgba(28, 93, 99, 0.2);
+  --shell-22: rgba(28, 93, 99, 0.22);
+  --shell-35: rgba(28, 93, 99, 0.35);
+
+  --python-08: rgba(53, 95, 59, 0.08);
+  --python-10: rgba(53, 95, 59, 0.1);
+  --python-12: rgba(53, 95, 59, 0.12);
+  --python-15: rgba(53, 95, 59, 0.15);
+  --python-18: rgba(53, 95, 59, 0.18);
+  --python-20: rgba(53, 95, 59, 0.2);
+  --python-22: rgba(53, 95, 59, 0.22);
+
+  --c-08: rgba(178, 76, 43, 0.08);
+  --c-10: rgba(178, 76, 43, 0.1);
+  --c-20: rgba(178, 76, 43, 0.2);
+  --c-50: rgba(178, 76, 43, 0.5);
+
+  /* --- Terminal colors --- */
+  --term-bg: #1c1a17;
+  --term-fg: #d4cfc8;
+  --term-dim: #7a756e;
+  --term-ok: #5ab87a;
+  --term-info: #6bb8d4;
+  --term-warn: #e5b749;
+  --term-error: #e45a5a;
+
+  /* --- Typography --- */
+  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* --- Radius scale --- */
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
+  --radius-3xl: 24px;
+  --radius-full: 999px;
+
+  /* --- Shadows --- */
   --shadow: 0 18px 40px rgba(50, 40, 20, 0.12);
 }
 
@@ -30,11 +121,11 @@ body {
   padding: 0;
   min-height: 100%;
   background:
-    radial-gradient(circle at top left, rgba(216, 166, 87, 0.32), transparent 28%),
-    radial-gradient(circle at top right, rgba(28, 93, 99, 0.18), transparent 26%),
-    linear-gradient(180deg, #f4ebde 0%, var(--bg) 100%);
+    radial-gradient(circle at top left, var(--accent-32), transparent 28%),
+    radial-gradient(circle at top right, var(--shell-18), transparent 26%),
+    linear-gradient(180deg, var(--bg-warm) 0%, var(--bg) 100%);
   color: var(--ink);
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.55;
   -webkit-text-size-adjust: 100%;
@@ -48,7 +139,7 @@ h1,
 h2,
 h3,
 strong {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: var(--font-display);
 }
 
 h1 {
@@ -92,7 +183,7 @@ a {
   backdrop-filter: blur(12px);
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow);
   padding: 18px;
 }
@@ -145,8 +236,8 @@ a {
 .metric-card {
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-lg);
+  background: var(--white-60);
 }
 
 .metric-card span,
@@ -187,9 +278,9 @@ a {
   display: inline-flex;
   align-items: center;
   padding: 7px 12px;
-  border-radius: 999px;
-  background: rgba(28, 26, 23, 0.06);
-  border: 1px solid rgba(28, 26, 23, 0.08);
+  border-radius: var(--radius-full);
+  background: var(--ink-06);
+  border: 1px solid var(--ink-08);
   font-size: 13px;
   min-height: 36px;
 }
@@ -218,7 +309,7 @@ a {
 }
 
 .track-card.active {
-  border-color: rgba(216, 166, 87, 0.7);
+  border-color: var(--accent-70);
   transform: translateY(-3px);
 }
 
@@ -268,7 +359,7 @@ a {
   padding: 10px 12px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .tmux-header {
@@ -311,7 +402,7 @@ a {
 }
 
 .nav-logo {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: var(--font-display);
   font-size: 16px;
   font-weight: 700;
   color: var(--ink);
@@ -322,9 +413,9 @@ a {
   display: inline-flex;
   align-items: center;
   padding: 3px 9px;
-  border-radius: 999px;
-  background: rgba(28, 93, 99, 0.1);
-  border: 1px solid rgba(28, 93, 99, 0.18);
+  border-radius: var(--radius-full);
+  background: var(--shell-10);
+  border: 1px solid var(--shell-18);
   color: var(--shell);
   font-size: 11px;
   font-weight: 600;
@@ -369,9 +460,9 @@ a {
 .nav-auth-btn {
   min-height: 34px;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--white-70);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
@@ -380,12 +471,12 @@ a {
 }
 
 .nav-auth-btn:hover {
-  background: rgba(28, 26, 23, 0.05);
+  background: var(--ink-05);
 }
 
 .nav-link {
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 13px;
   color: var(--muted);
   text-decoration: none;
@@ -397,12 +488,12 @@ a {
 }
 
 .nav-link:hover {
-  background: rgba(28, 26, 23, 0.05);
+  background: var(--ink-05);
   color: var(--ink);
 }
 
 .nav-link--active {
-  background: rgba(216, 166, 87, 0.12);
+  background: var(--accent-12);
   color: var(--ink);
   font-weight: 600;
 }
@@ -497,7 +588,7 @@ a {
 }
 
 .dashboard-track-pct {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: var(--font-display);
   font-size: 1.6rem;
   font-weight: 700;
   line-height: 1;
@@ -519,16 +610,16 @@ a {
   display: grid;
   gap: 6px;
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--white-50);
   text-decoration: none;
   color: var(--ink);
   transition: background 0.15s, border-color 0.15s;
 }
 
 .skill-graph-module:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--white-85);
 }
 
 .skill-graph-module--done {
@@ -537,7 +628,7 @@ a {
 
 .skill-graph-module--in_progress {
   border-left: 4px solid var(--accent);
-  background: rgba(216, 166, 87, 0.06);
+  background: var(--accent-06);
 }
 
 .skill-graph-module--todo {
@@ -593,10 +684,10 @@ a {
 .skill-graph-prereq-tag {
   font-size: 11px;
   padding: 2px 8px;
-  border-radius: 6px;
-  background: rgba(28, 26, 23, 0.06);
+  border-radius: var(--radius-sm);
+  background: var(--ink-06);
   color: var(--muted);
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-mono);
 }
 
 /* Skill nodes */
@@ -613,20 +704,20 @@ a {
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--white-40);
   font-size: 13px;
 }
 
 .skill-graph-skill--done {
-  background: rgba(53, 95, 59, 0.08);
-  border-color: rgba(53, 95, 59, 0.18);
+  background: var(--python-08);
+  border-color: var(--python-18);
 }
 
 .skill-graph-skill--in_progress {
-  background: rgba(216, 166, 87, 0.1);
-  border-color: rgba(216, 166, 87, 0.25);
+  background: var(--accent-10);
+  border-color: var(--accent-25);
 }
 
 .skill-graph-skill--todo {
@@ -708,7 +799,7 @@ a {
 
 .progress-bar {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--line);
   margin-top: 8px;
   overflow: hidden;
@@ -716,7 +807,7 @@ a {
 
 .progress-bar-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   transition: width 0.3s ease;
 }
 
@@ -784,20 +875,20 @@ a {
 
 .analytics-bar-value {
   white-space: nowrap;
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: var(--font-display);
   font-size: 0.95rem;
 }
 
 .analytics-bar-track {
   height: 12px;
-  border-radius: 999px;
-  background: rgba(28, 26, 23, 0.08);
+  border-radius: var(--radius-full);
+  background: var(--ink-08);
   overflow: hidden;
 }
 
 .analytics-bar-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   transition: width 0.28s ease;
 }
 
@@ -810,12 +901,12 @@ a {
   align-items: center;
   padding: 12px 28px;
   border: none;
-  border-radius: 14px;
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-display);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  color: #fff;
+  color: var(--white);
   background: var(--ink);
   text-decoration: none;
   transition: opacity 0.15s;
@@ -845,20 +936,20 @@ a {
 /* Pill variants */
 
 .pill--done {
-  background: rgba(53, 95, 59, 0.12);
-  border-color: rgba(53, 95, 59, 0.2);
+  background: var(--python-12);
+  border-color: var(--python-20);
   color: var(--python);
 }
 
 .pill--in_progress {
-  background: rgba(216, 166, 87, 0.18);
-  border-color: rgba(216, 166, 87, 0.3);
-  color: #7a5a16;
+  background: var(--accent-18);
+  border-color: var(--accent-30);
+  color: var(--accent-warm);
 }
 
 .pill--todo {
-  background: rgba(28, 26, 23, 0.06);
-  border-color: rgba(28, 26, 23, 0.08);
+  background: var(--ink-06);
+  border-color: var(--ink-08);
 }
 
 /* Checklist */
@@ -874,9 +965,9 @@ a {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--white-50);
   text-decoration: none;
   color: var(--ink);
   transition: background 0.15s;
@@ -884,7 +975,7 @@ a {
 }
 
 .prog-checklist-item:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--white-85);
 }
 
 .prog-checklist-item--done {
@@ -931,23 +1022,23 @@ a {
 }
 
 .prog-check--done {
-  background: rgba(53, 95, 59, 0.15);
+  background: var(--python-15);
   color: var(--python);
 }
 
 .prog-check--in_progress {
-  background: rgba(216, 166, 87, 0.2);
-  color: #7a5a16;
+  background: var(--accent-20);
+  color: var(--accent-warm);
   animation: pulse 2s infinite;
 }
 
 .prog-check--ready {
-  background: rgba(28, 26, 23, 0.06);
+  background: var(--ink-06);
   color: var(--muted);
 }
 
 .prog-check--blocked {
-  background: rgba(178, 76, 43, 0.1);
+  background: var(--c-10);
   color: var(--c);
 }
 
@@ -958,9 +1049,9 @@ a {
 
 .prog-code {
   padding: 3px 8px;
-  border-radius: 6px;
-  background: rgba(28, 26, 23, 0.06);
-  font-family: "IBM Plex Mono", monospace;
+  border-radius: var(--radius-sm);
+  background: var(--ink-06);
+  font-family: var(--font-mono);
   font-size: 13px;
 }
 
@@ -1005,9 +1096,9 @@ a {
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--white-50);
   font-size: 14px;
   min-height: 44px;
 }
@@ -1057,7 +1148,7 @@ a {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
   font-size: 14px;
   min-height: 40px;
@@ -1091,7 +1182,7 @@ a {
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
   font-size: 14px;
   min-height: 40px;
@@ -1115,7 +1206,7 @@ a {
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -1129,26 +1220,26 @@ a {
 }
 
 .spb--high {
-  background: rgba(53, 95, 59, 0.12);
-  border-color: rgba(53, 95, 59, 0.22);
+  background: var(--python-12);
+  border-color: var(--python-22);
   color: var(--python);
 }
 
 .spb--medium {
-  background: rgba(28, 93, 99, 0.1);
-  border-color: rgba(28, 93, 99, 0.2);
+  background: var(--shell-10);
+  border-color: var(--shell-20);
   color: var(--shell);
 }
 
 .spb--low {
-  background: rgba(216, 166, 87, 0.15);
-  border-color: rgba(216, 166, 87, 0.3);
-  color: #7a5a16;
+  background: var(--accent-15);
+  border-color: var(--accent-30);
+  color: var(--accent-warm);
 }
 
 .spb--blocked {
-  background: rgba(178, 76, 43, 0.1);
-  border-color: rgba(178, 76, 43, 0.2);
+  background: var(--c-10);
+  border-color: var(--c-20);
   color: var(--c);
 }
 
@@ -1210,9 +1301,9 @@ a {
   display: grid;
   gap: 4px;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--white-48);
 }
 
 .login-card-header {
@@ -1225,16 +1316,16 @@ a {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   padding: 6px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.56);
+  background: var(--white-56);
 }
 
 .login-mode-btn {
   min-height: 40px;
   padding: 10px 12px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--muted);
   font: inherit;
@@ -1243,7 +1334,7 @@ a {
 }
 
 .login-mode-btn--active {
-  background: rgba(28, 93, 99, 0.12);
+  background: var(--shell-12);
   color: var(--shell);
 }
 
@@ -1263,9 +1354,9 @@ a {
   width: 100%;
   min-height: 48px;
   padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(28, 26, 23, 0.14);
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--ink-14);
+  background: var(--white-92);
   color: var(--ink);
   font: inherit;
 }
@@ -1274,9 +1365,9 @@ a {
   width: 100%;
   min-height: 48px;
   padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(28, 26, 23, 0.14);
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--ink-14);
+  background: var(--white-92);
   color: var(--ink);
   font: inherit;
 }
@@ -1287,14 +1378,14 @@ a {
 
 .login-field input:focus,
 .login-field select:focus {
-  outline: 2px solid rgba(28, 93, 99, 0.22);
+  outline: 2px solid var(--shell-22);
   outline-offset: 2px;
-  border-color: rgba(28, 93, 99, 0.35);
+  border-color: var(--shell-35);
 }
 
 .login-field input[aria-invalid="true"],
 .login-field select[aria-invalid="true"] {
-  border-color: rgba(178, 76, 43, 0.5);
+  border-color: var(--c-50);
 }
 
 .login-error {
@@ -1318,28 +1409,28 @@ a {
   justify-content: center;
   min-height: 44px;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.56);
+  background: var(--white-56);
   text-decoration: none;
 }
 
 .login-feedback {
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid transparent;
   font-size: 14px;
 }
 
 .login-feedback--success {
-  background: rgba(53, 95, 59, 0.1);
-  border-color: rgba(53, 95, 59, 0.2);
+  background: var(--python-10);
+  border-color: var(--python-20);
   color: var(--python);
 }
 
 .login-feedback--error {
-  background: rgba(178, 76, 43, 0.1);
-  border-color: rgba(178, 76, 43, 0.2);
+  background: var(--c-10);
+  border-color: var(--c-20);
   color: var(--c);
 }
 
@@ -1359,7 +1450,7 @@ a {
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  background: rgba(28, 26, 23, 0.06);
+  background: var(--ink-06);
   border-bottom: 1px solid var(--line);
 }
 
@@ -1375,26 +1466,26 @@ a {
 }
 
 .login-boot-dot--red {
-  background: #e45a5a;
+  background: var(--term-error);
 }
 
 .login-boot-dot--yellow {
-  background: #e5b749;
+  background: var(--term-warn);
 }
 
 .login-boot-dot--green {
-  background: #5ab87a;
+  background: var(--term-ok);
 }
 
 .login-boot-title {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--muted);
   font-weight: 600;
 }
 
 .boot-sequence {
-  background: #1c1a17;
+  background: var(--term-bg);
   padding: 16px;
   overflow-y: auto;
   max-height: 420px;
@@ -1407,32 +1498,32 @@ a {
 }
 
 .boot-line {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.6;
-  color: #d4cfc8;
+  color: var(--term-fg);
   white-space: pre;
   animation: boot-fade-in 0.15s ease-out;
 }
 
 .boot-line--ok {
-  color: #5ab87a;
+  color: var(--term-ok);
 }
 
 .boot-line--info {
-  color: #6bb8d4;
+  color: var(--term-info);
 }
 
 .boot-line--warn {
-  color: #e5b749;
+  color: var(--term-warn);
 }
 
 .boot-line--dim {
-  color: #7a756e;
+  color: var(--term-dim);
 }
 
 .boot-line--bold {
-  color: #d4cfc8;
+  color: var(--term-fg);
   font-weight: 700;
 }
 
@@ -1440,7 +1531,7 @@ a {
   display: inline-block;
   width: 8px;
   height: 15px;
-  background: #d4cfc8;
+  background: var(--term-fg);
   animation: boot-blink 0.8s step-end infinite;
   vertical-align: text-bottom;
 }
@@ -1497,16 +1588,16 @@ a {
 
 .profiles-card {
   padding: 18px;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.54);
+  background: var(--white-54);
 }
 
 .profiles-card--active {
-  border-color: rgba(216, 166, 87, 0.7);
+  border-color: var(--accent-70);
   background:
-    linear-gradient(135deg, rgba(216, 166, 87, 0.16), rgba(255, 255, 255, 0.54)),
-    rgba(255, 255, 255, 0.54);
+    linear-gradient(135deg, var(--accent-16), var(--white-54)),
+    var(--white-54);
 }
 
 .profiles-meta {
@@ -1521,9 +1612,9 @@ a {
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--white-70);
   color: var(--ink);
   font: inherit;
   font-weight: 600;
@@ -1536,8 +1627,8 @@ a {
 }
 
 .profiles-switch-btn--active {
-  border-color: rgba(216, 166, 87, 0.45);
-  background: rgba(216, 166, 87, 0.18);
+  border-color: var(--accent-45);
+  background: var(--accent-18);
 }
 
 .profiles-inline-link {
@@ -1551,9 +1642,9 @@ a {
 
 .profiles-note {
   padding: 14px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--white-48);
 }
 
 /* ================================================================== */
@@ -1601,7 +1692,7 @@ a {
   .status-panel,
   .track-card,
   .panel {
-    border-radius: 22px;
+    border-radius: var(--radius-2xl);
     padding: 22px;
   }
 
@@ -1610,7 +1701,7 @@ a {
   }
 
   .metric-card {
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     padding: 16px;
   }
 
@@ -1695,7 +1786,7 @@ a {
   .status-panel,
   .track-card,
   .panel {
-    border-radius: 24px;
+    border-radius: var(--radius-3xl);
     padding: 24px;
   }
 
@@ -1704,7 +1795,7 @@ a {
   }
 
   .metric-card {
-    border-radius: 18px;
+    border-radius: var(--radius-xl);
   }
 
   .hero-grid,
@@ -1798,7 +1889,7 @@ a {
   gap: 0;
   padding: 0;
   overflow: hidden;
-  border: 1px solid rgba(28, 26, 23, 0.18);
+  border: 1px solid var(--ink-18);
 }
 
 .terminal-pane-header {
@@ -1807,7 +1898,7 @@ a {
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
-  background: rgba(28, 26, 23, 0.04);
+  background: var(--ink-04);
 }
 
 .terminal-pane-header .eyebrow {
@@ -1821,16 +1912,16 @@ a {
 }
 
 .terminal-pane-session {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--muted);
 }
 
 .terminal-pane-toggle {
   padding: 4px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--white-70);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -1839,16 +1930,16 @@ a {
 }
 
 .terminal-pane-toggle:hover {
-  background: rgba(28, 26, 23, 0.05);
+  background: var(--ink-05);
   color: var(--ink);
 }
 
 .terminal-pane-content {
   margin: 0;
   padding: 14px 16px;
-  background: #1c1a17;
-  color: #d4cfc8;
-  font-family: "IBM Plex Mono", monospace;
+  background: var(--term-bg);
+  color: var(--term-fg);
+  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.4;
   overflow-x: auto;
@@ -1860,7 +1951,7 @@ a {
 
 .terminal-pane-error {
   padding: 14px 16px;
-  background: rgba(178, 76, 43, 0.08);
+  background: var(--c-08);
   color: var(--c);
   font-size: 13px;
 }
@@ -1904,18 +1995,18 @@ a {
   width: 100%;
   min-height: 48px;
   padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(28, 26, 23, 0.14);
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--ink-14);
+  background: var(--white-92);
   color: var(--ink);
   font: inherit;
 }
 
 .defense-field select:focus,
 .defense-field input:focus {
-  outline: 2px solid rgba(28, 93, 99, 0.22);
+  outline: 2px solid var(--shell-22);
   outline-offset: 2px;
-  border-color: rgba(28, 93, 99, 0.35);
+  border-color: var(--shell-35);
 }
 
 .defense-field-row {
@@ -1942,7 +2033,7 @@ a {
 }
 
 .defense-timer {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: var(--font-display);
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--ink);
@@ -1950,7 +2041,7 @@ a {
 }
 
 .defense-timer--warning {
-  color: #7a5a16;
+  color: var(--accent-warm);
 }
 
 .defense-timer--critical {
@@ -1983,9 +2074,9 @@ a {
   width: 100%;
   min-height: 120px;
   padding: 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(28, 26, 23, 0.14);
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--ink-14);
+  background: var(--white-92);
   color: var(--ink);
   font: inherit;
   font-size: 15px;
@@ -1994,9 +2085,9 @@ a {
 }
 
 .defense-textarea:focus {
-  outline: 2px solid rgba(28, 93, 99, 0.22);
+  outline: 2px solid var(--shell-22);
   outline-offset: 2px;
-  border-color: rgba(28, 93, 99, 0.35);
+  border-color: var(--shell-35);
 }
 
 .defense-textarea::placeholder {
@@ -2048,7 +2139,7 @@ a {
 }
 
 .defense-results-score {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: var(--font-display);
   font-size: 3rem;
   font-weight: 700;
   margin: 8px 0;
@@ -2096,7 +2187,7 @@ a {
 }
 
 .defense-result-meta strong {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: var(--font-display);
   font-size: 1.1rem;
 }
 
@@ -2113,9 +2204,9 @@ a {
 
 .defense-error {
   padding: 12px 16px;
-  border-radius: 14px;
-  background: rgba(178, 76, 43, 0.1);
-  border: 1px solid rgba(178, 76, 43, 0.2);
+  border-radius: var(--radius-lg);
+  background: var(--c-10);
+  border: 1px solid var(--c-20);
   color: var(--c);
   font-size: 14px;
 }
@@ -2166,9 +2257,9 @@ a {
   gap: 8px;
   min-height: 44px;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--white-62);
   cursor: pointer;
 }
 
@@ -2177,8 +2268,8 @@ a {
 }
 
 .review-lens--active {
-  border-color: rgba(216, 166, 87, 0.42);
-  background: rgba(216, 166, 87, 0.14);
+  border-color: var(--accent-42);
+  background: var(--accent-14);
 }
 
 .review-history-card,
@@ -2186,9 +2277,9 @@ a {
   display: grid;
   gap: 10px;
   padding: 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--white-58);
 }
 
 .review-history-meta,
@@ -2216,9 +2307,9 @@ a {
 .evidence-content {
   margin: 0;
   padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(28, 26, 23, 0.05);
-  font-family: "IBM Plex Mono", monospace;
+  border-radius: var(--radius-md);
+  background: var(--ink-05);
+  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -2264,9 +2355,9 @@ a {
   flex: 1;
   padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-mono);
   background: var(--panel);
   color: var(--ink);
 }
@@ -2289,8 +2380,8 @@ a {
   padding: 10px 14px;
   background: var(--ink);
   color: var(--bg);
-  border-radius: 6px;
-  font-family: "IBM Plex Mono", monospace;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
   font-size: 13px;
   user-select: all;
 }
@@ -2317,7 +2408,7 @@ a {
 }
 
 .sessions-name {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
 }
 
@@ -2345,7 +2436,7 @@ a {
 
 .btn--danger:hover {
   background: var(--c);
-  color: #fff;
+  color: var(--white);
 }
 
 /* ------------------------------------------------------------------ */
@@ -2379,7 +2470,7 @@ a {
 
 .talent-track {
   background: var(--panel);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow);
   overflow: hidden;
 }
@@ -2458,7 +2549,7 @@ a {
 }
 
 .talent-node:hover {
-  background: rgba(216, 166, 87, 0.06);
+  background: var(--accent-06);
 }
 
 .talent-node--locked {
@@ -2466,7 +2557,7 @@ a {
 }
 
 .talent-node--in_progress {
-  background: rgba(216, 166, 87, 0.08);
+  background: var(--accent-08);
 }
 
 .talent-node-icon {
