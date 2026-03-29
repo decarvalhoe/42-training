@@ -6,7 +6,14 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .defense import compute_session_result, create_session, get_session, score_answer
+from .defense import (
+    compute_session_result,
+    create_session,
+    get_current_question,
+    get_current_question_deadline,
+    get_session,
+    submit_answer,
+)
 from .intent import route_intent
 from .librarian import search_librarian
 from .llm_client import get_mentor_response
@@ -278,7 +285,13 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
     if module is None:
         raise HTTPException(status_code=404, detail="Module not found")
 
-    session = create_session(track, module, request.phase, request.num_questions)
+    session = create_session(
+        track,
+        module,
+        request.phase,
+        request.num_questions,
+        request.question_time_limit_seconds,
+    )
 
     return DefenseStartResponse(
         status="ok",
@@ -290,10 +303,15 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
                 question_id=q.id,
                 text=q.text,
                 skill=q.skill,
+                time_limit_seconds=session.question_time_limit_seconds,
             )
             for q in session.questions
         ],
         total_questions=len(session.questions),
+        question_time_limit_seconds=session.question_time_limit_seconds,
+        active_question_id=session.questions[0].id if session.questions else None,
+        started_at=session.started_at,
+        current_question_deadline=get_current_question_deadline(session),
     )
 
 
@@ -308,24 +326,22 @@ def defense_answer(request: DefenseAnswerRequest) -> DefenseAnswerResponse:
     question = next((q for q in session.questions if q.id == request.question_id), None)
     if question is None:
         raise HTTPException(status_code=404, detail="Question not found")
-    if question.answered:
-        raise HTTPException(status_code=400, detail="Question already answered")
+    current_question = get_current_question(session)
+    if current_question is not None and request.question_id != current_question.id:
+        raise HTTPException(status_code=409, detail="Questions must be answered in order")
 
-    score_val, feedback = score_answer(question, request.answer)
-    question.score = score_val
-    question.feedback = feedback
-    question.answered = True
-
-    remaining = sum(1 for q in session.questions if not q.answered)
-    if remaining == 0:
-        session.completed = True
+    result = submit_answer(session, request.question_id, request.answer)
 
     return DefenseAnswerResponse(
         status="ok",
-        question_id=question.id,
-        score=score_val,
-        feedback=feedback,
-        questions_remaining=remaining,
+        question_id=result["question_id"],
+        score=result["score"],
+        feedback=result["feedback"],
+        questions_remaining=result["questions_remaining"],
+        timed_out=result["timed_out"],
+        elapsed_seconds=result["elapsed_seconds"],
+        next_question_id=result["next_question_id"],
+        next_question_deadline=result["next_question_deadline"],
     )
 
 
@@ -343,5 +359,6 @@ def defense_result(session_id: str) -> DefenseResultResponse:
         overall_score=result["overall_score"],
         passed=result["passed"],
         summary=result["summary"],
+        timed_out_questions=result["timed_out_questions"],
         question_results=[DefenseQuestionResult(**qr) for qr in result["question_results"]],
     )

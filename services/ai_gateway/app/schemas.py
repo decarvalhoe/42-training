@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -130,12 +131,14 @@ class DefenseStartRequest(BaseModel):
     module_id: str
     phase: Literal["foundation", "practice", "core", "advanced"] = "foundation"
     num_questions: int = Field(default=3, ge=1, le=10)
+    question_time_limit_seconds: int = Field(default=60, ge=10, le=600)
 
 
 class DefenseQuestionOut(BaseModel):
     question_id: str
     text: str
     skill: str
+    time_limit_seconds: int
 
 
 class DefenseStartResponse(BaseModel):
@@ -145,6 +148,10 @@ class DefenseStartResponse(BaseModel):
     module_id: str
     questions: list[DefenseQuestionOut]
     total_questions: int
+    question_time_limit_seconds: int
+    active_question_id: str | None
+    started_at: datetime
+    current_question_deadline: datetime | None
 
 
 class DefenseAnswerRequest(BaseModel):
@@ -159,6 +166,10 @@ class DefenseAnswerResponse(BaseModel):
     score: float
     feedback: str
     questions_remaining: int
+    timed_out: bool
+    elapsed_seconds: float
+    next_question_id: str | None = None
+    next_question_deadline: datetime | None = None
 
 
 class DefenseQuestionResult(BaseModel):
@@ -168,6 +179,8 @@ class DefenseQuestionResult(BaseModel):
     score: float
     feedback: str
     answered: bool
+    timed_out: bool = False
+    elapsed_seconds: float = 0.0
 
 
 class DefenseResultResponse(BaseModel):
@@ -176,4 +189,5 @@ class DefenseResultResponse(BaseModel):
     overall_score: float
     passed: bool
     summary: str
+    timed_out_questions: int
     question_results: list[DefenseQuestionResult]

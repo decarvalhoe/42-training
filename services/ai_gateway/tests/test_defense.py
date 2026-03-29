@@ -7,6 +7,9 @@ Key invariants:
 - The system never provides correct answers in feedback
 """
 
+from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -27,10 +30,20 @@ def _clean_sessions():
     clear_sessions()
 
 
-def _start_session(track_id: str = "shell", module_id: str = "shell-basics", num_questions: int = 3) -> dict:
+def _start_session(
+    track_id: str = "shell",
+    module_id: str = "shell-basics",
+    num_questions: int = 3,
+    question_time_limit_seconds: int = 60,
+) -> dict:
     response = client.post(
         START_ENDPOINT,
-        json={"track_id": track_id, "module_id": module_id, "num_questions": num_questions},
+        json={
+            "track_id": track_id,
+            "module_id": module_id,
+            "num_questions": num_questions,
+            "question_time_limit_seconds": question_time_limit_seconds,
+        },
     )
     assert response.status_code == 200
     return response.json()
@@ -47,6 +60,9 @@ def test_start_session_returns_questions() -> None:
     assert data["module_id"] == "shell-basics"
     assert len(data["questions"]) == 3
     assert data["total_questions"] == 3
+    assert data["question_time_limit_seconds"] == 60
+    assert data["active_question_id"] == data["questions"][0]["question_id"]
+    assert data["current_question_deadline"] is not None
 
 
 def test_start_session_questions_have_structure() -> None:
@@ -55,6 +71,7 @@ def test_start_session_questions_have_structure() -> None:
         assert "question_id" in q
         assert "text" in q
         assert "skill" in q
+        assert q["time_limit_seconds"] == 60
         assert len(q["text"]) > 10
 
 
@@ -124,6 +141,10 @@ def test_answer_question_scores_good_answer() -> None:
     assert data["score"] > 0.0
     assert data["feedback"]
     assert data["questions_remaining"] == 2
+    assert data["timed_out"] is False
+    assert data["elapsed_seconds"] >= 0.0
+    assert data["next_question_id"] == session["questions"][1]["question_id"]
+    assert data["next_question_deadline"] is not None
 
 
 def test_answer_question_scores_brief_answer_low() -> None:
@@ -171,7 +192,7 @@ def test_answer_already_answered_rejected() -> None:
     }
     client.post(ANSWER_ENDPOINT, json=payload)
     response = client.post(ANSWER_ENDPOINT, json=payload)
-    assert response.status_code == 400
+    assert response.status_code == 409
 
 
 def test_answer_invalid_session() -> None:
@@ -193,6 +214,20 @@ def test_answer_invalid_question() -> None:
         },
     )
     assert response.status_code == 404
+
+
+def test_answer_requires_current_question_first() -> None:
+    session = _start_session(num_questions=2)
+    second_question = session["questions"][1]
+    response = client.post(
+        ANSWER_ENDPOINT,
+        json={
+            "session_id": session["session_id"],
+            "question_id": second_question["question_id"],
+            "answer": "I want to skip ahead and answer this one first.",
+        },
+    )
+    assert response.status_code == 409
 
 
 def test_answer_decrements_remaining() -> None:
@@ -301,6 +336,54 @@ def test_completed_session_rejects_answers() -> None:
     assert response.status_code == 400
 
 
+def test_answer_times_out_when_question_deadline_passed() -> None:
+    start = datetime(2026, 3, 29, 12, 0, 0, tzinfo=UTC)
+    with patch("app.defense._utc_now", return_value=start):
+        session = _start_session(num_questions=1, question_time_limit_seconds=30)
+
+    question = session["questions"][0]
+    with patch("app.defense._utc_now", return_value=start + timedelta(seconds=45)):
+        response = client.post(
+            ANSWER_ENDPOINT,
+            json={
+                "session_id": session["session_id"],
+                "question_id": question["question_id"],
+                "answer": "pwd shows the current directory and helps me verify where I am in the filesystem.",
+            },
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["timed_out"] is True
+    assert data["score"] == 0.0
+    assert data["elapsed_seconds"] == 45.0
+    assert data["next_question_id"] is None
+    assert data["next_question_deadline"] is None
+
+
+def test_result_counts_timed_out_questions() -> None:
+    start = datetime(2026, 3, 29, 12, 0, 0, tzinfo=UTC)
+    with patch("app.defense._utc_now", return_value=start):
+        session = _start_session(num_questions=1, question_time_limit_seconds=20)
+
+    question = session["questions"][0]
+    with patch("app.defense._utc_now", return_value=start + timedelta(seconds=25)):
+        client.post(
+            ANSWER_ENDPOINT,
+            json={
+                "session_id": session["session_id"],
+                "question_id": question["question_id"],
+                "answer": "ls lists files in a directory because it reads the directory entries.",
+            },
+        )
+
+    response = client.get(f"/api/v1/defense/{session['session_id']}/result")
+    data = response.json()
+    assert data["timed_out_questions"] == 1
+    assert data["question_results"][0]["timed_out"] is True
+    assert "timer" in data["summary"].lower()
+
+
 # === Unit tests for scoring ===
 
 
@@ -348,3 +431,5 @@ def test_result_question_results_structure() -> None:
     assert "score" in qr
     assert "feedback" in qr
     assert "answered" in qr
+    assert "timed_out" in qr
+    assert "elapsed_seconds" in qr
