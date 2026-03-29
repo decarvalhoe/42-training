@@ -21,6 +21,12 @@ class HealthResponse(BaseModel):
     service: str
 
 
+class ErrorResponse(BaseModel):
+    detail: str
+    code: str
+    status: int
+
+
 class MetaResponse(BaseModel):
     app: str
     campus: str

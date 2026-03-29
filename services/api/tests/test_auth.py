@@ -126,7 +126,11 @@ def test_register_rejects_duplicate_email(auth_client: tuple[TestClient, async_s
 
     assert first.status_code == 201
     assert duplicate.status_code == 409
-    assert duplicate.json()["detail"] == "Email already registered"
+    assert duplicate.json() == {
+        "detail": "Email already registered",
+        "code": "conflict",
+        "status": 409,
+    }
 
 
 def test_login_returns_jwt_and_updates_last_login(
@@ -153,7 +157,11 @@ def test_login_rejects_invalid_password(auth_client: tuple[TestClient, async_ses
     response = client.post("/api/v1/auth/login", json={"email": "student@example.com", "password": "wrongpass"})
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid email or password"
+    assert response.json() == {
+        "detail": "Invalid email or password",
+        "code": "unauthorized",
+        "status": 401,
+    }
 
 
 def test_me_returns_current_user_from_bearer_token(
@@ -186,7 +194,11 @@ def test_me_requires_bearer_token(auth_client: tuple[TestClient, async_sessionma
     response = client.get("/api/v1/auth/me")
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid authentication credentials"
+    assert response.json() == {
+        "detail": "Invalid authentication credentials",
+        "code": "unauthorized",
+        "status": 401,
+    }
 
 
 def test_alembic_upgrade_head_creates_user_accounts_table(tmp_path: Path) -> None:
