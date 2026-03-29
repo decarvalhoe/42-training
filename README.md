@@ -13,6 +13,9 @@ Le depot contient maintenant deux couches qui coexistent:
 
 Documentation principale:
 
+- `docs/RUNBOOK_LOCAL.md` — demarrage local en 3 commandes et depannage
+- `docs/PRODUCT_METRICS.md` — KPIs produit et pedagogiques, SQL analytics et structure de dashboard
+- `docs/JSON_TO_PG_MIGRATION.md` — design du pipeline d'import `progression.json` vers PostgreSQL et strategie de transition
 - `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
 - `docs/42_REFERENCE_STACK.md`
 - `docs/NEW_TC_PROJECT_PREDICTIONS.md`
@@ -56,10 +59,26 @@ L'architecture suit volontairement des patterns inspirés de RBOK:
 |-- packages/shared-types/
 |-- scripts/
 |-- progression.json
-`-- infra/docker-compose.dev.example.yml
+`-- docker-compose.yml
 ```
 
 ### Lancer le MVP en local
+
+#### Option 1: Docker (recommande)
+
+```bash
+./scripts/dev-up.sh
+```
+
+Le script copie les `.env.example` si necessaire, demarre tous les services via docker-compose, attend les healthchecks et affiche les URLs.
+
+Pour arreter:
+
+```bash
+docker compose down
+```
+
+#### Option 2: Sans Docker (services individuels)
 
 API:
 
@@ -125,6 +144,9 @@ The repository now contains two coexisting layers:
 
 Core documentation:
 
+- `docs/RUNBOOK_LOCAL.md` — 3-command local setup and troubleshooting
+- `docs/PRODUCT_METRICS.md` — product and pedagogical KPIs, analytics SQL and dashboard structure
+- `docs/JSON_TO_PG_MIGRATION.md` — initial `progression.json` to PostgreSQL import design and transition strategy
 - `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
 - `docs/42_REFERENCE_STACK.md`
 - `docs/NEW_TC_PROJECT_PREDICTIONS.md`
@@ -168,10 +190,26 @@ The architecture deliberately follows RBOK-inspired patterns:
 |-- packages/shared-types/
 |-- scripts/
 |-- progression.json
-`-- infra/docker-compose.dev.example.yml
+`-- docker-compose.yml
 ```
 
 ### Run the MVP locally
+
+#### Option 1: Docker (recommended)
+
+```bash
+./scripts/dev-up.sh
+```
+
+The script copies `.env.example` files if needed, starts all services via docker-compose, waits for healthchecks and prints service URLs.
+
+To stop:
+
+```bash
+docker compose down
+```
+
+#### Option 2: Without Docker (individual services)
 
 API:
 

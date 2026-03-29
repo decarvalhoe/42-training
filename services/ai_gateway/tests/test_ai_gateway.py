@@ -1,27 +1,85 @@
-from fastapi.testclient import TestClient
+from unittest.mock import patch
 
-from app.main import app
+from app.main import health, mentor_respond
+from app.schemas import MentorRequest
 
-client = TestClient(app)
+MOCK_LLM_RESPONSE = {
+    "observation": "Tu travailles sur les bases shell.",
+    "question": "Quelle commande as-tu essayee en premier?",
+    "hint": "Regarde la page man de cp.",
+    "next_action": "Essaie cp avec un seul fichier d'abord.",
+}
 
 
 def test_health() -> None:
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json()["service"] == "ai_gateway"
+    assert health() == {"status": "ok", "service": "ai_gateway"}
 
 
-def test_mentor_response() -> None:
-    response = client.post(
-        "/api/v1/mentor/respond",
-        json={
-            "track_id": "shell",
-            "module_id": "shell-basics",
-            "question": "Je bloque sur cp",
-            "pace_mode": "normal",
-            "phase": "foundation"
-        },
+@patch("app.main.get_mentor_response", return_value=MOCK_LLM_RESPONSE)
+def test_mentor_respond_with_llm(mock_llm) -> None:
+    response = mentor_respond(
+        MentorRequest(
+            track_id="shell",
+            module_id="shell-basics",
+            question="Je bloque sur cp",
+            pace_mode="normal",
+            phase="foundation",
+        )
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["direct_solution_allowed"] is False
+    assert response.status == "ok"
+    assert response.observation == MOCK_LLM_RESPONSE["observation"]
+    assert response.question == MOCK_LLM_RESPONSE["question"]
+    assert response.hint == MOCK_LLM_RESPONSE["hint"]
+    assert response.next_action == MOCK_LLM_RESPONSE["next_action"]
+    assert response.direct_solution_allowed is False
+    assert "official_42" in response.source_policy
+    mock_llm.assert_called_once()
+
+
+@patch("app.main.get_mentor_response", side_effect=RuntimeError("No API key"))
+def test_mentor_respond_fallback(mock_llm) -> None:
+    response = mentor_respond(
+        MentorRequest(
+            track_id="shell",
+            module_id="shell-basics",
+            question="Je bloque sur cp",
+            pace_mode="normal",
+            phase="foundation",
+        )
+    )
+    assert response.status == "ok"
+    assert "Tu travailles sur" in response.observation
+    assert response.direct_solution_allowed is False
+    mock_llm.assert_called_once()
+
+
+def test_mentor_respond_advanced_allows_solution() -> None:
+    with patch("app.main.get_mentor_response", return_value=MOCK_LLM_RESPONSE):
+        response = mentor_respond(
+            MentorRequest(
+                track_id="shell",
+                module_id="shell-basics",
+                question="Montre-moi comment fonctionne cp -r",
+                pace_mode="normal",
+                phase="advanced",
+            )
+        )
+        assert response.direct_solution_allowed is True
+
+
+@patch("app.main.get_mentor_response", return_value={"observation": "incomplete"})
+def test_mentor_respond_fallback_on_invalid_llm_payload(mock_llm) -> None:
+    response = mentor_respond(
+        MentorRequest(
+            track_id="shell",
+            module_id="shell-basics",
+            question="Je bloque sur cp",
+            pace_mode="normal",
+            phase="foundation",
+        )
+    )
+    assert "Tu travailles sur" in response.observation
+    assert response.question
+    assert response.hint
+    assert response.next_action
+    mock_llm.assert_called_once()

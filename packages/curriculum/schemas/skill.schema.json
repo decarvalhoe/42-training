@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "skill.schema.json",
+  "title": "Skill",
+  "description": "An atomic competency that a learner acquires. Skills are the smallest unit of progression in the curriculum.",
+  "type": "object",
+  "required": ["id", "label", "track", "module_id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the skill, e.g. 'shell-redirect-stdout'.",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable name of the skill."
+    },
+    "track": {
+      "type": "string",
+      "enum": ["shell", "c", "python_ai"],
+      "description": "Which track this skill belongs to."
+    },
+    "module_id": {
+      "type": "string",
+      "description": "The module this skill is part of."
+    },
+    "description": {
+      "type": "string",
+      "description": "One-sentence explanation of what this skill means concretely."
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of skill IDs that should be acquired before this one.",
+      "default": []
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["foundation", "practice", "core", "advanced"],
+      "description": "Learning phase this skill belongs to."
+    }
+  },
+  "additionalProperties": false
+}

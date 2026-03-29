@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "resource.schema.json",
+  "title": "Resource",
+  "description": "A learning resource linked to one or more skills. Each resource carries a source tier indicating its level of trust according to the source governance policy.",
+  "type": "object",
+  "required": ["id", "label", "url", "tier", "skill_ids"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the resource.",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable name."
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the resource."
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "official_42",
+        "community_docs",
+        "testers_and_tooling",
+        "solution_metadata",
+        "blocked_solution_content"
+      ],
+      "description": "Source governance tier. Controls how the resource may be used."
+    },
+    "skill_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Skills this resource helps develop."
+    },
+    "format": {
+      "type": "string",
+      "enum": ["article", "video", "tool", "repository", "man_page", "interactive"],
+      "description": "Type of content."
+    },
+    "language": {
+      "type": "string",
+      "description": "Content language (ISO 639-1).",
+      "default": "en"
+    }
+  },
+  "additionalProperties": false
+}
