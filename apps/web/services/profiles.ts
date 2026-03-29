@@ -1,4 +1,4 @@
-import { getMockSessionEmail, getStoredAccessToken } from "@/services/auth";
+import { getStoredAccessToken, getStoredSessionEmail } from "@/services/auth";
 
 export type ProfileItem = {
   id: string;
@@ -82,7 +82,7 @@ function mapApiProfilesState(data: ApiProfilesResponse, mocked: boolean): Profil
 }
 
 function getSessionEmail() {
-  return getMockSessionEmail() ?? FALLBACK_SESSION_EMAIL;
+  return getStoredSessionEmail() ?? FALLBACK_SESSION_EMAIL;
 }
 
 function seedMockProfiles(email: string): ProfilesState {
