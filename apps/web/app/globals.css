@@ -203,16 +203,125 @@ p {
 
 .module-list,
 .bridge-list,
-.policy-list {
+.policy-list,
+.reference-list,
+.tool-list,
+.confidence-list {
   display: grid;
   gap: 14px;
 }
 
 .module-item,
 .bridge-item,
-.policy-item {
+.policy-item,
+.reference-item,
+.tool-item,
+.confidence-item {
   padding-top: 14px;
   border-top: 1px solid var(--line);
+}
+
+.reference-item {
+  display: grid;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.reference-item:hover,
+.tool-link:hover {
+  opacity: 0.9;
+}
+
+.tool-link {
+  display: grid;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.reference-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.reference-topline span {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+.tool-item,
+.confidence-item,
+.milestone-card,
+.quality-card,
+.prediction-card,
+.analogy-item,
+.module-reference-item {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.52);
+  padding: 16px;
+}
+
+.tool-item,
+.confidence-item {
+  padding-top: 16px;
+}
+
+.quality-grid,
+.milestone-grid,
+.prediction-grid,
+.analogy-list,
+.module-reference-list {
+  display: grid;
+  gap: 16px;
+}
+
+.quality-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.milestone-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 20px;
+}
+
+.quality-card {
+  display: grid;
+  gap: 14px;
+}
+
+.prediction-card,
+.module-reference-item {
+  display: grid;
+  gap: 10px;
+}
+
+.module-reference-item {
+  color: inherit;
+  text-decoration: none;
+}
+
+.module-note {
+  margin-top: 12px;
+  color: var(--muted);
+}
+
+.analogy-list {
+  margin-bottom: 20px;
+}
+
+.prediction-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quality-subsection {
+  display: grid;
+  gap: 8px;
 }
 
 .section.split {
@@ -222,7 +331,10 @@ p {
 @media (max-width: 1080px) {
   .hero,
   .track-grid,
-  .section.split {
+  .section.split,
+  .quality-grid,
+  .milestone-grid,
+  .prediction-grid {
     grid-template-columns: 1fr;
   }
 }

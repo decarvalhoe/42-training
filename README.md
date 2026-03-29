@@ -14,6 +14,8 @@ Le depot contient maintenant deux couches qui coexistent:
 Documentation principale:
 
 - `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
+- `docs/42_REFERENCE_STACK.md`
+- `docs/NEW_TC_PROJECT_PREDICTIONS.md`
 - `ARCHITECTURE_TARGET.md`
 - `docs/DEVOPS_RBOK_ADAPTATION.md`
 - `docs/adr/README.md`
@@ -124,6 +126,8 @@ The repository now contains two coexisting layers:
 Core documentation:
 
 - `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
+- `docs/42_REFERENCE_STACK.md`
+- `docs/NEW_TC_PROJECT_PREDICTIONS.md`
 - `ARCHITECTURE_TARGET.md`
 - `docs/DEVOPS_RBOK_ADAPTATION.md`
 - `docs/adr/README.md`
