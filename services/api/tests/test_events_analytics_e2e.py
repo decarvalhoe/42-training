@@ -131,6 +131,7 @@ def test_emit_event_helper_persists_to_table_and_feeds_analytics_dashboard(
         "checkpoint_success_rate": 100.0,
         "mentor_queries": 1,
         "defenses_started": 0,
+        "watch_mentor_checkins": 0,
     }
     assert data["modules_completed"][0]["module_id"] == "shell-basics"
     assert data["average_time"][0]["value"] == 30.0
@@ -215,6 +216,7 @@ def test_public_events_endpoint_writes_events_that_dashboard_aggregates(
         "checkpoint_success_rate": 0.0,
         "mentor_queries": 0,
         "defenses_started": 1,
+        "watch_mentor_checkins": 0,
     }
     assert data["modules_completed"][0]["module_id"] == "shell-streams"
     assert data["average_time"][0]["module_id"] == "shell-streams"

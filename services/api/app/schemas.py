@@ -310,6 +310,7 @@ PedagogicalEventType = Literal[
     "checkpoint_submitted",
     "mentor_query",
     "defense_started",
+    "watch_mentor_checkin",
 ]
 
 
@@ -335,6 +336,7 @@ class AnalyticsSummary(BaseModel):
     checkpoint_success_rate: float
     mentor_queries: int
     defenses_started: int
+    watch_mentor_checkins: int
 
 
 class AnalyticsChartRow(BaseModel):

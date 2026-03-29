@@ -72,6 +72,7 @@ def test_build_analytics_dashboard_computes_summary_and_charts() -> None:
     assert data.summary.checkpoint_success_rate == 50.0
     assert data.summary.mentor_queries == 1
     assert data.summary.defenses_started == 1
+    assert data.summary.watch_mentor_checkins == 0
 
     assert [row.module_id for row in data.modules_completed] == ["shell-basics", "shell-streams"]
     assert data.average_time[0].module_id == "shell-streams"
