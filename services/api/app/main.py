@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .auth import router as auth_router
 from .db import get_db_session
-from .events import emit_event
+from .events import _emit_event_async, emit_event  # noqa: F401
 from .models import DefenseSession as DefenseSessionModel
 from .models import ReviewAttempt as ReviewAttemptModel
 from .progression_state import canonicalize_progression, get_completed_module_ids, get_module_statuses
@@ -577,7 +577,7 @@ def list_checkpoints(module_id: str) -> CheckpointListResponse:
 
 @app.post("/api/v1/events", response_model=PedagogicalEventResponse)
 async def create_event(payload: PedagogicalEventCreate) -> PedagogicalEventResponse:
-    event_id = await emit_event(
+    event_id = await _emit_event_async(
         payload.event_type,
         learner_id=payload.learner_id,
         track_id=payload.track_id,
