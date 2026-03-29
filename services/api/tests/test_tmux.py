@@ -1,4 +1,4 @@
-"""Tests for tmux pane capture (Issue #179) and session listing (Issue #178)."""
+"""Tests for tmux pane capture (#179), session listing (#178), and lifecycle (#181)."""
 
 from __future__ import annotations
 
@@ -195,3 +195,108 @@ class TestTmuxSessions:
         with patch("app.tmux.subprocess.run", return_value=result):
             r = client.get("/api/v1/tmux/sessions")
         assert r.json()["total"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Session lifecycle tests (Issue #181)
+# ---------------------------------------------------------------------------
+
+
+def _fake_list_output(sessions: list[tuple[str, int, int, int]]) -> subprocess.CompletedProcess[str]:
+    """Build a fake tmux list-sessions result."""
+    lines = "\n".join(f"{name}\t{created}\t{windows}\t{attached}" for name, created, windows, attached in sessions)
+    return subprocess.CompletedProcess(args=[], returncode=0, stdout=lines, stderr="")
+
+
+def _no_sessions() -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="no server running")
+
+
+def _ok() -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+
+
+def _fail() -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="error")
+
+
+class TestListSessions:
+    def test_returns_empty_when_no_sessions(self) -> None:
+        with patch("app.tmux._run", return_value=_no_sessions()):
+            response = client.get("/api/v1/tmux")
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_returns_parsed_sessions(self) -> None:
+        fake = _fake_list_output([("shell-practice", 1711700000, 2, 1), ("c-debug", 1711700100, 1, 0)])
+        with patch("app.tmux._run", return_value=fake):
+            response = client.get("/api/v1/tmux")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["name"] == "shell-practice"
+        assert data[0]["attached"] is True
+        assert data[1]["name"] == "c-debug"
+        assert data[1]["attached"] is False
+
+
+class TestStartSession:
+    def test_creates_new_session(self) -> None:
+        with patch("app.tmux._run") as mock_run:
+            mock_run.side_effect = [_fail(), _ok()]  # has-session fails, new-session ok
+            response = client.post("/api/v1/tmux/start", json={"name": "test-sess"})
+        assert response.status_code == 201
+        assert response.json()["name"] == "test-sess"
+        assert response.json()["status"] == "created"
+
+    def test_rejects_duplicate_session(self) -> None:
+        with patch("app.tmux._run", return_value=_ok()):  # has-session succeeds
+            response = client.post("/api/v1/tmux/start", json={"name": "existing"})
+        assert response.status_code == 409
+
+    def test_rejects_invalid_name(self) -> None:
+        response = client.post("/api/v1/tmux/start", json={"name": "bad name!"})
+        assert response.status_code == 422
+
+    def test_rejects_empty_name(self) -> None:
+        response = client.post("/api/v1/tmux/start", json={"name": ""})
+        assert response.status_code == 422
+
+    def test_handles_tmux_failure(self) -> None:
+        with patch("app.tmux._run") as mock_run:
+            mock_run.side_effect = [_fail(), subprocess.CalledProcessError(1, "tmux")]
+            response = client.post("/api/v1/tmux/start", json={"name": "broken"})
+        assert response.status_code == 500
+
+
+class TestAttachSession:
+    def test_returns_attach_command(self) -> None:
+        with patch("app.tmux._run", return_value=_ok()):  # has-session succeeds
+            response = client.post("/api/v1/tmux/attach", json={"name": "my-sess"})
+        assert response.status_code == 200
+        assert response.json()["command"] == "tmux attach-session -t my-sess"
+
+    def test_returns_404_for_missing_session(self) -> None:
+        with patch("app.tmux._run", return_value=_fail()):  # has-session fails
+            response = client.post("/api/v1/tmux/attach", json={"name": "ghost"})
+        assert response.status_code == 404
+
+
+class TestKillSession:
+    def test_kills_existing_session(self) -> None:
+        with patch("app.tmux._run") as mock_run:
+            mock_run.side_effect = [_ok(), _ok()]  # has-session ok, kill-session ok
+            response = client.delete("/api/v1/tmux/test-sess")
+        assert response.status_code == 200
+        assert response.json()["status"] == "killed"
+
+    def test_returns_404_for_missing_session(self) -> None:
+        with patch("app.tmux._run", return_value=_fail()):
+            response = client.delete("/api/v1/tmux/ghost")
+        assert response.status_code == 404
+
+    def test_handles_kill_failure(self) -> None:
+        with patch("app.tmux._run") as mock_run:
+            mock_run.side_effect = [_ok(), subprocess.CalledProcessError(1, "tmux")]
+            response = client.delete("/api/v1/tmux/broken")
+        assert response.status_code == 500
