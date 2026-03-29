@@ -95,7 +95,7 @@ def get_active_profile(user: UserAccount) -> LearnerProfile | None:
     active_profile = getattr(user, "active_learner_profile", None)
     if isinstance(active_profile, LearnerProfile):
         return active_profile
-    return user.learner_profile
+    return user.learner_profile  # type: ignore[no-any-return]
 
 
 def create_access_token(user: UserAccount, active_profile_id: str | None = None) -> str:
