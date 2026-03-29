@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.repository import load_curriculum
 
 client = TestClient(app)
 
@@ -34,10 +35,9 @@ SOLUTION_GIVEAWAY_PATTERNS = [
 ]
 
 ALLOWED_SOURCE_TIERS = {
-    "official_42",
-    "community_docs",
-    "testers_and_tooling",
-    "solution_metadata_only",
+    tier["id"]
+    for tier in load_curriculum()["source_policy"]["tiers"]
+    if tier["id"] != "blocked_solution_content"
 }
 
 BLOCKED_SOURCE_TIERS = {
@@ -180,6 +180,16 @@ def test_source_policy_contains_only_allowed_tiers() -> None:
     assert resp.status_code == 200
     policy = set(resp.json()["source_policy"])
     assert policy <= ALLOWED_SOURCE_TIERS, f"Unexpected tiers in source_policy: {policy - ALLOWED_SOURCE_TIERS}"
+
+
+def test_mentor_source_policy_matches_curriculum_non_blocked_tiers() -> None:
+    """The mentor endpoint must expose the exact non-blocked curriculum source-policy ids."""
+    resp = client.post(
+        "/api/v1/mentor/respond",
+        json=_mentor_request(),
+    )
+    assert resp.status_code == 200
+    assert set(resp.json()["source_policy"]) == ALLOWED_SOURCE_TIERS
 
 
 # ---------------------------------------------------------------------------
