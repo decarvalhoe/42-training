@@ -32,7 +32,14 @@ class TestDatabaseConfig:
 
 class TestSqlAlchemyMetadata:
     def test_core_models_registered_in_metadata(self) -> None:
-        assert {"learner_profile", "progression", "evidence", "review"} <= set(Base.metadata.tables.keys())
+        assert {
+            "learner_profile",
+            "progression",
+            "evidence",
+            "review",
+            "defense_session",
+            "review_attempt",
+        } <= set(Base.metadata.tables.keys())
 
     def test_learner_profile_model_registered_in_metadata(self) -> None:
         table = Base.metadata.tables["learner_profile"]
@@ -54,7 +61,44 @@ class TestAlembicBootstrap:
         engine = create_engine(f"sqlite:///{db_path}")
         inspector = inspect(engine)
         table_names = set(inspector.get_table_names())
-        assert {"learner_profile", "progression", "evidence", "review", "user_accounts"} <= table_names
+        assert {
+            "learner_profile",
+            "progression",
+            "evidence",
+            "review",
+            "user_accounts",
+            "defense_session",
+            "review_attempt",
+        } <= table_names
 
         columns = {column["name"] for column in inspector.get_columns("learner_profile")}
         assert {"id", "login", "track", "current_module", "runtime_state", "started_at", "updated_at"} <= columns
+
+        defense_columns = {column["name"] for column in inspector.get_columns("defense_session")}
+        assert {
+            "session_id",
+            "learner_id",
+            "module_id",
+            "questions",
+            "answers",
+            "scores",
+            "status",
+            "evidence_artifacts",
+            "created_at",
+            "updated_at",
+        } <= defense_columns
+
+        review_attempt_columns = {column["name"] for column in inspector.get_columns("review_attempt")}
+        assert {
+            "id",
+            "learner_id",
+            "reviewer_id",
+            "module_id",
+            "code_snippet",
+            "feedback",
+            "questions",
+            "score",
+            "evidence_artifacts",
+            "created_at",
+            "updated_at",
+        } <= review_attempt_columns

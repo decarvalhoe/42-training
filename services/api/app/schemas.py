@@ -210,6 +210,27 @@ class DefenseSession(BaseModel):
     status: DefenseStatus = "scheduled"
 
 
+class DefenseSessionCreate(DefenseSession):
+    learner_id: str | None = Field(default=None, min_length=1, max_length=64)
+    evidence_artifacts: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class DefenseSessionRecord(DefenseSessionCreate):
+    created_at: datetime
+    updated_at: datetime
+
+
+class ReviewAttemptCreate(Review):
+    learner_id: str | None = Field(default=None, min_length=1, max_length=64)
+    evidence_artifacts: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ReviewAttemptRecord(ReviewAttemptCreate):
+    id: str = Field(min_length=1, max_length=64)
+    created_at: datetime
+    updated_at: datetime
+
+
 # --- Checkpoint submission schemas (Issue #37) ---
 
 EvaluationResult = Literal["pass", "partial", "fail"]

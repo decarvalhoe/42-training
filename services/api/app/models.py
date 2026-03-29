@@ -106,6 +106,15 @@ class LearnerProfile(Base):
     evidence_items: Mapped[list[Evidence]] = relationship(back_populates="learner")
     reviews_authored: Mapped[list[Review]] = relationship(back_populates="reviewer", foreign_keys="Review.reviewer_id")
     reviews_received: Mapped[list[Review]] = relationship(back_populates="learner", foreign_keys="Review.learner_id")
+    defense_sessions: Mapped[list[DefenseSession]] = relationship(back_populates="learner")
+    review_attempts_authored: Mapped[list[ReviewAttempt]] = relationship(
+        back_populates="reviewer",
+        foreign_keys="ReviewAttempt.reviewer_id",
+    )
+    review_attempts_received: Mapped[list[ReviewAttempt]] = relationship(
+        back_populates="learner",
+        foreign_keys="ReviewAttempt.learner_id",
+    )
 
 
 class UserAccount(Base):
@@ -195,3 +204,53 @@ class Review(Base):
 
     learner: Mapped[LearnerProfile | None] = relationship(back_populates="reviews_received", foreign_keys=[learner_id])
     reviewer: Mapped[LearnerProfile] = relationship(back_populates="reviews_authored", foreign_keys=[reviewer_id])
+
+
+class DefenseSession(Base):
+    __tablename__ = "defense_session"
+
+    session_id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid_str)
+    learner_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("learner_profile.id"), nullable=True, index=True
+    )
+    module_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    questions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    answers: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    scores: Mapped[list[int]] = mapped_column(JSON, default=list, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="scheduled", index=True)
+    evidence_artifacts: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    learner: Mapped[LearnerProfile | None] = relationship(back_populates="defense_sessions")
+
+
+class ReviewAttempt(Base):
+    __tablename__ = "review_attempt"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid_str)
+    learner_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("learner_profile.id"), nullable=True, index=True
+    )
+    reviewer_id: Mapped[str] = mapped_column(String(64), ForeignKey("learner_profile.id"), nullable=False, index=True)
+    module_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    code_snippet: Mapped[str] = mapped_column(Text, nullable=False)
+    feedback: Mapped[str] = mapped_column(Text, nullable=False)
+    questions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    evidence_artifacts: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    learner: Mapped[LearnerProfile | None] = relationship(
+        back_populates="review_attempts_received",
+        foreign_keys=[learner_id],
+    )
+    reviewer: Mapped[LearnerProfile] = relationship(
+        back_populates="review_attempts_authored",
+        foreign_keys=[reviewer_id],
+    )
