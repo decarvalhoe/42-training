@@ -19,7 +19,9 @@ def upgrade() -> None:
         sa.Column("track", sa.String(length=32), nullable=False),
         sa.Column("current_module", sa.String(length=128), nullable=True),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_learner_profile_login"), "learner_profile", ["login"], unique=True)
@@ -37,7 +39,9 @@ def upgrade() -> None:
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("skipped_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("evidence_summary", sa.JSON(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.ForeignKeyConstraint(["learner_id"], ["learner_profile.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("learner_id", "module_id", name="uq_progression_learner_module"),
@@ -61,8 +65,12 @@ def upgrade() -> None:
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("expected_content", sa.Text(), nullable=True),
         sa.Column("content", sa.Text(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.ForeignKeyConstraint(["learner_id"], ["learner_profile.id"]),
         sa.ForeignKeyConstraint(["progression_id"], ["progression.id"]),
         sa.PrimaryKeyConstraint("id"),
@@ -83,8 +91,12 @@ def upgrade() -> None:
         sa.Column("feedback", sa.Text(), nullable=False),
         sa.Column("questions", sa.JSON(), nullable=False),
         sa.Column("score", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.ForeignKeyConstraint(["learner_id"], ["learner_profile.id"]),
         sa.ForeignKeyConstraint(["reviewer_id"], ["learner_profile.id"]),
         sa.PrimaryKeyConstraint("id"),
