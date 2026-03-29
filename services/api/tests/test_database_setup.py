@@ -1,4 +1,4 @@
-"""Tests for SQLModel and Alembic bootstrap setup (Issue #50)."""
+"""Tests for SQLAlchemy and Alembic bootstrap setup (Issue #50)."""
 
 from __future__ import annotations
 
@@ -30,7 +30,10 @@ class TestDatabaseConfig:
         assert not is_async_database_url("sqlite:///tmp/test.db")
 
 
-class TestSqlModelMetadata:
+class TestSqlAlchemyMetadata:
+    def test_core_models_registered_in_metadata(self) -> None:
+        assert {"learner_profile", "progression", "evidence", "review"} <= set(Base.metadata.tables.keys())
+
     def test_learner_profile_model_registered_in_metadata(self) -> None:
         table = Base.metadata.tables["learner_profile"]
         assert LearnerProfile.__table__.name == "learner_profile"
@@ -38,7 +41,7 @@ class TestSqlModelMetadata:
 
 
 class TestAlembicBootstrap:
-    def test_upgrade_head_creates_learner_profiles_table(self, tmp_path: Path) -> None:
+    def test_upgrade_head_creates_core_tables(self, tmp_path: Path) -> None:
         db_path = tmp_path / "bootstrap.db"
         config = Config(str(API_ROOT / "alembic.ini"))
         config.set_main_option("script_location", str(API_ROOT / "alembic"))
@@ -48,7 +51,8 @@ class TestAlembicBootstrap:
 
         engine = create_engine(f"sqlite:///{db_path}")
         inspector = inspect(engine)
-        assert "learner_profiles" in inspector.get_table_names()
+        table_names = set(inspector.get_table_names())
+        assert {"learner_profile", "progression", "evidence", "review"} <= table_names
 
-        columns = {column["name"] for column in inspector.get_columns("learner_profiles")}
+        columns = {column["name"] for column in inspector.get_columns("learner_profile")}
         assert {"id", "login", "track", "current_module", "started_at", "updated_at"} <= columns
