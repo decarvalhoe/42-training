@@ -70,8 +70,13 @@ def _clone(value: object) -> object:
 
 
 def _tamper_token(token: str) -> str:
-    replacement = "a" if token[-1] != "a" else "b"
-    return f"{token[:-1]}{replacement}"
+    """Corrupt the JWT signature so it is always invalid."""
+    parts = token.rsplit(".", 1)
+    if len(parts) == 2:
+        # Flip every character in the signature portion to guarantee invalidation
+        flipped = "".join("X" if c != "X" else "Y" for c in parts[1])
+        return f"{parts[0]}.{flipped}"
+    return token + "INVALID"
 
 
 @pytest.fixture
