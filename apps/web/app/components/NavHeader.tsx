@@ -4,7 +4,8 @@ import { AuthStatus } from "@/app/components/AuthStatus";
 import { getDashboardData } from "@/lib/api";
 
 const NAV_LINKS = [
-  { href: "/", label: "Dashboard" },
+  { href: "/", label: "Home" },
+  { href: "/dashboard", label: "Skills" },
   { href: "/progression", label: "Progression" },
   { href: "/defense", label: "Defense" },
   { href: "/review", label: "Review" },
