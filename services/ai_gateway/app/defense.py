@@ -416,6 +416,22 @@ def _keywords_for_skill(skill: str, track_id: str) -> list[str]:
     return base + skill_keywords.get(skill.lower(), [])
 
 
+def resume_session(session: DefenseSession) -> DefenseSession:
+    """Resume an interrupted defense session.
+
+    Re-registers the session in the in-memory store and resets the
+    current question timer so the learner gets a fresh deadline.
+    Returns the session unchanged if it is already completed.
+    """
+    if session.completed:
+        _sessions[session.session_id] = session
+        return session
+
+    session.current_question_started_at = _utc_now()
+    _sessions[session.session_id] = session
+    return session
+
+
 def clear_sessions() -> None:
     """Clear all sessions. Used for testing only."""
     _sessions.clear()

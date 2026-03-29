@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -15,9 +16,50 @@ DEFAULT_API_BASE_URL = "http://localhost:8000"
 SESSION_STATE_ARTIFACT = "defense_session_state"
 SESSION_RESULT_ARTIFACT = "defense_session_result"
 
+MAX_RETRIES = 3
+RETRY_BASE_DELAY = 0.5
+
 
 class DefensePersistenceError(RuntimeError):
     """Raised when the API backend cannot persist or restore defense state."""
+
+
+def _is_transient(exc: Exception) -> bool:
+    """Return True for errors worth retrying (5xx, timeouts, connection errors)."""
+    if isinstance(exc, httpx.TimeoutException | httpx.ConnectError):
+        return True
+    return isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500
+
+
+def _retry_request(fn: Any, *args: Any, **kwargs: Any) -> httpx.Response:
+    """Execute an httpx call with retry on transient failures."""
+    last_exc: Exception | None = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = fn(*args, **kwargs)
+            if response.status_code >= 500 and attempt < MAX_RETRIES - 1:
+                logger.warning(
+                    "Transient %d from backend (attempt %d/%d), retrying",
+                    response.status_code,
+                    attempt + 1,
+                    MAX_RETRIES,
+                )
+                time.sleep(RETRY_BASE_DELAY * (2**attempt))
+                continue
+            return response
+        except (httpx.TimeoutException, httpx.ConnectError) as exc:
+            last_exc = exc
+            if attempt < MAX_RETRIES - 1:
+                logger.warning(
+                    "Transient error %s (attempt %d/%d), retrying",
+                    type(exc).__name__,
+                    attempt + 1,
+                    MAX_RETRIES,
+                )
+                time.sleep(RETRY_BASE_DELAY * (2**attempt))
+            else:
+                raise DefensePersistenceError(f"Backend unreachable after {MAX_RETRIES} attempts") from exc
+    raise DefensePersistenceError(f"Backend unreachable after {MAX_RETRIES} attempts") from last_exc
 
 
 def _api_base_url() -> str:
@@ -155,7 +197,8 @@ def restore_defense_session(payload: dict[str, Any]) -> DefenseSession:
 
 
 def create_defense_session(session: DefenseSession) -> dict[str, Any]:
-    response = httpx.post(
+    response = _retry_request(
+        httpx.post,
         f"{_api_base_url()}/api/v1/defense-sessions",
         json=_defense_session_payload(session),
         timeout=2.0,
@@ -170,7 +213,8 @@ def create_defense_session(session: DefenseSession) -> dict[str, Any]:
 
 
 def sync_defense_session(session: DefenseSession, *, allow_create: bool = True) -> dict[str, Any]:
-    response = httpx.put(
+    response = _retry_request(
+        httpx.put,
         f"{_api_base_url()}/api/v1/defense-sessions/{session.session_id}",
         json=_defense_session_update_payload(session),
         timeout=2.0,
@@ -187,7 +231,8 @@ def sync_defense_session(session: DefenseSession, *, allow_create: bool = True) 
 
 
 def load_defense_session(session_id: str) -> DefenseSession | None:
-    response = httpx.get(
+    response = _retry_request(
+        httpx.get,
         f"{_api_base_url()}/api/v1/defense-sessions/{session_id}",
         timeout=2.0,
     )
@@ -239,7 +284,8 @@ def persist_review_attempt(session: DefenseSession) -> dict[str, Any] | None:
         ],
     }
 
-    response = httpx.post(
+    response = _retry_request(
+        httpx.post,
         f"{_api_base_url()}/api/v1/review-attempts",
         json=payload,
         timeout=2.0,

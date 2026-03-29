@@ -193,6 +193,24 @@ class DefenseQuestionResult(BaseModel):
     elapsed_seconds: float = 0.0
 
 
+class DefenseResumeRequest(BaseModel):
+    session_id: str
+
+
+class DefenseResumeResponse(BaseModel):
+    status: str
+    session_id: str
+    track_id: str
+    module_id: str
+    questions: list[DefenseQuestionOut]
+    total_questions: int
+    questions_answered: int
+    question_time_limit_seconds: int
+    active_question_id: str | None
+    current_question_deadline: datetime | None
+    completed: bool
+
+
 class DefenseResultResponse(BaseModel):
     status: str
     session_id: str
