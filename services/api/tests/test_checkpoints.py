@@ -5,11 +5,19 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _patch_emit_event():
+    with patch("app.main.emit_event", return_value=None):
+        yield
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -261,6 +269,29 @@ class TestSubmitCheckpoint:
         assert record["module_id"] == "shell-basics"
         assert record["evidence"] == "pwd => /tmp"
         assert record["self_evaluation"] == "pass"
+
+    def test_submit_emits_event(self) -> None:
+        p_cur, p_load, p_write, _prog_data, _written = _patch_repo()
+        with p_cur, p_load, p_write, patch("app.main.emit_event", return_value="evt-3") as mock_emit:
+            r = client.post(
+                "/api/v1/checkpoints/submit",
+                json={
+                    "module_id": "shell-basics",
+                    "checkpoint_index": 0,
+                    "type": "exit_criteria",
+                    "evidence": "cd /tmp && pwd => /tmp",
+                    "self_evaluation": "pass",
+                },
+            )
+        assert r.status_code == 200
+        mock_emit.assert_called_once_with(
+            "checkpoint_submitted",
+            learner_id="default",
+            module_id="shell-basics",
+            checkpoint_index=0,
+            source_service="api",
+            payload={"type": "exit_criteria", "self_evaluation": "pass"},
+        )
 
     def test_submit_appends_to_existing_checkpoints(self) -> None:
         """Multiple submissions should accumulate."""

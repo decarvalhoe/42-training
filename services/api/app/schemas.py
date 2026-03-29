@@ -242,3 +242,29 @@ class CheckpointListResponse(BaseModel):
 
     module_id: str
     checkpoints: list[dict[str, object]]
+
+
+# --- Pedagogical event logging (Issue #134) ---
+
+PedagogicalEventType = Literal[
+    "module_started",
+    "module_completed",
+    "checkpoint_submitted",
+    "mentor_query",
+    "defense_started",
+]
+
+
+class PedagogicalEventCreate(BaseModel):
+    event_type: PedagogicalEventType
+    learner_id: str | None = "default"
+    track_id: str | None = None
+    module_id: str | None = None
+    checkpoint_index: int | None = Field(default=None, ge=0)
+    source_service: Literal["api", "ai_gateway"] = "api"
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class PedagogicalEventResponse(BaseModel):
+    status: str
+    event_id: str | None = None

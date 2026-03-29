@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -27,6 +28,12 @@ _TEST_CURRICULUM = {
         }
     ],
 }
+
+
+@pytest.fixture(autouse=True)
+def _patch_emit_event():
+    with patch("app.main.emit_event", return_value=None):
+        yield
 
 
 def _make_progression(**overrides: object) -> dict[str, object]:
@@ -151,6 +158,20 @@ class TestModuleStart:
             r = client.post("/api/v1/modules/nonexistent/start")
         assert r.status_code == 404
 
+    def test_start_emits_event(self) -> None:
+        p_cur, p_load, p_write, _prog, _written = _patch_repo()
+        with p_cur, p_load, p_write, patch("app.main.emit_event", return_value="evt-1") as mock_emit:
+            r = client.post("/api/v1/modules/shell-basics/start", json={"learner_id": "learner-1"})
+        assert r.status_code == 200
+        mock_emit.assert_called_once_with(
+            "module_started",
+            learner_id="learner-1",
+            track_id="shell",
+            module_id="shell-basics",
+            source_service="api",
+            payload={"status": "in_progress"},
+        )
+
 
 class TestModuleComplete:
     def test_complete_in_progress_module(self) -> None:
@@ -180,6 +201,23 @@ class TestModuleComplete:
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/modules/shell-basics/complete")
         assert r.status_code == 409
+
+    def test_complete_emits_event(self) -> None:
+        prog = _make_progression(
+            module_status={"shell-basics": {"status": "in_progress", "started_at": "2026-01-01T00:00:00+00:00"}}
+        )
+        p_cur, p_load, p_write, _prog, _written = _patch_repo(prog)
+        with p_cur, p_load, p_write, patch("app.main.emit_event", return_value="evt-2") as mock_emit:
+            r = client.post("/api/v1/modules/shell-basics/complete", json={"learner_id": "learner-1"})
+        assert r.status_code == 200
+        mock_emit.assert_called_once_with(
+            "module_completed",
+            learner_id="learner-1",
+            track_id="shell",
+            module_id="shell-basics",
+            source_service="api",
+            payload={"status": "completed"},
+        )
 
 
 class TestModuleSkip:

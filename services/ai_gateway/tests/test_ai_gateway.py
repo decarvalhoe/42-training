@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+import pytest
+
 from app.main import health, mentor_respond
 from app.schemas import MentorRequest
 
@@ -9,6 +11,12 @@ MOCK_LLM_RESPONSE = {
     "hint": "Regarde la page man de cp.",
     "next_action": "Essaie cp avec un seul fichier d'abord.",
 }
+
+
+@pytest.fixture(autouse=True)
+def _patch_emit_event():
+    with patch("app.main.emit_event", return_value=None):
+        yield
 
 
 def test_health() -> None:
@@ -50,6 +58,35 @@ def test_mentor_respond_fallback(mock_llm) -> None:
     assert response.status == "ok"
     assert "Tu travailles sur" in response.observation
     assert response.direct_solution_allowed is False
+    mock_llm.assert_called_once()
+
+
+@patch("app.main.get_mentor_response", return_value=MOCK_LLM_RESPONSE)
+def test_mentor_respond_emits_event(mock_llm) -> None:
+    with patch("app.main.emit_event", return_value=None) as mock_emit:
+        response = mentor_respond(
+            MentorRequest(
+                track_id="shell",
+                module_id="shell-basics",
+                question="Je bloque sur cp",
+                pace_mode="normal",
+                phase="foundation",
+            )
+        )
+    assert response.status == "ok"
+    mock_emit.assert_called_once_with(
+        "mentor_query",
+        learner_id="default",
+        track_id="shell",
+        module_id="shell-basics",
+        payload={
+            "phase": "foundation",
+            "pace_mode": "normal",
+            "direct_solution_allowed": False,
+            "response_source": "llm",
+            "question_length": len("Je bloque sur cp"),
+        },
+    )
     mock_llm.assert_called_once()
 
 

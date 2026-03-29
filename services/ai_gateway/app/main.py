@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .defense import compute_session_result, create_session, get_session, score_answer
+from .events import emit_event
 from .intent import route_intent
 from .llm_client import get_mentor_response
 from .repository import load_curriculum, load_progression
@@ -213,6 +214,19 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
         module,
         response_source,
     )
+    emit_event(
+        "mentor_query",
+        learner_id="default",
+        track_id=request.track_id,
+        module_id=request.module_id,
+        payload={
+            "phase": request.phase,
+            "pace_mode": request.pace_mode,
+            "direct_solution_allowed": direct_solution_allowed,
+            "response_source": response_source,
+            "question_length": len(request.question),
+        },
+    )
 
     return MentorResponse(
         status="ok",
@@ -355,6 +369,17 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
         raise HTTPException(status_code=404, detail="Module not found")
 
     session = create_session(track, module, request.phase, request.num_questions)
+    emit_event(
+        "defense_started",
+        learner_id="default",
+        track_id=request.track_id,
+        module_id=request.module_id,
+        payload={
+            "phase": request.phase,
+            "num_questions": request.num_questions,
+            "session_id": session.session_id,
+        },
+    )
 
     return DefenseStartResponse(
         status="ok",

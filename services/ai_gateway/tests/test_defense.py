@@ -7,6 +7,8 @@ Key invariants:
 - The system never provides correct answers in feedback
 """
 
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -25,6 +27,12 @@ def _clean_sessions():
     clear_sessions()
     yield
     clear_sessions()
+
+
+@pytest.fixture(autouse=True)
+def _patch_emit_event():
+    with patch("app.main.emit_event", return_value=None):
+        yield
 
 
 def _start_session(track_id: str = "shell", module_id: str = "shell-basics", num_questions: int = 3) -> dict:
@@ -100,6 +108,23 @@ def test_start_session_invalid_module() -> None:
         json={"track_id": "shell", "module_id": "nonexistent"},
     )
     assert response.status_code == 404
+
+
+def test_start_session_emits_event() -> None:
+    with patch("app.main.emit_event", return_value=None) as mock_emit:
+        data = _start_session(track_id="shell", module_id="shell-basics", num_questions=2)
+    assert data["status"] == "ok"
+    mock_emit.assert_called_once_with(
+        "defense_started",
+        learner_id="default",
+        track_id="shell",
+        module_id="shell-basics",
+        payload={
+            "phase": "foundation",
+            "num_questions": 2,
+            "session_id": data["session_id"],
+        },
+    )
 
 
 # === Answer questions ===

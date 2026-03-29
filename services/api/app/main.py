@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from .auth import router as auth_router
+from .events import emit_event
 from .progression_state import canonicalize_progression, get_completed_module_ids, get_module_statuses
 from .repository import load_curriculum, load_progression, write_progression
 from .schemas import (
@@ -22,6 +23,8 @@ from .schemas import (
     ModuleSkipRequest,
     ModuleStartRequest,
     ModuleStatusResponse,
+    PedagogicalEventCreate,
+    PedagogicalEventResponse,
     ProgressionResponse,
     ProgressUpdate,
     TrackDetail,
@@ -150,6 +153,25 @@ def update_progression(payload: ProgressUpdate) -> ProgressionResponse:
     return ProgressionResponse(**current)
 
 
+# ---------------------------------------------------------------------------
+# Internal event logging
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/v1/internal/pedagogical-events")
+def create_pedagogical_event(payload: PedagogicalEventCreate) -> PedagogicalEventResponse:
+    event_id = emit_event(
+        payload.event_type,
+        learner_id=payload.learner_id,
+        track_id=payload.track_id,
+        module_id=payload.module_id,
+        checkpoint_index=payload.checkpoint_index,
+        source_service=payload.source_service,
+        payload=payload.payload,
+    )
+    return PedagogicalEventResponse(status="ok", event_id=event_id)
+
+
 # --- Helpers for module progression ---
 
 
@@ -208,6 +230,7 @@ def module_status(module_id: str) -> ModuleStatusResponse:
 def module_start(module_id: str, payload: ModuleStartRequest | None = None) -> ModuleProgressionResponse:
     track, _module = _find_module(module_id)
     progression_data = canonicalize_progression(load_progression())
+    learner_id = payload.learner_id if payload else "default"
 
     missing = _check_prerequisites(module_id, track, progression_data)
     if missing:
@@ -233,6 +256,14 @@ def module_start(module_id: str, payload: ModuleStartRequest | None = None) -> M
     now = datetime.now(UTC).isoformat()
     statuses[module_id] = {"status": "in_progress", "started_at": now}
     write_progression(progression_data)
+    emit_event(
+        "module_started",
+        learner_id=learner_id,
+        track_id=str(track["id"]),
+        module_id=module_id,
+        source_service="api",
+        payload={"status": "in_progress"},
+    )
 
     return ModuleProgressionResponse(
         module_id=module_id,
@@ -246,6 +277,7 @@ def module_start(module_id: str, payload: ModuleStartRequest | None = None) -> M
 def module_complete(module_id: str, payload: ModuleCompleteRequest | None = None) -> ModuleProgressionResponse:
     track, _module = _find_module(module_id)
     progression_data = canonicalize_progression(load_progression())
+    learner_id = payload.learner_id if payload else "default"
     statuses = get_module_statuses(progression_data)
     current = statuses.get(module_id, {})
 
@@ -260,6 +292,14 @@ def module_complete(module_id: str, payload: ModuleCompleteRequest | None = None
     current["completed_at"] = now
     statuses[module_id] = current
     write_progression(progression_data)
+    emit_event(
+        "module_completed",
+        learner_id=learner_id,
+        track_id=str(track["id"]),
+        module_id=module_id,
+        source_service="api",
+        payload={"status": "completed"},
+    )
 
     return ModuleProgressionResponse(
         module_id=module_id,
@@ -375,6 +415,14 @@ def submit_checkpoint(payload: CheckpointSubmission) -> CheckpointRecord:
     checkpoints = progression_data.setdefault("checkpoints", [])
     checkpoints.append(record.model_dump())
     write_progression(progression_data)
+    emit_event(
+        "checkpoint_submitted",
+        learner_id="default",
+        module_id=payload.module_id,
+        checkpoint_index=payload.checkpoint_index,
+        source_service="api",
+        payload={"type": payload.type, "self_evaluation": payload.self_evaluation},
+    )
 
     return record
 

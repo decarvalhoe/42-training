@@ -10,7 +10,7 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect
 
 from app.db import DEFAULT_DATABASE_URL, create_async_db_engine, get_database_url, is_async_database_url
-from app.models import Base, LearnerProfile
+from app.models import Base, LearnerProfile, PedagogicalEvent
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,7 +32,9 @@ class TestDatabaseConfig:
 
 class TestSqlAlchemyMetadata:
     def test_core_models_registered_in_metadata(self) -> None:
-        assert {"learner_profile", "progression", "evidence", "review"} <= set(Base.metadata.tables.keys())
+        assert {"learner_profile", "progression", "evidence", "review", "pedagogical_event"} <= set(
+            Base.metadata.tables.keys()
+        )
 
     def test_learner_profile_model_registered_in_metadata(self) -> None:
         table = Base.metadata.tables["learner_profile"]
@@ -40,6 +42,21 @@ class TestSqlAlchemyMetadata:
         assert {"id", "login", "track", "current_module", "runtime_state", "started_at", "updated_at"} <= set(
             table.columns.keys()
         )
+
+    def test_pedagogical_event_model_registered_in_metadata(self) -> None:
+        table = Base.metadata.tables["pedagogical_event"]
+        assert PedagogicalEvent.__table__.name == "pedagogical_event"
+        assert {
+            "id",
+            "event_type",
+            "learner_id",
+            "track_id",
+            "module_id",
+            "checkpoint_index",
+            "source_service",
+            "payload",
+            "created_at",
+        } <= set(table.columns.keys())
 
 
 class TestAlembicBootstrap:
@@ -54,7 +71,14 @@ class TestAlembicBootstrap:
         engine = create_engine(f"sqlite:///{db_path}")
         inspector = inspect(engine)
         table_names = set(inspector.get_table_names())
-        assert {"learner_profile", "progression", "evidence", "review", "user_accounts"} <= table_names
+        assert {
+            "learner_profile",
+            "progression",
+            "evidence",
+            "review",
+            "user_accounts",
+            "pedagogical_event",
+        } <= table_names
 
         columns = {column["name"] for column in inspector.get_columns("learner_profile")}
         assert {"id", "login", "track", "current_module", "runtime_state", "started_at", "updated_at"} <= columns

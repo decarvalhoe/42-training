@@ -195,3 +195,17 @@ class Review(Base):
 
     learner: Mapped[LearnerProfile | None] = relationship(back_populates="reviews_received", foreign_keys=[learner_id])
     reviewer: Mapped[LearnerProfile] = relationship(back_populates="reviews_authored", foreign_keys=[reviewer_id])
+
+
+class PedagogicalEvent(Base):
+    __tablename__ = "pedagogical_event"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid_str)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    learner_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    track_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    module_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    checkpoint_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_service: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
