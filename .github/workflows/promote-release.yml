@@ -1,0 +1,39 @@
+name: Promote draft release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag of the draft release to promote (e.g. v0.2.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Promote draft to stable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.tag }}"
+
+          echo "Looking up release for tag: ${TAG}"
+          DRAFT=$(gh release view "${TAG}" --json isDraft --jq '.isDraft' 2>&1) || {
+            echo "::error::Release '${TAG}' not found"
+            exit 1
+          }
+
+          if [ "${DRAFT}" != "true" ]; then
+            echo "Release '${TAG}' is already published (draft=${DRAFT}). Nothing to do."
+            exit 0
+          fi
+
+          echo "Promoting '${TAG}' from draft to stable..."
+          gh release edit "${TAG}" --draft=false
+          echo "Release '${TAG}' is now stable."
