@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useAuth } from "@/app/components/AuthProvider";
+import { BootSequence } from "@/app/components/BootSequence";
 import { isAuthApiError } from "@/services/auth";
 
 type FormState = {
@@ -103,37 +104,27 @@ export default function LoginPage() {
   return (
     <main className="page-shell login-page">
       <section className="login-shell">
-        <article className="login-copy panel">
-          <p className="eyebrow">Authentication</p>
-          <h1>Sign in with your learner account.</h1>
-          <p className="lead">
-            The web app now calls the real authentication endpoints, stores the JWT locally and reuses it to
-            protect the learning workspace.
-          </p>
-          <div className="login-highlights">
-            <div className="login-highlight">
-              <strong>Real API flow</strong>
-              <span className="muted">Uses `/auth/login`, `/auth/register` and `/auth/me`.</span>
+        {/* Boot sequence panel (replaces static copy) */}
+        <article className="login-boot panel">
+          <div className="login-boot-header">
+            <div className="login-boot-dots">
+              <span className="login-boot-dot login-boot-dot--red" />
+              <span className="login-boot-dot login-boot-dot--yellow" />
+              <span className="login-boot-dot login-boot-dot--green" />
             </div>
-            <div className="login-highlight">
-              <strong>Client validation</strong>
-              <span className="muted">Checks email format and a minimal password length.</span>
-            </div>
-            <div className="login-highlight">
-              <strong>Protected pages</strong>
-              <span className="muted">Unauthenticated access is redirected back to this screen.</span>
-            </div>
+            <span className="login-boot-title">42-training — boot</span>
           </div>
-          <p className="muted">
-            Use an existing account to sign in, or switch to create mode to register a new learner account from
-            the same screen.
-          </p>
+          <BootSequence />
         </article>
 
+        {/* Login form */}
         <section className="login-card panel" aria-labelledby="login-form-title">
           <div className="login-card-header">
-            <p className="eyebrow">Web Auth</p>
+            <p className="eyebrow">Learner Authentication</p>
             <h2 id="login-form-title">{mode === "login" ? "Access 42-training" : "Create your account"}</h2>
+            <p className="muted">
+              The workspace agents are ready. Authenticate to start your learning session.
+            </p>
           </div>
 
           <div className="login-mode-toggle" aria-label="Authentication mode">
