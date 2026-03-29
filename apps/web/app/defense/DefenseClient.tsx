@@ -417,6 +417,9 @@ export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Pr
               Question {activeQuestionIndex + 1} of {questions.length}
             </span>
             <span
+              role="timer"
+              aria-live="off"
+              aria-label={`${secondsLeft} seconds remaining`}
               className={`defense-timer ${timerWarning ? "defense-timer--warning" : ""} ${timerCritical ? "defense-timer--critical" : ""}`}
             >
               {secondsLeft}s
@@ -444,6 +447,8 @@ export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Pr
         {/* Feedback (shown briefly after answering) */}
         {lastFeedback && (
           <div
+            role="status"
+            aria-live="polite"
             className={`defense-feedback panel ${lastFeedback.score >= 0.7 ? "defense-feedback--good" : lastFeedback.score >= 0.4 ? "defense-feedback--partial" : "defense-feedback--low"}`}
           >
             <div className="defense-feedback-header">
@@ -461,7 +466,7 @@ export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Pr
         {/* Answer form */}
         {!lastFeedback && (
           <div className="defense-answer panel">
-            {error && <p className="defense-error">{error}</p>}
+            {error && <p className="defense-error" role="alert">{error}</p>}
             <label className="defense-field">
               <span>Your explanation</span>
               <textarea

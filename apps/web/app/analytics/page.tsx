@@ -94,7 +94,7 @@ export default async function AnalyticsPage() {
 
   return (
     <main className="page-shell">
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Analytics</span>

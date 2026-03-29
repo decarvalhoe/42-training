@@ -5,6 +5,8 @@ function StatusDot({ status }: { status: TmuxSession["status"] }) {
   return (
     <span
       className={cls}
+      role="img"
+      aria-label={`Status: ${status}`}
       style={{
         display: "inline-block",
         width: 8,

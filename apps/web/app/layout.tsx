@@ -22,8 +22,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body>
         <AuthProvider>
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
           <AuthGuard header={<NavHeader />}>
-            <div className="app-content">{children}</div>
+            <div id="main-content" className="app-content">{children}</div>
           </AuthGuard>
         </AuthProvider>
       </body>

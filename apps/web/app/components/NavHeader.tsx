@@ -26,7 +26,7 @@ export async function NavHeader() {
         <Link href="/" className="nav-logo">42-training</Link>
         <span className="nav-track-indicator">{activeTrack}</span>
       </div>
-      <nav className="nav-links">
+      <nav className="nav-links" aria-label="Main navigation">
         {NAV_LINKS.map((link) => (
           <Link key={link.href} href={link.href} className="nav-link">
             {link.label}

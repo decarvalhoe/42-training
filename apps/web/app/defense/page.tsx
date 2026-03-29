@@ -35,7 +35,7 @@ export default async function DefensePage() {
 
   return (
     <main className="page-shell defense-page">
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Defense</span>

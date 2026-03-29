@@ -11,7 +11,7 @@
   --panel: rgba(255, 252, 247, 0.86);
   --white: #fff;
   --ink: #1c1a17;
-  --muted: #645f58;
+  --muted: #4d4843;
   --line: rgba(28, 26, 23, 0.12);
 
   /* --- Track colors --- */
@@ -141,6 +141,60 @@ body {
   font-size: 15px;
   line-height: 1.55;
   -webkit-text-size-adjust: 100%;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Accessibility: skip link                                           */
+/* ------------------------------------------------------------------ */
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 1000;
+  padding: 8px 16px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 0 0 6px 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Accessibility: global focus-visible                                */
+/* ------------------------------------------------------------------ */
+
+:focus-visible {
+  outline: 2px solid var(--shell);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Accessibility: reduced motion                                      */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .app-content {
