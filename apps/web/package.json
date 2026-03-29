@@ -23,10 +23,5 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "typescript": "5.8.2",
     "typescript-eslint": "^8.57.2"
-  },
-  "overrides": {
-    "eslint-plugin-jsx-a11y": {
-      "eslint": "$eslint"
-    }
   }
 }
