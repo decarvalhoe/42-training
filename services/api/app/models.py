@@ -100,10 +100,30 @@ class LearnerProfile(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
+    user_account: Mapped[UserAccount | None] = relationship(back_populates="learner_profile", uselist=False)
     progressions: Mapped[list[Progression]] = relationship(back_populates="learner")
     evidence_items: Mapped[list[Evidence]] = relationship(back_populates="learner")
     reviews_authored: Mapped[list[Review]] = relationship(back_populates="reviewer", foreign_keys="Review.reviewer_id")
     reviews_received: Mapped[list[Review]] = relationship(back_populates="learner", foreign_keys="Review.learner_id")
+
+
+class UserAccount(Base):
+    __tablename__ = "user_accounts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid_str)
+    email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active", index=True)
+    learner_profile_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("learner_profile.id"), nullable=True, unique=True
+    )
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    learner_profile: Mapped[LearnerProfile | None] = relationship(back_populates="user_account")
 
 
 class Progression(Base):
