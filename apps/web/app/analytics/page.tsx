@@ -92,6 +92,7 @@ export default async function AnalyticsPage() {
     { label: "Checkpoint pass rate", value: analytics.summary.checkpoint_success_rate },
     { label: "Mentor queries", value: analytics.summary.mentor_queries },
     { label: "Defenses started", value: analytics.summary.defenses_started },
+    { label: "Watch check-ins", value: analytics.summary.watch_mentor_checkins },
   ];
 
   return (

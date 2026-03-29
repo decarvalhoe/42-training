@@ -142,6 +142,7 @@ export type AnalyticsSummary = {
   checkpoint_success_rate: number;
   mentor_queries: number;
   defenses_started: number;
+  watch_mentor_checkins: number;
 };
 
 export type AnalyticsChartRow = {
@@ -423,6 +424,7 @@ const fallbackAnalyticsData: AnalyticsData = {
     checkpoint_success_rate: 71.4,
     mentor_queries: 11,
     defenses_started: 2,
+    watch_mentor_checkins: 4,
   },
   modules_completed: [
     {

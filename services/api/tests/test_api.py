@@ -192,6 +192,7 @@ class TestAnalyticsDashboard:
                             "checkpoint_success_rate": 66.7,
                             "mentor_queries": 1,
                             "defenses_started": 1,
+                            "watch_mentor_checkins": 0,
                         },
                         "modules_completed": [],
                         "average_time": [],
