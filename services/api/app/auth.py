@@ -125,7 +125,7 @@ def serialize_profiles(profiles: list[LearnerProfile]) -> list[AuthLearnerProfil
 
 def get_jwt_active_profile(user: UserAccount) -> LearnerProfile | None:
     """Return the profile bound to the current JWT, falling back to the DB active_profile."""
-    return getattr(user, "_jwt_active_profile", None) or user.active_profile
+    return getattr(user, "_jwt_active_profile", None) or user.active_profile  # type: ignore[return-value]
 
 
 def get_jwt_active_profile_id(user: UserAccount) -> str | None:
