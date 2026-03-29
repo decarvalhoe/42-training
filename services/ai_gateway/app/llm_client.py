@@ -7,6 +7,7 @@ from typing import Any
 
 from .mentor_memory import MentorTurn
 from .schemas import MentorRequest
+from .tmux_reader import capture_pane, format_terminal_context
 
 logger = logging.getLogger(__name__)
 REQUIRED_RESPONSE_FIELDS = ("observation", "question", "hint", "next_action")
@@ -105,8 +106,17 @@ def _build_user_message(
     module_title: str | None,
     active_course: str,
     conversation_history: list[MentorTurn] | None = None,
+    *,
+    terminal_context: str | None = None,
 ) -> str:
-    parts = [
+    parts: list[str] = []
+
+    # Inject tmux terminal context when available
+    if terminal_context:
+        parts.append(terminal_context)
+        parts.append("")
+
+    parts += [
         f"Learner: {request.learner_id}",
         f"Track: {request.track_id} ({track_title})",
         f"Module: {module_title or 'aucun specifie'}",
@@ -208,12 +218,20 @@ def get_mentor_response(
         raise RuntimeError("ANTHROPIC_API_KEY not set")
 
     client = _build_anthropic_client(api_key)
+
+    # Best-effort tmux pane capture — None when unavailable
+    terminal_context: str | None = None
+    pane_content = capture_pane()
+    if pane_content:
+        terminal_context = format_terminal_context(pane_content)
+
     user_message = _build_user_message(
         request,
         track_title,
         module_title,
         active_course,
         conversation_history=conversation_history,
+        terminal_context=terminal_context,
     )
 
     message = client.messages.create(
