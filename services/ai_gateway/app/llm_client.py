@@ -50,6 +50,32 @@ Reponds UNIQUEMENT en JSON valide avec cette structure exacte:
 Pas de texte avant ou apres le JSON. Pas de markdown autour du JSON.
 """
 
+DEFENSE_SYSTEM_PROMPT = """\
+Tu es un examinateur de defense orale pour la preparation a 42 Lausanne.
+
+Ta mission:
+- evaluer la qualite d'une reponse de l'apprenant a une question de defense
+- attribuer un score entre 0.0 et 1.0
+- donner un feedback pedagogique court
+
+Regles absolues:
+- N'ecris JAMAIS la reponse correcte complete.
+- N'indique jamais "la bonne reponse est".
+- Explique ce qui est compris, ce qui manque, et comment approfondir.
+- Sois strict mais juste, dans l'esprit d'une evaluation 42.
+- Le score 1.0 signifie une comprehension solide, precise et bien expliquee.
+- Le score 0.0 signifie aucune comprehension exploitable.
+
+Format de reponse:
+Retourne UNIQUEMENT un JSON valide avec cette structure exacte:
+{
+  "score": 0.0,
+  "feedback": "..."
+}
+
+Pas de texte avant ou apres le JSON. Pas de markdown autour du JSON.
+"""
+
 
 def _build_user_message(request: MentorRequest, track_title: str, module_title: str | None, active_course: str) -> str:
     parts = [
@@ -104,6 +130,32 @@ def _parse_response_payload(raw_text: str) -> dict[str, str]:
     return normalized
 
 
+def _parse_defense_payload(raw_text: str) -> dict[str, Any]:
+    payload_text = raw_text.strip()
+    start = payload_text.find("{")
+    end = payload_text.rfind("}")
+    if start != -1 and end != -1 and start < end:
+        payload_text = payload_text[start : end + 1]
+
+    parsed = json.loads(payload_text)
+    if not isinstance(parsed, dict):
+        raise ValueError("Claude defense response must be a JSON object")
+
+    score = parsed.get("score")
+    feedback = parsed.get("feedback")
+    if not isinstance(score, (int, float)):
+        raise ValueError("Claude defense response missing valid 'score' field")
+    if not 0.0 <= float(score) <= 1.0:
+        raise ValueError("Claude defense response score must be between 0.0 and 1.0")
+    if not isinstance(feedback, str) or not feedback.strip():
+        raise ValueError("Claude defense response missing valid 'feedback' field")
+
+    return {
+        "score": round(float(score), 2),
+        "feedback": feedback.strip(),
+    }
+
+
 def _build_anthropic_client(api_key: str) -> Any:
     import anthropic
 
@@ -137,3 +189,47 @@ def get_mentor_response(
 
     raw = _extract_text_content(message)
     return _parse_response_payload(raw)
+
+
+def get_defense_evaluation(
+    *,
+    track_id: str,
+    module_id: str,
+    phase: str,
+    question_text: str,
+    skill: str,
+    expected_keywords: list[str],
+    answer: str,
+) -> dict[str, Any]:
+    """Call Claude API to evaluate a defense answer.
+
+    Raises on API errors or malformed JSON so the caller can fall back.
+    """
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY not set")
+
+    client = _build_anthropic_client(api_key)
+    user_message = "\n".join(
+        [
+            f"Track: {track_id}",
+            f"Module: {module_id}",
+            f"Phase: {phase}",
+            f"Skill cible: {skill}",
+            f"Mots-cles attendus: {', '.join(expected_keywords) if expected_keywords else 'aucun'}",
+            f"Question de defense: {question_text}",
+            f"Reponse de l'apprenant: {answer}",
+            "IMPORTANT: evalue la comprehension sans reveler la solution et retourne uniquement le JSON demande.",
+        ]
+    )
+
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=512,
+        temperature=0,
+        system=DEFENSE_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": [{"type": "text", "text": user_message}]}],
+    )
+
+    raw = _extract_text_content(message)
+    return _parse_defense_payload(raw)
