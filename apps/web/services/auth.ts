@@ -16,33 +16,19 @@ export type AuthProfile = {
   current_module: string | null;
 };
 
-type AuthTokenResponse = {
-  access_token: string;
-  token_type: "bearer";
-  expires_in: number;
-  user: AuthUser;
-  learner_profile: AuthProfile | null;
-  profiles: AuthProfile[];
-};
-
-type AuthMeResponse = {
+type AuthSessionResponse = {
   user: AuthUser;
   learner_profile: AuthProfile | null;
   profiles: AuthProfile[];
 };
 
 export type AuthSession = {
-  accessToken: string;
-  tokenType: "bearer";
-  expiresIn: number | null;
   user: AuthUser;
   learnerProfile: AuthProfile | null;
   profiles: AuthProfile[];
 };
 
-export const ACCESS_TOKEN_STORAGE_KEY = "training-access-token";
 export const AUTH_SESSION_STORAGE_KEY = "training-auth-session";
-export const ACCESS_TOKEN_COOKIE_KEY = "training-access-token";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -63,11 +49,8 @@ function normalizeCredentials(payload: AuthCredentials): AuthCredentials {
   };
 }
 
-function buildSessionFromTokenResponse(data: AuthTokenResponse): AuthSession {
+function buildSession(data: AuthSessionResponse): AuthSession {
   return {
-    accessToken: data.access_token,
-    tokenType: data.token_type,
-    expiresIn: data.expires_in,
     user: data.user,
     learnerProfile: data.learner_profile ?? null,
     profiles: data.profiles,
@@ -79,39 +62,11 @@ function serializeSession(session: AuthSession) {
     return;
   }
 
-  window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, session.accessToken);
   window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
-}
-
-function setTokenCookie(token: string, maxAgeSeconds: number | null) {
-  if (typeof document === "undefined") {
-    return;
-  }
-
-  const cookieParts = [
-    `${ACCESS_TOKEN_COOKIE_KEY}=${encodeURIComponent(token)}`,
-    "Path=/",
-    "SameSite=Lax",
-  ];
-
-  if (typeof maxAgeSeconds === "number") {
-    cookieParts.push(`Max-Age=${Math.max(0, Math.floor(maxAgeSeconds))}`);
-  }
-
-  document.cookie = cookieParts.join("; ");
-}
-
-function clearTokenCookie() {
-  if (typeof document === "undefined") {
-    return;
-  }
-
-  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 function persistSession(session: AuthSession): AuthSession {
   serializeSession(session);
-  setTokenCookie(session.accessToken, session.expiresIn);
   return session;
 }
 
@@ -123,22 +78,20 @@ function extractErrorMessage(payload: unknown, fallback: string) {
   return fallback;
 }
 
-async function authRequest<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
+async function authRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   if (init?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
-  }
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
   }
 
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
     headers,
+    credentials: "include",
     cache: "no-store",
   });
 
-  const payload = (await response.json().catch(() => null)) as unknown;
+  const payload = (response.status === 204 ? null : await response.json().catch(() => null)) as unknown;
   if (!response.ok) {
     throw new AuthApiError(
       extractErrorMessage(payload, `Authentication failed with status ${response.status}.`),
@@ -147,14 +100,6 @@ async function authRequest<T>(path: string, init?: RequestInit, token?: string):
   }
 
   return payload as T;
-}
-
-export function getStoredAccessToken(): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
 export function getStoredAuthSession(): AuthSession | null {
@@ -170,6 +115,7 @@ export function getStoredAuthSession(): AuthSession | null {
   try {
     return JSON.parse(raw) as AuthSession;
   } catch {
+    window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
     return null;
   }
 }
@@ -180,46 +126,35 @@ export function getStoredSessionEmail(): string | null {
 
 export function clearStoredAuth() {
   if (typeof window !== "undefined") {
-    window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
   }
-
-  clearTokenCookie();
 }
 
 export async function loginWithPassword(payload: AuthCredentials): Promise<AuthSession> {
-  const response = await authRequest<AuthTokenResponse>("/api/v1/auth/login", {
+  const response = await authRequest<AuthSessionResponse>("/api/v1/auth/login", {
     method: "POST",
     body: JSON.stringify(normalizeCredentials(payload)),
   });
 
-  return persistSession(buildSessionFromTokenResponse(response));
+  return persistSession(buildSession(response));
 }
 
 export async function registerWithPassword(payload: AuthCredentials): Promise<AuthSession> {
-  const response = await authRequest<AuthTokenResponse>("/api/v1/auth/register", {
+  const response = await authRequest<AuthSessionResponse>("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify(normalizeCredentials(payload)),
   });
 
-  return persistSession(buildSessionFromTokenResponse(response));
+  return persistSession(buildSession(response));
 }
 
-export async function fetchCurrentSession(accessToken = getStoredAccessToken()): Promise<AuthSession> {
-  if (!accessToken) {
-    throw new AuthApiError("No bearer token available.", 401);
-  }
+export async function fetchCurrentSession(): Promise<AuthSession> {
+  const response = await authRequest<AuthSessionResponse>("/api/v1/auth/me", { method: "GET" });
+  return persistSession(buildSession(response));
+}
 
-  const current = getStoredAuthSession();
-  const response = await authRequest<AuthMeResponse>("/api/v1/auth/me", { method: "GET" }, accessToken);
-  return persistSession({
-    accessToken,
-    tokenType: "bearer",
-    expiresIn: current?.expiresIn ?? null,
-    user: response.user,
-    learnerProfile: response.learner_profile ?? null,
-    profiles: response.profiles,
-  });
+export async function logoutCurrentSession(): Promise<void> {
+  await authRequest<null>("/api/v1/auth/logout", { method: "POST" });
 }
 
 export function isAuthApiError(error: unknown): error is AuthApiError {

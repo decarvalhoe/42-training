@@ -5,9 +5,9 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import {
   clearStoredAuth,
   fetchCurrentSession,
-  getStoredAccessToken,
   getStoredAuthSession,
   loginWithPassword,
+  logoutCurrentSession,
   registerWithPassword,
   type AuthCredentials,
   type AuthSession,
@@ -20,7 +20,7 @@ type AuthContextValue = {
   session: AuthSession | null;
   login: (payload: AuthCredentials) => Promise<AuthSession>;
   register: (payload: AuthCredentials) => Promise<AuthSession>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshSession: () => Promise<AuthSession>;
 };
 
@@ -34,23 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function bootstrap() {
-      const storedToken = getStoredAccessToken();
       const storedSession = getStoredAuthSession();
-
-      if (!storedToken) {
-        if (!cancelled) {
-          setSession(storedSession);
-          setStatus("unauthenticated");
-        }
-        return;
-      }
 
       if (storedSession && !cancelled) {
         setSession(storedSession);
       }
 
       try {
-        const nextSession = await fetchCurrentSession(storedToken);
+        const nextSession = await fetchCurrentSession();
         if (!cancelled) {
           setSession(nextSession);
           setStatus("authenticated");
@@ -92,10 +83,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return nextSession;
   }
 
-  function logout() {
-    clearStoredAuth();
-    setSession(null);
-    setStatus("unauthenticated");
+  async function logout() {
+    try {
+      await logoutCurrentSession();
+    } finally {
+      clearStoredAuth();
+      setSession(null);
+      setStatus("unauthenticated");
+    }
   }
 
   return (

@@ -52,7 +52,7 @@ function formatDateLabel(value: string) {
 }
 
 export default function ProfilesPage() {
-  const { session } = useAuth();
+  const { refreshSession, session } = useAuth();
   const [tracks, setTracks] = useState<TrackItem[]>([]);
   const [profilesState, setProfilesState] = useState<ProfilesState | null>(null);
   const [form, setForm] = useState<ProfileFormState>(INITIAL_FORM);
@@ -120,6 +120,7 @@ export default function ProfilesPage() {
         login: form.login.trim() || undefined,
       });
       setProfilesState(nextState);
+      await refreshSession().catch(() => undefined);
       setForm((current) => ({ ...current, login: "" }));
       setFeedbackTone("success");
       setFeedback(`Profile for ${formatTrackTitle(form.track, tracks)} is ready and now active.`);
@@ -137,6 +138,7 @@ export default function ProfilesPage() {
     try {
       const nextState = await switchActiveProfile(profile.id);
       setProfilesState(nextState);
+      await refreshSession().catch(() => undefined);
       setFeedbackTone("success");
       setFeedback(`${formatTrackTitle(profile.track, tracks)} is now the active profile.`);
     } catch (error) {
@@ -203,7 +205,7 @@ export default function ProfilesPage() {
           </div>
           <div className="metric-card">
             <span>Data source</span>
-            <strong>{profilesState.mocked ? "Profiles fallback" : "API live state"}</strong>
+            <strong>{profilesState.mocked ? "Demo mode" : "API live state"}</strong>
           </div>
         </div>
       </section>
@@ -313,8 +315,8 @@ export default function ProfilesPage() {
           <div className="profiles-note">
             <strong>Current integration state</strong>
             <p className="muted">
-              This page uses the JWT created at login time and calls the real `/api/v1/profiles` endpoints. A browser
-              fallback remains available only when the profile API is temporarily unreachable.
+              This page uses the authenticated session cookie and calls the real `/api/v1/profiles` endpoints.
+              Browser-backed mock data is available only when explicit demo mode is enabled.
             </p>
           </div>
         </aside>

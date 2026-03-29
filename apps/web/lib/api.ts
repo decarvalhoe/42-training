@@ -162,6 +162,8 @@ export type AnalyticsData = {
   success_rate: AnalyticsChartRow[];
 };
 
+const DEMO_MODE_ENABLED = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
+
 const fallbackData: DashboardData = {
   curriculum: {
     metadata: {
@@ -554,8 +556,11 @@ export async function getDashboardData(): Promise<DashboardData> {
       throw new Error(`API returned ${response.status}`);
     }
     return (await response.json()) as DashboardData;
-  } catch {
-    return fallbackData;
+  } catch (error) {
+    if (DEMO_MODE_ENABLED) {
+      return fallbackData;
+    }
+    throw error;
   }
 }
 
@@ -568,7 +573,10 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       throw new Error(`API returned ${response.status}`);
     }
     return (await response.json()) as AnalyticsData;
-  } catch {
-    return fallbackAnalyticsData;
+  } catch (error) {
+    if (DEMO_MODE_ENABLED) {
+      return fallbackAnalyticsData;
+    }
+    throw error;
   }
 }

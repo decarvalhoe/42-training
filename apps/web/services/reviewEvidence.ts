@@ -78,6 +78,7 @@ type ApiDefenseSessionRecord = {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const REVIEW_STORAGE_KEY = "training-mock-review-attempts";
 const DEFENSE_STORAGE_KEY = "training-mock-defense-sessions";
+const DEMO_MODE_ENABLED = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
 
 function nowIso() {
   return new Date().toISOString();
@@ -127,20 +128,27 @@ function mapDefenseSession(record: ApiDefenseSessionRecord): DefenseSessionRecor
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
+    credentials: "include",
     cache: "no-store",
   });
 
+  const payload = (await response.json().catch(() => null)) as unknown;
   if (!response.ok) {
+    if (payload && typeof payload === "object" && "detail" in payload && typeof payload.detail === "string") {
+      throw new Error(payload.detail);
+    }
     throw new Error(`Assessment API returned ${response.status}`);
   }
 
-  return response.json() as Promise<T>;
+  return payload as T;
 }
 
 function seedReviewAttempts(): ReviewAttemptRecord[] {
@@ -227,7 +235,10 @@ export async function listReviewAttempts(): Promise<{ items: ReviewAttemptRecord
   try {
     const data = await requestJson<ApiReviewAttemptRecord[]>("/api/v1/review-attempts");
     return { items: data.map(mapReviewAttempt), mocked: false };
-  } catch {
+  } catch (error) {
+    if (!DEMO_MODE_ENABLED) {
+      throw error;
+    }
     return { items: readMockReviewAttempts(), mocked: true };
   }
 }
@@ -248,7 +259,10 @@ export async function createReviewAttempt(payload: ReviewAttemptCreatePayload): 
       }),
     });
     return { item: mapReviewAttempt(data), mocked: false };
-  } catch {
+  } catch (error) {
+    if (!DEMO_MODE_ENABLED) {
+      throw error;
+    }
     const timestamp = nowIso();
     const item: ReviewAttemptRecord = {
       id: randomId("review"),
@@ -273,7 +287,10 @@ export async function listDefenseSessions(): Promise<{ items: DefenseSessionReco
   try {
     const data = await requestJson<ApiDefenseSessionRecord[]>("/api/v1/defense-sessions");
     return { items: data.map(mapDefenseSession), mocked: false };
-  } catch {
+  } catch (error) {
+    if (!DEMO_MODE_ENABLED) {
+      throw error;
+    }
     return { items: readMockDefenseSessions(), mocked: true };
   }
 }

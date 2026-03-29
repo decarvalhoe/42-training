@@ -16,8 +16,8 @@ export function AuthStatus() {
     return null;
   }
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     router.replace("/login");
     router.refresh();
   }
@@ -28,7 +28,7 @@ export function AuthStatus() {
         <strong>{session.user.email}</strong>
         <span>{session.learnerProfile ? `${session.learnerProfile.track} profile` : "No active profile"}</span>
       </div>
-      <button type="button" className="nav-auth-btn" onClick={handleLogout}>
+      <button type="button" className="nav-auth-btn" onClick={() => void handleLogout()}>
         Logout
       </button>
     </div>

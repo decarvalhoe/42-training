@@ -59,7 +59,7 @@ export function AuthGuard({ children, header }: { children: ReactNode; header: R
         <h1>{status === "loading" ? "Checking your session..." : "Redirecting to login..."}</h1>
         <p className="lead">
           {status === "loading"
-            ? "The frontend is validating the stored JWT with /auth/me before opening the workspace."
+            ? "The frontend is validating the active session cookie with /auth/me before opening the workspace."
             : "This page requires an authenticated learner account."}
         </p>
       </section>
