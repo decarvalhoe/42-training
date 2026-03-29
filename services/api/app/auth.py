@@ -72,11 +72,11 @@ def normalize_email(email: str) -> str:
 
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")  # type: ignore[no-any-return]
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))  # type: ignore[no-any-return]
 
 
 def create_access_token(user: UserAccount) -> str:
@@ -87,7 +87,7 @@ def create_access_token(user: UserAccount) -> str:
         "iat": now,
         "exp": now + timedelta(minutes=ACCESS_TOKEN_TTL_MINUTES),
     }
-    return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)  # type: ignore[no-any-return]
 
 
 def serialize_user(user: UserAccount) -> AuthUserResponse:
