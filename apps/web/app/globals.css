@@ -783,6 +783,131 @@ a {
   font-size: 12px;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Login page                                                         */
+/* ------------------------------------------------------------------ */
+
+.login-page {
+  max-width: 1100px;
+}
+
+.login-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.login-copy,
+.login-card {
+  display: grid;
+  gap: 18px;
+}
+
+.login-copy h1 {
+  max-width: 11ch;
+}
+
+.login-highlights {
+  display: grid;
+  gap: 12px;
+}
+
+.login-highlight {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.login-card-header {
+  display: grid;
+  gap: 4px;
+}
+
+.login-form {
+  display: grid;
+  gap: 16px;
+}
+
+.login-field {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(28, 26, 23, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font: inherit;
+}
+
+.login-field input::placeholder {
+  color: var(--muted);
+}
+
+.login-field input:focus {
+  outline: 2px solid rgba(28, 93, 99, 0.22);
+  outline-offset: 2px;
+  border-color: rgba(28, 93, 99, 0.35);
+}
+
+.login-field input[aria-invalid="true"] {
+  border-color: rgba(178, 76, 43, 0.5);
+}
+
+.login-error {
+  color: var(--c);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.login-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.login-submit {
+  width: 100%;
+}
+
+.login-secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.56);
+  text-decoration: none;
+}
+
+.login-feedback {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-size: 14px;
+}
+
+.login-feedback--success {
+  background: rgba(53, 95, 59, 0.1);
+  border-color: rgba(53, 95, 59, 0.2);
+  color: var(--python);
+}
+
+.login-feedback--error {
+  background: rgba(178, 76, 43, 0.1);
+  border-color: rgba(178, 76, 43, 0.2);
+  color: var(--c);
+}
+
 /* ================================================================== */
 /*  Tablet breakpoint (>=600px)                                        */
 /* ================================================================== */
@@ -860,6 +985,11 @@ a {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+  }
+
+  .login-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
   }
 
   .progression-hero,
@@ -944,6 +1074,11 @@ a {
 
   .module-detail-body {
     grid-template-columns: 1.4fr 0.6fr;
+  }
+
+  .login-shell {
+    grid-template-columns: 1.05fr 0.95fr;
+    align-items: start;
   }
 
   .progression-hero,
