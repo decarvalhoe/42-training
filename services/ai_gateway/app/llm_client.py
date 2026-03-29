@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import os
-
-import anthropic
+from typing import Any
 
 from .schemas import MentorRequest
 
 logger = logging.getLogger(__name__)
+REQUIRED_RESPONSE_FIELDS = ("observation", "question", "hint", "next_action")
 
 SYSTEM_PROMPT = """\
 Tu es un mentor pedagogique pour la preparation a 42 Lausanne.
@@ -61,10 +61,53 @@ def _build_user_message(request: MentorRequest, track_title: str, module_title: 
         f"Question de l'apprenant: {request.question}",
     ]
     if request.phase == "advanced":
-        parts.append("NOTE: Phase advanced — une solution complete est permise si l'apprenant montre sa comprehension.")
+        parts.append(
+            "NOTE: Phase advanced — une solution complete est permise UNIQUEMENT si "
+            "l'apprenant montre deja sa comprehension."
+        )
     else:
         parts.append(f"NOTE: Phase {request.phase} — PAS de solution complete. Guide uniquement.")
+    parts.append("IMPORTANT: respecte strictement le contrat pedagogique et retourne uniquement du JSON valide.")
     return "\n".join(parts)
+
+
+def _extract_text_content(message: Any) -> str:
+    text_blocks: list[str] = []
+    for block in getattr(message, "content", []):
+        text = getattr(block, "text", None)
+        if isinstance(text, str) and text.strip():
+            text_blocks.append(text.strip())
+
+    if not text_blocks:
+        raise ValueError("Claude response did not contain any text blocks")
+
+    return "\n".join(text_blocks)
+
+
+def _parse_response_payload(raw_text: str) -> dict[str, str]:
+    payload_text = raw_text.strip()
+    start = payload_text.find("{")
+    end = payload_text.rfind("}")
+    if start != -1 and end != -1 and start < end:
+        payload_text = payload_text[start : end + 1]
+
+    parsed = json.loads(payload_text)
+    if not isinstance(parsed, dict):
+        raise ValueError("Claude response must be a JSON object")
+
+    normalized: dict[str, str] = {}
+    for field in REQUIRED_RESPONSE_FIELDS:
+        value = parsed.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Claude response missing valid '{field}' field")
+        normalized[field] = value.strip()
+    return normalized
+
+
+def _build_anthropic_client(api_key: str) -> Any:
+    import anthropic
+
+    return anthropic.Anthropic(api_key=api_key)
 
 
 def get_mentor_response(
@@ -81,17 +124,16 @@ def get_mentor_response(
     if not api_key:
         raise RuntimeError("ANTHROPIC_API_KEY not set")
 
-    client = anthropic.Anthropic(api_key=api_key)
+    client = _build_anthropic_client(api_key)
     user_message = _build_user_message(request, track_title, module_title, active_course)
 
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=1024,
+        temperature=0,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
+        messages=[{"role": "user", "content": [{"type": "text", "text": user_message}]}],
     )
 
-    block = message.content[0]
-    raw: str = block.text.strip()  # type: ignore[union-attr]
-    result: dict[str, str] = json.loads(raw)
-    return result
+    raw = _extract_text_content(message)
+    return _parse_response_payload(raw)
