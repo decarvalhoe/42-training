@@ -93,10 +93,10 @@ def _find_module_context(curriculum: dict[str, Any], module_id: str) -> tuple[st
 async def _get_default_learner(session: Any) -> LearnerProfile | None:
     learner = await session.get(LearnerProfile, DEFAULT_LEARNER_ID)
     if learner is not None:
-        return learner
+        return learner  # type: ignore[no-any-return]
 
     result = await session.execute(select(LearnerProfile).where(LearnerProfile.login == DEFAULT_LEARNER_ID))
-    return result.scalar_one_or_none()
+    return result.scalar_one_or_none()  # type: ignore[no-any-return]
 
 
 async def _load_progression_from_db() -> dict[str, Any]:
