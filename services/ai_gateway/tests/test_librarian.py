@@ -22,11 +22,14 @@ def test_librarian_basic_search() -> None:
 def test_librarian_results_have_expected_fields() -> None:
     response = client.post(ENDPOINT, json={"query": "shell"})
     data = response.json()
+    assert "authorized_sources" in data
+    assert "sources_used" in data
     for result in data["results"]:
         assert "content" in result
         assert "tier" in result
         assert "tier_label" in result
         assert "confidence" in result
+        assert "provenance" in result
         assert 0.0 <= result["confidence"] <= 1.0
 
 
@@ -37,6 +40,7 @@ def test_librarian_never_returns_blocked_tiers() -> None:
     for result in data["results"]:
         assert result["tier"] != "blocked_solution_content"
     assert "blocked_solution_content" in data["blocked_tiers"]
+    assert all(source["tier"] != "blocked_solution_content" for source in data["authorized_sources"])
 
 
 def test_librarian_foundation_blocks_solution_metadata() -> None:
@@ -46,6 +50,7 @@ def test_librarian_foundation_blocks_solution_metadata() -> None:
     for result in data["results"]:
         assert result["tier"] != "solution_metadata"
     assert "solution_metadata" in data["blocked_tiers"]
+    assert all(source["tier"] != "solution_metadata" for source in data["authorized_sources"])
 
 
 def test_librarian_advanced_allows_solution_metadata() -> None:
@@ -53,6 +58,7 @@ def test_librarian_advanced_allows_solution_metadata() -> None:
     response = client.post(ENDPOINT, json={"query": "shell", "phase": "advanced"})
     data = response.json()
     assert "solution_metadata" not in data["blocked_tiers"]
+    assert any(source["tier"] == "solution_metadata" for source in data["authorized_sources"])
 
 
 def test_librarian_with_track_context() -> None:
@@ -96,6 +102,7 @@ def test_librarian_tiers_used_reflects_results() -> None:
     data = response.json()
     result_tiers = {r["tier"] for r in data["results"]}
     assert result_tiers == set(data["tiers_used"])
+    assert {item["tier"] for item in data["sources_used"]} == result_tiers
 
 
 def test_librarian_query_too_short() -> None:
@@ -108,3 +115,33 @@ def test_librarian_resource_includes_url() -> None:
     response = client.post(ENDPOINT, json={"query": "norminette"})
     data = response.json()
     assert any(r["source_url"] is not None for r in data["results"])
+
+
+def test_librarian_result_includes_explicit_provenance() -> None:
+    response = client.post(ENDPOINT, json={"query": "norminette"})
+    data = response.json()
+    result = next(item for item in data["results"] if item["source_url"] is not None)
+    provenance = result["provenance"]
+    assert provenance["tier"] == result["tier"]
+    assert provenance["tier_label"] == result["tier_label"]
+    assert provenance["source_label"]
+    assert provenance["allowed_usage"]
+    assert provenance["confidence_level"]
+    assert provenance["confidence_rationale"]
+
+
+def test_librarian_authorized_sources_are_built_from_source_policy() -> None:
+    response = client.post(ENDPOINT, json={"query": "shell"})
+    data = response.json()
+    official = next(item for item in data["authorized_sources"] if item["tier"] == "official_42")
+    assert official["tier_label"] == "Official 42 sources"
+    assert official["allowed_usage"] == "ground_truth"
+    assert official["confidence_level"] == "high"
+
+
+def test_librarian_authorized_sources_include_recommended_resources() -> None:
+    response = client.post(ENDPOINT, json={"query": "shell"})
+    data = response.json()
+    testers = next(item for item in data["authorized_sources"] if item["tier"] == "testers_and_tooling")
+    labels = {resource["label"] for resource in testers["resources"]}
+    assert "norminette" in labels

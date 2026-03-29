@@ -59,12 +59,37 @@ class LibrarianRequest(BaseModel):
     max_results: int = Field(default=5, ge=1, le=20)
 
 
+class AuthorizedSourceResource(BaseModel):
+    label: str
+    url: str | None = None
+
+
+class AuthorizedSource(BaseModel):
+    tier: str
+    tier_label: str
+    allowed_usage: str
+    confidence_level: str
+    confidence_rationale: str
+    resources: list[AuthorizedSourceResource]
+
+
+class LibrarianProvenance(BaseModel):
+    tier: str
+    tier_label: str
+    source_label: str
+    source_url: str | None = None
+    allowed_usage: str
+    confidence_level: str
+    confidence_rationale: str
+
+
 class LibrarianResult(BaseModel):
     content: str
     source_url: str | None = None
     tier: str
     tier_label: str
     confidence: float
+    provenance: LibrarianProvenance
 
 
 class LibrarianResponse(BaseModel):
@@ -73,6 +98,8 @@ class LibrarianResponse(BaseModel):
     results: list[LibrarianResult]
     tiers_used: list[str]
     blocked_tiers: list[str]
+    authorized_sources: list[AuthorizedSource]
+    sources_used: list[LibrarianProvenance]
 
 
 class ReviewerRequest(BaseModel):
