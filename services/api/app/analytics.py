@@ -160,7 +160,7 @@ def build_analytics_dashboard(
             "mentor_queries": mentor_queries,
             "defenses_started": defenses_started,
         },
-        modules_completed=_chart_rows(completion_counts, curriculum, suffix=" completions"),
-        average_time=_chart_rows(average_time_by_module, curriculum, suffix=" min"),
-        success_rate=_chart_rows(success_rate_by_module, curriculum, count_lookup=checkpoint_totals, suffix="%"),
+        modules_completed=_chart_rows(completion_counts, curriculum, suffix=" completions"),  # type: ignore[arg-type]
+        average_time=_chart_rows(average_time_by_module, curriculum, suffix=" min"),  # type: ignore[arg-type]
+        success_rate=_chart_rows(success_rate_by_module, curriculum, count_lookup=checkpoint_totals, suffix="%"),  # type: ignore[arg-type]
     )
