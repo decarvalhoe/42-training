@@ -159,10 +159,7 @@ export default async function DashboardPage() {
                     <div className="progress-bar">
                       <div
                         className="progress-bar-fill"
-                        style={{
-                          width: `${pct}%`,
-                          background: `var(--${track.id === "python_ai" ? "python" : track.id})`,
-                        }}
+                        style={{ "--bar-width": `${pct}%`, "--bar-color": `var(--${track.id === "python_ai" ? "python" : track.id})` } as React.CSSProperties}
                       />
                     </div>
                     <span className="muted">

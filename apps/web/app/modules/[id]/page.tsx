@@ -107,10 +107,10 @@ export default async function ModuleDetailPage({
   if (!foundModule) {
     return (
       <main className="page-shell">
-        <section className="panel" style={{ textAlign: "center", padding: 48 }}>
+        <section className="panel not-found-panel">
           <h1>Module not found</h1>
           <p className="muted">No module with id &ldquo;{id}&rdquo; exists in the curriculum.</p>
-          <Link href="/" className="action-btn" style={{ marginTop: 24, display: "inline-block" }}>
+          <Link href="/" className="action-btn not-found-action">
             Back to dashboard
           </Link>
         </section>

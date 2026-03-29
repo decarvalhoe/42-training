@@ -67,7 +67,7 @@ function AnalyticsBarChart({
                 <div className={`analytics-bar-track ${TRACK_CLASS[row.track_id] ?? ""}`}>
                   <div
                     className="analytics-bar-fill"
-                    style={{ width }}
+                    style={{ "--bar-width": width } as React.CSSProperties}
                   />
                 </div>
               </div>

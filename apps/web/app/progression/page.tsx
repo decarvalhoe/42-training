@@ -171,7 +171,7 @@ export default async function ProgressionPage() {
               <div className="progress-bar">
                 <div
                   className="progress-bar-fill"
-                  style={{ width: `${ts.percent}%` }}
+                  style={{ "--bar-width": `${ts.percent}%` } as React.CSSProperties}
                 />
               </div>
               <p className="muted">{ts.done} / {ts.total} modules</p>
@@ -232,7 +232,7 @@ export default async function ProgressionPage() {
           {/* Completed checklist */}
           {doneModules.length > 0 && (
             <>
-              <h2 style={{ marginTop: 24 }}>Completed ({doneModules.length})</h2>
+              <h2 className="section-heading-spaced">Completed ({doneModules.length})</h2>
               <div className="prog-checklist">
                 {doneModules.map((m) => (
                   <Link
@@ -297,7 +297,7 @@ export default async function ProgressionPage() {
           <h2>{progression.progress.current_exercise}</h2>
           <p>{progression.progress.current_step ?? ""}</p>
           {progression.next_command && (
-            <p style={{ marginTop: 8 }}>
+            <p className="section-note-spaced">
               Next command: <code className="prog-code">{progression.next_command}</code>
             </p>
           )}

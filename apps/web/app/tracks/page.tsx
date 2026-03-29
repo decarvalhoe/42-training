@@ -136,7 +136,7 @@ function TrackTree({
           <div className="talent-track-bar">
             <div
               className="talent-track-bar-fill"
-              style={{ width: `${pct}%` }}
+              style={{ "--bar-width": `${pct}%` } as React.CSSProperties}
             />
           </div>
           <span className="muted">
