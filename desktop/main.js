@@ -1,113 +1,167 @@
 /**
- * Electron main process for 42 Training desktop shell.
+ * 42-Training — Electron main process.
  *
  * Lifecycle:
- *   1. Spawn the Next.js standalone server from extraResources.
- *   2. Wait for the health-check endpoint to respond.
- *   3. Open a BrowserWindow pointing at the local server.
- *   4. On quit, tear down the child process.
- *
- * The Python backend services (API + AI Gateway) are expected to run
- * independently — either via Docker Desktop or manually.
- * Set NEXT_PUBLIC_API_URL and NEXT_PUBLIC_AI_GATEWAY_URL env vars to
- * point the frontend at the running backends.
+ *   1. Spawn the Python API backend (port 8000) with SQLite
+ *   2. Spawn the Python AI Gateway (port 8100)
+ *   3. Spawn the Next.js frontend (port 3000)
+ *   4. Wait for all health checks
+ *   5. Open the BrowserWindow
+ *   6. On quit, tear down all child processes
  */
 
 const { app, BrowserWindow, dialog } = require("electron");
 const { spawn } = require("child_process");
 const path = require("path");
+const fs = require("fs");
 const http = require("http");
 
-const WEB_PORT = Number(process.env.PORT) || 3042;
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+/* ------------------------------------------------------------------ */
+/*  Paths                                                              */
+/* ------------------------------------------------------------------ */
 
+const IS_PACKAGED = app.isPackaged;
+const RESOURCES = IS_PACKAGED
+  ? path.join(process.resourcesPath)
+  : path.join(__dirname);
+
+const BACKEND_DIR = path.join(RESOURCES, "backend");
+const DATA_DIR = path.join(RESOURCES, "data");
+const FRONTEND_DIR = path.join(RESOURCES, "frontend");
+
+const API_DIR = path.join(BACKEND_DIR, "api");
+const GATEWAY_DIR = path.join(BACKEND_DIR, "ai_gateway");
+const VENV_PYTHON_API = path.join(API_DIR, "venv", "bin", "python");
+const VENV_PYTHON_GW = path.join(GATEWAY_DIR, "venv", "bin", "python");
+
+/* ------------------------------------------------------------------ */
+/*  Ports                                                              */
+/* ------------------------------------------------------------------ */
+
+const API_PORT = 8000;
+const GATEWAY_PORT = 8100;
+const WEB_PORT = 3000;
+
+/* ------------------------------------------------------------------ */
+/*  State                                                              */
+/* ------------------------------------------------------------------ */
+
+const children = [];
 let mainWindow = null;
-let serverProcess = null;
 
 /* ------------------------------------------------------------------ */
-/*  Next.js server management                                          */
+/*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function getServerPath() {
-  const resourcesPath = process.resourcesPath || path.join(__dirname, "..");
-  return path.join(resourcesPath, "web", "apps", "web", "server.js");
+function userDataPath(filename) {
+  return path.join(app.getPath("userData"), filename);
 }
 
-function startServer() {
-  const serverPath = getServerPath();
-
-  serverProcess = spawn(process.execPath.includes("electron") ? "node" : process.execPath, [serverPath], {
-    env: {
-      ...process.env,
-      PORT: String(WEB_PORT),
-      HOSTNAME: "127.0.0.1",
-      NEXT_PUBLIC_API_URL: API_URL,
-      NEXT_PUBLIC_AI_GATEWAY_URL: process.env.NEXT_PUBLIC_AI_GATEWAY_URL || "http://localhost:8100",
-      NODE_ENV: "production",
-    },
-    stdio: "pipe",
-  });
-
-  serverProcess.stdout?.on("data", (data) => {
-    console.log(`[next] ${data.toString().trim()}`);
-  });
-
-  serverProcess.stderr?.on("data", (data) => {
-    console.error(`[next] ${data.toString().trim()}`);
-  });
-
-  serverProcess.on("error", (err) => {
-    console.error("Failed to start Next.js server:", err.message);
-    dialog.showErrorBox(
-      "Server Error",
-      `Could not start the web server.\n\n${err.message}\n\nMake sure the application was built correctly.`
-    );
-  });
-
-  serverProcess.on("exit", (code) => {
-    console.log(`Next.js server exited with code ${code}`);
-    serverProcess = null;
+function healthCheck(port, pathname, retries = 40, intervalMs = 500) {
+  return new Promise((resolve, reject) => {
+    let attempt = 0;
+    const check = () => {
+      const req = http.get(
+        { hostname: "127.0.0.1", port, path: pathname, timeout: 2000 },
+        (res) => {
+          if (res.statusCode === 200) return resolve();
+          retry();
+        },
+      );
+      req.on("error", retry);
+      req.on("timeout", () => {
+        req.destroy();
+        retry();
+      });
+    };
+    const retry = () => {
+      if (++attempt >= retries) {
+        return reject(new Error(`Service on port ${port} did not start after ${retries} attempts`));
+      }
+      setTimeout(check, intervalMs);
+    };
+    check();
   });
 }
 
-function stopServer() {
-  if (serverProcess) {
-    serverProcess.kill();
-    serverProcess = null;
+function spawnService(label, command, args, cwd, env) {
+  const proc = spawn(command, args, {
+    cwd,
+    env: { ...process.env, ...env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  children.push(proc);
+
+  proc.stdout.on("data", (d) => console.log(`[${label}] ${d.toString().trim()}`));
+  proc.stderr.on("data", (d) => console.error(`[${label}] ${d.toString().trim()}`));
+  proc.on("error", (err) => console.error(`[${label}] failed to start:`, err.message));
+
+  return proc;
+}
+
+function killAll() {
+  for (const proc of children) {
+    if (!proc.killed) {
+      proc.kill("SIGTERM");
+      setTimeout(() => {
+        if (!proc.killed) proc.kill("SIGKILL");
+      }, 3000);
+    }
   }
 }
 
 /* ------------------------------------------------------------------ */
-/*  Health check                                                       */
+/*  Service launchers                                                  */
 /* ------------------------------------------------------------------ */
 
-function waitForServer(url, retries = 30, interval = 500) {
-  return new Promise((resolve, reject) => {
-    let attempts = 0;
+function startApi() {
+  const dbPath = userDataPath("42training.db");
+  const dbUrl = `sqlite+aiosqlite:///${dbPath}`;
 
-    function check() {
-      attempts += 1;
-      http
-        .get(url, (res) => {
-          if (res.statusCode === 200 || res.statusCode === 307) {
-            resolve();
-          } else if (attempts < retries) {
-            setTimeout(check, interval);
-          } else {
-            reject(new Error(`Server not ready after ${retries} attempts (last status: ${res.statusCode})`));
-          }
-        })
-        .on("error", () => {
-          if (attempts < retries) {
-            setTimeout(check, interval);
-          } else {
-            reject(new Error(`Server not reachable after ${retries} attempts`));
-          }
-        });
-    }
+  return spawnService(
+    "api",
+    VENV_PYTHON_API,
+    ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", String(API_PORT)],
+    API_DIR,
+    {
+      DATABASE_URL: dbUrl,
+      APP_SECRET_KEY: "desktop-local-key",
+      CURRICULUM_PATH: path.join(DATA_DIR, "42_lausanne_curriculum.json"),
+      PROGRESSION_PATH: path.join(DATA_DIR, "progression.json"),
+    },
+  );
+}
 
-    check();
-  });
+function startGateway() {
+  return spawnService(
+    "ai_gateway",
+    VENV_PYTHON_GW,
+    ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", String(GATEWAY_PORT)],
+    GATEWAY_DIR,
+    {
+      AI_GATEWAY_API_BASE_URL: `http://127.0.0.1:${API_PORT}`,
+      CURRICULUM_PATH: path.join(DATA_DIR, "42_lausanne_curriculum.json"),
+      PROGRESSION_PATH: path.join(DATA_DIR, "progression.json"),
+    },
+  );
+}
+
+function startFrontend() {
+  const nodeBin = process.execPath.includes("Electron")
+    ? "node"
+    : process.execPath;
+
+  return spawnService(
+    "web",
+    nodeBin,
+    ["node_modules/next/dist/bin/next", "start", "--port", String(WEB_PORT)],
+    FRONTEND_DIR,
+    {
+      NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
+      NEXT_PUBLIC_AI_GATEWAY_URL: `http://127.0.0.1:${GATEWAY_PORT}`,
+      PORT: String(WEB_PORT),
+    },
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -116,11 +170,11 @@ function waitForServer(url, retries = 30, interval = 500) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280,
+    width: 1400,
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    title: "42 Training",
+    title: "42-Training",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -129,7 +183,6 @@ function createWindow() {
   });
 
   mainWindow.loadURL(`http://127.0.0.1:${WEB_PORT}`);
-
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -140,23 +193,34 @@ function createWindow() {
 /* ------------------------------------------------------------------ */
 
 app.on("ready", async () => {
-  startServer();
-
   try {
-    await waitForServer(`http://127.0.0.1:${WEB_PORT}/health`);
-  } catch {
-    // Fallback: try loading anyway — the page may still serve
-    console.warn("Health check failed, loading frontend anyway");
-  }
+    startApi();
+    startGateway();
 
-  createWindow();
+    await healthCheck(API_PORT, "/health");
+    console.log("[boot] API is ready");
+
+    await healthCheck(GATEWAY_PORT, "/health");
+    console.log("[boot] AI Gateway is ready");
+
+    startFrontend();
+    await healthCheck(WEB_PORT, "/");
+    console.log("[boot] Frontend is ready");
+
+    createWindow();
+  } catch (err) {
+    dialog.showErrorBox(
+      "42-Training — Startup Error",
+      `A service failed to start:\n\n${err.message}\n\nCheck Console.app for details.`,
+    );
+    killAll();
+    app.quit();
+  }
 });
 
 app.on("window-all-closed", () => {
-  stopServer();
+  killAll();
   app.quit();
 });
 
-app.on("before-quit", () => {
-  stopServer();
-});
+app.on("before-quit", killAll);
