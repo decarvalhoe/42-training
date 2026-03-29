@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Snap CLI wrapper for 42-training
+set -euo pipefail
+
+case "${1:-help}" in
+    start)
+        sudo snap start 42-training
+        echo "All services started."
+        ;;
+    stop)
+        sudo snap stop 42-training
+        echo "All services stopped."
+        ;;
+    status)
+        snap services 42-training
+        ;;
+    logs)
+        sudo snap logs 42-training -n 50
+        ;;
+    *)
+        echo "Usage: 42-training {start|stop|status|logs}"
+        ;;
+esac
