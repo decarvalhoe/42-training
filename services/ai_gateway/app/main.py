@@ -60,7 +60,7 @@ def source_policy() -> dict[str, object]:
 
 @app.post("/api/v1/intent", response_model=IntentResponse)
 def intent_route(request: IntentRequest) -> IntentResponse:
-    return IntentResponse(**route_intent(request))
+    return IntentResponse(**route_intent(request))  # type: ignore[arg-type]
 
 
 def _static_fallback(request: MentorRequest, focus: str, active_course: str) -> dict[str, str]:
