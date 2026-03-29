@@ -12,6 +12,7 @@ __pycache__/
 # Node / Next
 node_modules/
 .next/
+*.tsbuildinfo
 
 # Local workspaces
 .42-mentor/

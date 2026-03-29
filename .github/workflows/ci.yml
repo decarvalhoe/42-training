@@ -53,10 +53,10 @@ jobs:
         run: npm ci
       - name: ESLint
         working-directory: apps/web
-        run: npx eslint .
+        run: npm run lint
       - name: TypeScript strict check
         working-directory: apps/web
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
   web-build:
     runs-on: ubuntu-latest
