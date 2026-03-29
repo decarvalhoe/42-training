@@ -363,3 +363,22 @@ class TmuxPaneResponse(BaseModel):
     rows: int
     cols: int
     timestamp: str
+
+
+# --- Tmux session schemas (Issue #178) ---
+
+TmuxSessionStatus = Literal["active", "idle"]
+
+
+class TmuxSession(BaseModel):
+    name: str
+    status: TmuxSessionStatus
+    created_at: str
+    last_activity: str
+    windows: int
+    attached: bool
+
+
+class TmuxSessionsResponse(BaseModel):
+    sessions: list[TmuxSession]
+    total: int
