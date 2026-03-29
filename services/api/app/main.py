@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .analytics import build_analytics_dashboard, fetch_pedagogical_events
 from .auth import router as auth_router
 from .db import get_db_session
-from .events import _emit_event_async, emit_event  # noqa: F401
+from .events import _emit_event_async, emit_event
 from .models import DefenseSession as DefenseSessionModel
 from .models import ReviewAttempt as ReviewAttemptModel
 from .profiles import router as profiles_router
@@ -287,6 +287,13 @@ def module_start(module_id: str, payload: ModuleStartRequest | None = None) -> M
     now = datetime.now(UTC).isoformat()
     statuses[module_id] = {"status": "in_progress", "started_at": now}
     write_progression(progression_data)
+    emit_event(
+        "module_started",
+        learner_id=str(payload.learner_id) if payload is not None else "default",
+        track_id=str(track["id"]),
+        module_id=module_id,
+        payload={"status": "in_progress", "started_at": now},
+    )
 
     return ModuleProgressionResponse(
         module_id=module_id,
@@ -314,6 +321,13 @@ def module_complete(module_id: str, payload: ModuleCompleteRequest | None = None
     current["completed_at"] = now
     statuses[module_id] = current
     write_progression(progression_data)
+    emit_event(
+        "module_completed",
+        learner_id=str(payload.learner_id) if payload is not None else "default",
+        track_id=str(track["id"]),
+        module_id=module_id,
+        payload={"status": "completed", "completed_at": now},
+    )
 
     return ModuleProgressionResponse(
         module_id=module_id,
@@ -335,6 +349,13 @@ def module_skip(module_id: str, payload: ModuleSkipRequest | None = None) -> Mod
         entry["skip_reason"] = payload.reason
     statuses[module_id] = entry
     write_progression(progression_data)
+    emit_event(
+        "module_skipped",
+        learner_id=str(payload.learner_id) if payload is not None else "default",
+        track_id=str(track["id"]),
+        module_id=module_id,
+        payload=dict(entry),
+    )
 
     return ModuleProgressionResponse(
         module_id=module_id,
@@ -549,6 +570,22 @@ def submit_checkpoint(payload: CheckpointSubmission) -> CheckpointRecord:
     checkpoints = progression_data.setdefault("checkpoints", [])
     checkpoints.append(record.model_dump())
     write_progression(progression_data)
+    module_track_id = str(module.get("track_id", ""))
+    if not module_track_id:
+        module_context = _find_module(payload.module_id)
+        module_track_id = str(module_context[0]["id"])
+    emit_event(
+        "checkpoint_submitted",
+        learner_id="default",
+        track_id=module_track_id,
+        module_id=payload.module_id,
+        checkpoint_index=payload.checkpoint_index,
+        payload={
+            "type": payload.type,
+            "self_evaluation": payload.self_evaluation,
+            "submitted_at": now,
+        },
+    )
 
     return record
 

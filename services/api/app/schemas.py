@@ -290,6 +290,7 @@ class CheckpointListResponse(BaseModel):
 PedagogicalEventType = Literal[
     "module_started",
     "module_completed",
+    "module_skipped",
     "checkpoint_submitted",
     "mentor_query",
     "defense_started",
