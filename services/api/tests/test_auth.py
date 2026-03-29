@@ -59,7 +59,9 @@ async def _get_user_by_email(
         return result.scalar_one()
 
 
-def test_register_creates_user_with_bcrypt_hash(auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]]) -> None:
+def test_register_creates_user_with_bcrypt_hash(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
     client, session_factory = auth_client
 
     response = client.post(
@@ -94,7 +96,9 @@ def test_register_rejects_duplicate_email(auth_client: tuple[TestClient, async_s
     assert duplicate.json()["detail"] == "Email already registered"
 
 
-def test_login_returns_jwt_and_updates_last_login(auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]]) -> None:
+def test_login_returns_jwt_and_updates_last_login(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
     client, session_factory = auth_client
     client.post("/api/v1/auth/register", json={"email": "student@example.com", "password": "supersecret"})
 
@@ -119,7 +123,9 @@ def test_login_rejects_invalid_password(auth_client: tuple[TestClient, async_ses
     assert response.json()["detail"] == "Invalid email or password"
 
 
-def test_me_returns_current_user_from_bearer_token(auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]]) -> None:
+def test_me_returns_current_user_from_bearer_token(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
     client, _session_factory = auth_client
     register_response = client.post(
         "/api/v1/auth/register",

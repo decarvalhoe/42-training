@@ -20,8 +20,12 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=32), nullable=False, server_default=sa.text("'active'")),
         sa.Column("learner_profile_id", sa.String(length=64), nullable=True),
         sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.ForeignKeyConstraint(["learner_profile_id"], ["learner_profile.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("learner_profile_id"),
