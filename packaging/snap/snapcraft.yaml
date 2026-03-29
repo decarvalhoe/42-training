@@ -1,0 +1,99 @@
+name: 42-training
+version: '0.1.0'
+summary: 42 Lausanne learning platform
+description: |
+  Triple-track learning system (Shell, C, Python+AI) for 42 Lausanne.
+  Includes API server, AI gateway with agentic mentor orchestration,
+  defense sessions, and Next.js web frontend with live terminal
+  integration.
+
+  Agent roles: Mentor, Librarian, Reviewer, Examiner, Orchestrator.
+
+  After install:
+    sudo snap start 42-training
+    Open http://localhost:3000
+
+grade: devel
+confinement: classic
+base: core22
+architectures:
+  - build-on: amd64
+
+apps:
+  api:
+    command: opt/42-training/services/api/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+    daemon: simple
+    working-dir: $SNAP/opt/42-training/services/api
+    restart-condition: on-failure
+    environment:
+      DATABASE_URL: postgresql+asyncpg://training:training@localhost:5432/training
+      REDIS_URL: redis://localhost:6379/0
+
+  gateway:
+    command: opt/42-training/services/ai_gateway/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8100
+    daemon: simple
+    working-dir: $SNAP/opt/42-training/services/ai_gateway
+    restart-condition: on-failure
+    after: [api]
+    environment:
+      AI_GATEWAY_API_BASE_URL: http://localhost:8000
+
+  web:
+    command: usr/bin/npm run start
+    daemon: simple
+    working-dir: $SNAP/opt/42-training/apps/web
+    restart-condition: on-failure
+    after: [api, gateway]
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_AI_GATEWAY_URL: http://localhost:8100
+      PORT: "3000"
+
+  cli:
+    command: usr/bin/42-training-cli
+
+parts:
+  api:
+    plugin: python
+    source: services/api
+    python-requirements:
+      - requirements.txt
+    stage-packages:
+      - python3-venv
+    organize:
+      '*': opt/42-training/services/api/
+
+  ai-gateway:
+    plugin: python
+    source: services/ai_gateway
+    python-requirements:
+      - requirements.txt
+    organize:
+      '*': opt/42-training/services/ai_gateway/
+
+  web:
+    plugin: npm
+    source: apps/web
+    npm-node-version: "20"
+    organize:
+      '*': opt/42-training/apps/web/
+
+  curriculum:
+    plugin: dump
+    source: packages/curriculum/data
+    organize:
+      '*': opt/42-training/packages/curriculum/data/
+
+  progression:
+    plugin: dump
+    source: .
+    stage:
+      - progression.json
+    organize:
+      progression.json: opt/42-training/progression.json
+
+  cli-wrapper:
+    plugin: dump
+    source: packaging/snap
+    organize:
+      42-training-cli: usr/bin/42-training-cli
