@@ -13,7 +13,12 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from typing import Any
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
 @dataclass
@@ -25,6 +30,8 @@ class DefenseQuestion:
     answered: bool = False
     score: float = 0.0
     feedback: str = ""
+    timed_out: bool = False
+    elapsed_seconds: float = 0.0
 
 
 @dataclass
@@ -34,6 +41,9 @@ class DefenseSession:
     module_id: str
     phase: str
     questions: list[DefenseQuestion] = field(default_factory=list)
+    question_time_limit_seconds: int = 60
+    started_at: datetime = field(default_factory=_utc_now)
+    current_question_started_at: datetime = field(default_factory=_utc_now)
     completed: bool = False
 
 
@@ -50,8 +60,10 @@ def create_session(
     module: dict[str, Any],
     phase: str,
     num_questions: int = 3,
+    question_time_limit_seconds: int = 60,
 ) -> DefenseSession:
     """Create a new defense session with generated questions."""
+    now = _utc_now()
     session_id = uuid.uuid4().hex[:12]
     questions = _generate_questions(track, module, phase, num_questions)
     session = DefenseSession(
@@ -60,6 +72,9 @@ def create_session(
         module_id=module["id"],
         phase=phase,
         questions=questions,
+        question_time_limit_seconds=question_time_limit_seconds,
+        started_at=now,
+        current_question_started_at=now,
     )
     _sessions[session_id] = session
     return session
@@ -121,11 +136,13 @@ def score_answer(question: DefenseQuestion, answer: str) -> tuple[float, str]:
 def compute_session_result(session: DefenseSession) -> dict[str, Any]:
     """Compute final defense result for a completed session."""
     answered = [q for q in session.questions if q.answered]
+    timed_out_questions = sum(1 for q in session.questions if q.timed_out)
     if not answered:
         return {
             "overall_score": 0.0,
             "passed": False,
             "summary": "No questions were answered.",
+            "timed_out_questions": timed_out_questions,
             "question_results": [],
         }
 
@@ -140,6 +157,8 @@ def compute_session_result(session: DefenseSession) -> dict[str, Any]:
             "score": q.score,
             "feedback": q.feedback,
             "answered": q.answered,
+            "timed_out": q.timed_out,
+            "elapsed_seconds": q.elapsed_seconds,
         }
         for q in session.questions
     ]
@@ -154,11 +173,81 @@ def compute_session_result(session: DefenseSession) -> dict[str, Any]:
     else:
         summary = f"Defense not passed ({overall:.0%}). Review the feedback for each question and revisit the module materials."
 
+    if timed_out_questions:
+        summary += f" {timed_out_questions} question(s) exceeded the timer."
+
     return {
         "overall_score": overall,
         "passed": passed,
         "summary": summary,
+        "timed_out_questions": timed_out_questions,
         "question_results": question_results,
+    }
+
+
+def get_current_question(session: DefenseSession) -> DefenseQuestion | None:
+    for question in session.questions:
+        if not question.answered:
+            return question
+    return None
+
+
+def get_current_question_deadline(session: DefenseSession) -> datetime | None:
+    if get_current_question(session) is None:
+        return None
+    return session.current_question_started_at + timedelta(seconds=session.question_time_limit_seconds)
+
+
+def submit_answer(session: DefenseSession, question_id: str, answer: str) -> dict[str, Any]:
+    if session.completed:
+        raise ValueError("Session already completed")
+
+    current_question = get_current_question(session)
+    if current_question is None:
+        session.completed = True
+        raise ValueError("Session already completed")
+
+    if question_id != current_question.id:
+        raise ValueError("Questions must be answered in order")
+
+    now = _utc_now()
+    elapsed_seconds = round((now - session.current_question_started_at).total_seconds(), 2)
+    deadline = get_current_question_deadline(session)
+    timed_out = deadline is not None and now > deadline
+
+    if timed_out:
+        score_val = 0.0
+        feedback = (
+            f"Time limit reached for '{current_question.skill}'. Try explaining the concept again from memory in one "
+            "clear paragraph."
+        )
+    else:
+        score_val, feedback = score_answer(current_question, answer)
+
+    current_question.score = score_val
+    current_question.feedback = feedback
+    current_question.answered = True
+    current_question.timed_out = timed_out
+    current_question.elapsed_seconds = elapsed_seconds
+
+    remaining = sum(1 for question in session.questions if not question.answered)
+    next_question = get_current_question(session)
+    next_question_deadline = None
+    if next_question is None:
+        session.completed = True
+    else:
+        session.current_question_started_at = now
+        next_question_deadline = get_current_question_deadline(session)
+
+    return {
+        "question_id": current_question.id,
+        "score": score_val,
+        "feedback": feedback,
+        "questions_remaining": remaining,
+        "timed_out": timed_out,
+        "elapsed_seconds": elapsed_seconds,
+        "next_question_id": next_question.id if next_question else None,
+        "next_question_deadline": next_question_deadline,
     }
 
 
