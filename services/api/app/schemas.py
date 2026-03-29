@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 Track = Literal["shell", "c", "python_ai"]
 Phase = Literal["foundation", "practice", "core", "advanced"]
 PaceMode = Literal["slow", "normal", "intensive", "self_paced"]
+ModuleStatus = Literal["not_started", "in_progress", "completed", "skipped"]
 
 
 # --- Endpoint response schemas (Issue #23) ---
@@ -63,19 +65,24 @@ class ProgressionResponse(BaseModel):
 
 
 class LearnerProfile(BaseModel):
-    username: str = Field(min_length=1, max_length=64)
-    active_course: Track = "shell"
-    active_module: str | None = None
-    pace_mode: PaceMode = "normal"
-    profile: dict[str, str] = Field(default_factory=dict)
+    """Persisted learner identity and current track context."""
+
+    id: str = Field(min_length=1, max_length=64)
+    login: str = Field(min_length=1, max_length=64)
+    track: Track
+    current_module: str | None = None
+    started_at: datetime
+    updated_at: datetime
 
 
 class ProgressState(BaseModel):
-    current_exercise: str | None = None
-    current_step: str | None = None
-    completed: list[str] = Field(default_factory=list)
-    in_progress: list[str] = Field(default_factory=list)
-    todo: list[str] = Field(default_factory=list)
+    """Progress record for a learner on a specific module."""
+
+    module_id: str = Field(min_length=1)
+    status: ModuleStatus
+    started_at: datetime
+    completed_at: datetime | None = None
+    evidence: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProgressUpdate(BaseModel):
@@ -88,8 +95,6 @@ class ProgressUpdate(BaseModel):
 
 
 # --- Module progression schemas (Issue #24) ---
-
-ModuleStatus = Literal["not_started", "in_progress", "completed", "skipped"]
 
 
 class ModuleStartRequest(BaseModel):
