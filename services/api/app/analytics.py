@@ -63,7 +63,7 @@ def _chart_rows(
                 "suffix": suffix,
             }
         )
-    rows.sort(key=lambda row: float(row["value"]), reverse=True)
+    rows.sort(key=lambda row: float(row["value"]), reverse=True)  # type: ignore[arg-type]
     return rows
 
 
@@ -73,7 +73,7 @@ def build_analytics_dashboard(
 ) -> AnalyticsDashboardResponse:
     if not events:
         return AnalyticsDashboardResponse(
-            summary={
+            summary={  # type: ignore[arg-type]
                 "total_events": 0,
                 "module_completions": 0,
                 "average_completion_minutes": 0.0,
@@ -152,7 +152,7 @@ def build_analytics_dashboard(
     )
 
     return AnalyticsDashboardResponse(
-        summary={
+        summary={  # type: ignore[arg-type]
             "total_events": len(events),
             "module_completions": sum(completion_counts.values()),
             "average_completion_minutes": round(overall_average_minutes, 1),
