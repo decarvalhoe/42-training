@@ -9,6 +9,7 @@ from typing import Any, cast
 import httpx
 
 from .defense import DefenseQuestion, DefenseSession, compute_session_result
+from .terminal_context import TerminalContext
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,28 @@ def _question_payload(question: DefenseQuestion) -> dict[str, Any]:
     }
 
 
+def _terminal_context_payload(ctx: TerminalContext | None) -> dict[str, Any] | None:
+    if ctx is None:
+        return None
+    return {
+        "cwd": ctx.cwd,
+        "git_status": ctx.git_status,
+        "panes": ctx.panes,
+        "git_diff_summary": ctx.git_diff_summary,
+    }
+
+
+def _restore_terminal_context(data: dict[str, Any] | None) -> TerminalContext | None:
+    if data is None:
+        return None
+    return TerminalContext(
+        cwd=data.get("cwd", ""),
+        git_status=data.get("git_status", ""),
+        panes=dict(data.get("panes", {})),
+        git_diff_summary=data.get("git_diff_summary", ""),
+    )
+
+
 def _session_state_payload(session: DefenseSession) -> dict[str, Any]:
     return {
         "type": SESSION_STATE_ARTIFACT,
@@ -108,6 +131,7 @@ def _session_state_payload(session: DefenseSession) -> dict[str, Any]:
         "completed": session.completed,
         "review_attempt_persisted": session.review_attempt_persisted,
         "questions": [_question_payload(question) for question in session.questions],
+        "terminal_context": _terminal_context_payload(session.terminal_context),
     }
 
 
@@ -193,6 +217,7 @@ def restore_defense_session(payload: dict[str, Any]) -> DefenseSession:
         ),
         completed=bool(state.get("completed", status in {"passed", "failed"})),
         review_attempt_persisted=bool(state.get("review_attempt_persisted", False)),
+        terminal_context=_restore_terminal_context(state.get("terminal_context")),
     )
 
 

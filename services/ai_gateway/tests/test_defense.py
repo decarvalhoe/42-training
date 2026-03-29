@@ -15,8 +15,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import defense_persistence
-from app.defense import DefenseQuestion, clear_sessions, score_answer
+from app.defense import DefenseQuestion, _generate_questions, clear_sessions, score_answer
 from app.main import app
+from app.terminal_context import TerminalContext, capture_terminal_context
 
 client = TestClient(app)
 
@@ -826,3 +827,182 @@ def test_retry_recovers_from_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     response = client.get(f"/api/v1/defense/{session['session_id']}/result")
     assert response.status_code == 200
     assert call_count >= 2
+
+
+# === Terminal context capture ===
+
+
+def test_capture_terminal_context_returns_none_without_tmux() -> None:
+    """When tmux is not available, capture returns None gracefully."""
+    result = capture_terminal_context()
+    # In CI/test environment, tmux session won't exist
+    assert result is None
+
+
+def test_terminal_context_as_prompt_block() -> None:
+    ctx = TerminalContext(
+        cwd="/home/learner/shell_03",
+        git_status="M  sed_transform.sh",
+        panes={"work": "$ grep -E '^host=' config.conf\nhost=localhost"},
+        git_diff_summary=" sed_transform.sh | 3 +++",
+    )
+    block = ctx.as_prompt_block()
+    assert "/home/learner/shell_03" in block
+    assert "sed_transform.sh" in block
+    assert "grep -E" in block
+    assert not ctx.is_empty()
+
+
+def test_terminal_context_empty() -> None:
+    ctx = TerminalContext()
+    assert ctx.is_empty()
+    assert ctx.as_prompt_block() == ""
+
+
+# === Context-aware question generation ===
+
+
+def _shell_track() -> dict[str, Any]:
+    return {"id": "shell"}
+
+
+def _shell_module() -> dict[str, Any]:
+    return {
+        "id": "shell-basics",
+        "skills": ["pwd", "ls", "cd"],
+        "objectives": [],
+        "exit_criteria": [],
+    }
+
+
+def test_generate_questions_with_terminal_context_references_cwd() -> None:
+    """When terminal context is provided, questions reference the cwd."""
+    ctx = TerminalContext(
+        cwd="/home/learner/shell_03",
+        panes={"work": "$ ls -la\ntotal 8\ndrwxr-xr-x 2 learner learner 4096 Mar 29 12:00 ."},
+    )
+    questions = _generate_questions(_shell_track(), _shell_module(), "foundation", 3, ctx)
+    assert len(questions) == 3
+    # At least one question should reference the cwd
+    texts = " ".join(q.text for q in questions)
+    assert "/home/learner/shell_03" in texts
+
+
+def test_generate_questions_without_context_uses_generic_templates() -> None:
+    """Without terminal context, generic Socratic templates are used."""
+    questions = _generate_questions(_shell_track(), _shell_module(), "foundation", 3, None)
+    assert len(questions) == 3
+    texts = " ".join(q.text for q in questions)
+    # Generic templates use "Explain in your own words" style
+    assert any(word in texts.lower() for word in ["explain", "what would happen", "how would you verify"])
+
+
+def test_generate_questions_with_empty_context_uses_generic_templates() -> None:
+    """Empty terminal context (no cwd, no panes) falls back to generic templates."""
+    ctx = TerminalContext()
+    questions = _generate_questions(_shell_track(), _shell_module(), "foundation", 3, ctx)
+    texts = " ".join(q.text for q in questions)
+    assert "Explain" in texts
+
+
+# === Defense start with terminal context ===
+
+
+def test_start_session_with_terminal_context_returns_snapshot() -> None:
+    """When terminal_context is provided in the request, the response includes a snapshot."""
+    response = client.post(
+        START_ENDPOINT,
+        json={
+            "track_id": "shell",
+            "module_id": "shell-basics",
+            "terminal_context": {
+                "cwd": "/home/learner/shell_03",
+                "git_status": "M  sed_transform.sh",
+                "panes": {"work": "$ pwd\n/home/learner/shell_03"},
+                "git_diff_summary": "",
+            },
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["terminal_snapshot"] is not None
+    assert data["terminal_snapshot"]["cwd"] == "/home/learner/shell_03"
+    assert data["terminal_snapshot"]["panes"]["work"] == "$ pwd\n/home/learner/shell_03"
+
+
+def test_start_session_with_terminal_context_generates_contextual_questions() -> None:
+    """Questions reference the terminal cwd when context is provided."""
+    response = client.post(
+        START_ENDPOINT,
+        json={
+            "track_id": "shell",
+            "module_id": "shell-basics",
+            "terminal_context": {
+                "cwd": "/home/learner/grep_project",
+                "panes": {"work": "$ grep -r TODO ."},
+            },
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    texts = " ".join(q["text"] for q in data["questions"])
+    assert "/home/learner/grep_project" in texts
+
+
+def test_start_session_without_terminal_context_returns_null_snapshot() -> None:
+    """Without terminal context (and no tmux), snapshot is null."""
+    response = client.post(
+        START_ENDPOINT,
+        json={"track_id": "shell", "module_id": "shell-basics"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["terminal_snapshot"] is None
+
+
+def test_terminal_context_persisted_in_backend(
+    _fake_persistence_backend: dict[str, Any],
+) -> None:
+    """Terminal context is stored in the evidence artifacts for later review."""
+    response = client.post(
+        START_ENDPOINT,
+        json={
+            "track_id": "shell",
+            "module_id": "shell-basics",
+            "learner_id": "learner-1",
+            "terminal_context": {
+                "cwd": "/home/learner/c_02",
+                "git_status": "?? main.c",
+                "panes": {"build": "gcc -Wall main.c -o main"},
+            },
+        },
+    )
+    assert response.status_code == 200
+    session_id = response.json()["session_id"]
+    persisted = _fake_persistence_backend["defense_sessions"][session_id]
+    state = persisted["evidence_artifacts"][0]
+    assert state["terminal_context"] is not None
+    assert state["terminal_context"]["cwd"] == "/home/learner/c_02"
+    assert state["terminal_context"]["panes"]["build"] == "gcc -Wall main.c -o main"
+
+
+def test_start_session_questions_remain_socratic_with_context() -> None:
+    """Even with terminal context, questions must be Socratic — never reveal answers."""
+    response = client.post(
+        START_ENDPOINT,
+        json={
+            "track_id": "shell",
+            "module_id": "shell-basics",
+            "terminal_context": {
+                "cwd": "/home/learner/shell_03",
+                "panes": {"work": "$ chmod 755 script.sh"},
+            },
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    for q in data["questions"]:
+        text_lower = q["text"].lower()
+        assert any(
+            word in text_lower for word in ["explain", "what", "how", "describe", "looking", "based"]
+        ), f"Question should be Socratic: {q['text']}"

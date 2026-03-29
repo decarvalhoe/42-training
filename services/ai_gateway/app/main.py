@@ -48,7 +48,9 @@ from .schemas import (
     ReviewerRequest,
     ReviewerResponse,
     SourceUsed,
+    TerminalContextPayload,
 )
+from .terminal_context import TerminalContext, capture_terminal_context
 
 logger = logging.getLogger(__name__)
 REQUIRED_MENTOR_FIELDS = ("observation", "question", "hint", "next_action")
@@ -314,6 +316,30 @@ def reviewer_review(request: ReviewerRequest) -> ReviewerResponse:
 # --- Defense endpoints ---
 
 
+def _resolve_terminal_context(request: DefenseStartRequest) -> TerminalContext | None:
+    """Build a TerminalContext from the request payload or local tmux capture."""
+    if request.terminal_context is not None:
+        payload = request.terminal_context
+        return TerminalContext(
+            cwd=payload.cwd,
+            git_status=payload.git_status,
+            panes=dict(payload.panes),
+            git_diff_summary=payload.git_diff_summary,
+        )
+    return capture_terminal_context()
+
+
+def _terminal_snapshot(ctx: TerminalContext | None) -> TerminalContextPayload | None:
+    if ctx is None:
+        return None
+    return TerminalContextPayload(
+        cwd=ctx.cwd,
+        git_status=ctx.git_status,
+        panes=ctx.panes,
+        git_diff_summary=ctx.git_diff_summary,
+    )
+
+
 @app.post("/api/v1/defense/start", response_model=DefenseStartResponse)
 def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
     curriculum = load_curriculum()
@@ -325,6 +351,8 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
     if module is None:
         raise HTTPException(status_code=404, detail="Module not found")
 
+    terminal_ctx = _resolve_terminal_context(request)
+
     session = create_session(
         track,
         module,
@@ -333,6 +361,7 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
         request.reviewer_id,
         request.num_questions,
         request.question_time_limit_seconds,
+        terminal_context=terminal_ctx,
     )
     try:
         persist_defense_session(session)
@@ -359,6 +388,7 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
         active_question_id=session.questions[0].id if session.questions else None,
         started_at=session.started_at,
         current_question_deadline=get_current_question_deadline(session),
+        terminal_snapshot=_terminal_snapshot(terminal_ctx),
     )
 
 
