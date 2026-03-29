@@ -1,0 +1,157 @@
+name: Promote Develop To Main
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Validate the promotion guardrails without creating or reusing a PR"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve branch heads
+        id: compare
+        run: |
+          git fetch origin develop main
+          develop_sha="$(git rev-parse origin/develop)"
+          main_sha="$(git rev-parse origin/main)"
+
+          echo "develop_sha=${develop_sha}" >> "${GITHUB_OUTPUT}"
+          echo "main_sha=${main_sha}" >> "${GITHUB_OUTPUT}"
+
+          if [[ "${develop_sha}" = "${main_sha}" ]]; then
+            echo "sync_needed=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "sync_needed=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Check latest develop CI status
+        id: ci
+        uses: actions/github-script@v7
+        env:
+          DEVELOP_SHA: ${{ steps.compare.outputs.develop_sha }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const targetSha = process.env.DEVELOP_SHA;
+
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: "ci.yml",
+              branch: "develop",
+              per_page: 20,
+            });
+
+            const matchingRun = runs.data.workflow_runs.find((run) => run.head_sha === targetSha);
+
+            if (!matchingRun) {
+              core.setFailed(`No CI run found for current develop head ${targetSha}`);
+              return;
+            }
+
+            if (matchingRun.status !== "completed") {
+              core.setFailed(`CI for develop head ${targetSha} is not completed yet`);
+              return;
+            }
+
+            if (matchingRun.conclusion !== "success") {
+              core.setFailed(`CI for develop head ${targetSha} concluded with ${matchingRun.conclusion}`);
+              return;
+            }
+
+            core.setOutput("run_url", matchingRun.html_url);
+            core.setOutput("run_id", String(matchingRun.id));
+
+      - name: Create or reuse promotion PR
+        id: pr
+        if: steps.compare.outputs.sync_needed == 'true' && inputs.dry_run == false
+        uses: actions/github-script@v7
+        env:
+          DEVELOP_SHA: ${{ steps.compare.outputs.develop_sha }}
+          MAIN_SHA: ${{ steps.compare.outputs.main_sha }}
+          CI_RUN_URL: ${{ steps.ci.outputs.run_url }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const head = "develop";
+            const base = "main";
+
+            const existing = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              head: `${owner}:${head}`,
+              base,
+            });
+
+            if (existing.data.length > 0) {
+              const pr = existing.data[0];
+              core.notice(`Promotion PR already open: ${pr.html_url}`);
+              core.setOutput("pr_url", pr.html_url);
+              core.setOutput("pr_number", String(pr.number));
+              return;
+            }
+
+            const title = "chore: promote develop to main";
+            const body = [
+              "Automated promotion PR from `develop` to `main`.",
+              "",
+              "## Guardrails",
+              `- develop HEAD: \`${process.env.DEVELOP_SHA}\``,
+              `- main HEAD before promotion: \`${process.env.MAIN_SHA}\``,
+              `- latest successful develop CI: ${process.env.CI_RUN_URL}`,
+              "",
+              "## Release Checklist",
+              "- confirm the intended release scope on `develop`",
+              "- confirm no urgent hotfix is missing from `main`",
+              "- confirm maintainer review before merge",
+              "- merge only after the promotion PR checks are green",
+            ].join("\n");
+
+            const pr = await github.rest.pulls.create({
+              owner,
+              repo,
+              head,
+              base,
+              title,
+              body,
+            });
+
+            core.setOutput("pr_url", pr.data.html_url);
+            core.setOutput("pr_number", String(pr.data.number));
+
+      - name: Write workflow summary
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          SYNC_NEEDED: ${{ steps.compare.outputs.sync_needed }}
+          DEVELOP_SHA: ${{ steps.compare.outputs.develop_sha }}
+          MAIN_SHA: ${{ steps.compare.outputs.main_sha }}
+          CI_RUN_URL: ${{ steps.ci.outputs.run_url }}
+          PR_URL: ${{ steps.pr.outputs.pr_url }}
+        run: |
+          {
+            echo "# Develop -> Main Promotion"
+            echo
+            echo "- dry run: ${DRY_RUN}"
+            echo "- sync needed: ${SYNC_NEEDED}"
+            echo "- develop head: \`${DEVELOP_SHA}\`"
+            echo "- main head: \`${MAIN_SHA}\`"
+            echo "- develop CI: ${CI_RUN_URL}"
+            if [[ -n "${PR_URL}" ]]; then
+              echo "- promotion PR: ${PR_URL}"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
