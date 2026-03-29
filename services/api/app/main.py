@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +30,7 @@ from .schemas import (
     DefenseSessionCreate,
     DefenseSessionRecord,
     DefenseSessionUpdate,
+    ErrorResponse,
     HealthResponse,
     MetaResponse,
     ModuleCompleteRequest,
@@ -46,6 +49,18 @@ from .schemas import (
 )
 from .validation import find_module, validate_module_activation
 
+logger = logging.getLogger(__name__)
+
+ERROR_CODES_BY_STATUS = {
+    status.HTTP_400_BAD_REQUEST: "bad_request",
+    status.HTTP_401_UNAUTHORIZED: "unauthorized",
+    status.HTTP_403_FORBIDDEN: "forbidden",
+    status.HTTP_404_NOT_FOUND: "not_found",
+    status.HTTP_409_CONFLICT: "conflict",
+    status.HTTP_422_UNPROCESSABLE_ENTITY: "validation_error",
+    status.HTTP_500_INTERNAL_SERVER_ERROR: "internal_server_error",
+}
+
 app = FastAPI(title="42-training API", version="0.1.0")
 
 app.add_middleware(
@@ -58,6 +73,101 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(profiles_router)
+
+
+def _default_error_code(status_code: int) -> str:
+    return ERROR_CODES_BY_STATUS.get(status_code, "request_error")
+
+
+def _join_messages(messages: list[str], fallback: str) -> str:
+    filtered = [message for message in messages if message]
+    return "; ".join(filtered) if filtered else fallback
+
+
+def _normalize_http_error(detail: Any, status_code: int) -> tuple[str, str]:
+    default_code = _default_error_code(status_code)
+
+    if isinstance(detail, str) and detail:
+        return detail, default_code
+
+    if isinstance(detail, dict):
+        explicit_code = detail.get("code")
+        normalized_code = explicit_code if isinstance(explicit_code, str) and explicit_code else default_code
+
+        missing_prerequisites = detail.get("missing_prerequisites")
+        if isinstance(missing_prerequisites, list):
+            missing = [str(item) for item in missing_prerequisites if str(item)]
+            message = detail.get("message")
+            if isinstance(message, str) and message:
+                return message, "prerequisites"
+            fallback = f"Prerequisites not met: {', '.join(missing)}" if missing else "Prerequisites not met"
+            return fallback, "prerequisites"
+
+        validation_errors = detail.get("validation_errors")
+        if isinstance(validation_errors, list):
+            messages: list[str] = []
+            error_types: list[str] = []
+            for item in validation_errors:
+                if not isinstance(item, dict):
+                    continue
+                if isinstance(item.get("type"), str) and item["type"]:
+                    error_types.append(item["type"])
+                if isinstance(item.get("message"), str) and item["message"]:
+                    messages.append(item["message"])
+            unique_types = list(dict.fromkeys(error_types))
+            code = unique_types[0] if len(unique_types) == 1 else normalized_code
+            return _join_messages(messages, "Validation failed"), code
+
+        message = detail.get("message")
+        if isinstance(message, str) and message:
+            return message, normalized_code
+
+        nested_detail = detail.get("detail")
+        if isinstance(nested_detail, str) and nested_detail:
+            return nested_detail, normalized_code
+
+    return "Request failed", default_code
+
+
+def _normalize_validation_error(exc: RequestValidationError) -> tuple[str, str]:
+    messages: list[str] = []
+    for error in exc.errors():
+        message = error.get("msg")
+        if not isinstance(message, str) or not message:
+            continue
+        location = [str(part) for part in error.get("loc", []) if part != "body"]
+        if location:
+            messages.append(f"{'.'.join(location)}: {message}")
+        else:
+            messages.append(message)
+    return _join_messages(messages, "Validation failed"), _default_error_code(status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+
+def _error_response(status_code: int, detail: str, code: str) -> JSONResponse:
+    payload = ErrorResponse(detail=detail, code=code, status=status_code)
+    return JSONResponse(status_code=status_code, content=payload.model_dump())
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+    detail, code = _normalize_http_error(exc.detail, exc.status_code)
+    return _error_response(exc.status_code, detail, code)
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    detail, code = _normalize_validation_error(exc)
+    return _error_response(status.HTTP_422_UNPROCESSABLE_ENTITY, detail, code)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled API exception")
+    return _error_response(
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        "Internal server error",
+        _default_error_code(status.HTTP_500_INTERNAL_SERVER_ERROR),
+    )
 
 
 # ---------------------------------------------------------------------------

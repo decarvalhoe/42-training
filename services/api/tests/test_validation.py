@@ -388,9 +388,10 @@ class TestProgressionValidation:
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_module": "shell-streams"})
         assert r.status_code == 422
-        detail = r.json()["detail"]
-        assert "validation_errors" in detail
-        assert any(e["type"] == "prerequisites" for e in detail["validation_errors"])
+        data = r.json()
+        assert data["code"] == "prerequisites"
+        assert data["status"] == 422
+        assert "Missing prerequisites" in data["detail"]
         assert len(written) == 0  # no write on validation failure
 
     def test_set_active_module_wrong_track(self) -> None:
@@ -398,16 +399,20 @@ class TestProgressionValidation:
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_module": "c-basics"})
         assert r.status_code == 422
-        detail = r.json()["detail"]
-        assert any(e["type"] == "track_enrollment" for e in detail["validation_errors"])
+        data = r.json()
+        assert data["code"] == "track_enrollment"
+        assert data["status"] == 422
+        assert "belongs to track 'c'" in data["detail"]
 
     def test_set_active_module_phase_fail(self) -> None:
         p_cur, p_load, p_write, _p, _written = _patch_repo(_prog("shell"))
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_module": "shell-tooling"})
         assert r.status_code == 422
-        detail = r.json()["detail"]
-        assert any(e["type"] == "phase_ordering" for e in detail["validation_errors"])
+        data = r.json()
+        assert data["code"] == "validation_error"
+        assert data["status"] == 422
+        assert "Earlier-phase modules not completed" in data["detail"]
 
     def test_set_active_module_after_completing_prereqs(self) -> None:
         completed = ["shell-basics", "shell-streams", "shell-permissions"]

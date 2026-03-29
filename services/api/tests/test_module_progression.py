@@ -110,8 +110,10 @@ class TestModuleStart:
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/modules/shell-streams/start")
         assert r.status_code == 409
-        detail = r.json()["detail"]
-        assert "shell-basics" in detail["missing_prerequisites"]
+        data = r.json()
+        assert data["code"] == "prerequisites"
+        assert data["status"] == 409
+        assert "shell-basics" in data["detail"]
 
     def test_start_after_prerequisite_completed(self) -> None:
         prog = _make_progression(
