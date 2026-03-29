@@ -1,14 +1,23 @@
-"""Tests for the tmux pane capture endpoint (Issue #179)."""
+"""Tests for tmux pane capture (Issue #179) and session listing (Issue #178)."""
 
 from __future__ import annotations
 
 import asyncio
+import subprocess
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+
+client = TestClient(app)
+
+
+# ---------------------------------------------------------------------------
+# Pane capture tests (Issue #179)
+# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -116,3 +125,73 @@ async def test_tmux_pane_generic_error():
 
     assert resp.status_code == 502
     assert "tmux error" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Session listing tests (Issue #178)
+# ---------------------------------------------------------------------------
+
+_TMUX_OUTPUT = "rbok-gemini\t1711700000\t1711703600\t3\t1\nrbok-codex\t1711700000\t1711700100\t2\t0\n"
+
+
+class TestTmuxSessions:
+    def test_returns_sessions_from_tmux(self) -> None:
+        result = subprocess.CompletedProcess(args=[], returncode=0, stdout=_TMUX_OUTPUT, stderr="")
+        with patch("app.tmux.subprocess.run", return_value=result):
+            r = client.get("/api/v1/tmux/sessions")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] == 2
+        assert len(data["sessions"]) == 2
+        first = data["sessions"][0]
+        assert first["name"] == "rbok-gemini"
+        assert first["attached"] is True
+        assert first["status"] == "active"
+        assert first["windows"] == 3
+
+    def test_tmux_not_installed(self) -> None:
+        with patch("app.tmux.subprocess.run", side_effect=FileNotFoundError):
+            r = client.get("/api/v1/tmux/sessions")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] == 0
+        assert data["sessions"] == []
+
+    def test_tmux_returns_error(self) -> None:
+        result = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="no server running")
+        with patch("app.tmux.subprocess.run", return_value=result):
+            r = client.get("/api/v1/tmux/sessions")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] == 0
+
+    def test_tmux_timeout(self) -> None:
+        with patch("app.tmux.subprocess.run", side_effect=subprocess.TimeoutExpired("tmux", 5)):
+            r = client.get("/api/v1/tmux/sessions")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] == 0
+
+    def test_session_fields(self) -> None:
+        result = subprocess.CompletedProcess(args=[], returncode=0, stdout=_TMUX_OUTPUT, stderr="")
+        with patch("app.tmux.subprocess.run", return_value=result):
+            r = client.get("/api/v1/tmux/sessions")
+        session = r.json()["sessions"][0]
+        assert set(session.keys()) == {"name", "status", "created_at", "last_activity", "windows", "attached"}
+
+    def test_idle_detection(self) -> None:
+        """A detached session with old activity should be idle."""
+        old_line = "old-session\t1000000000\t1000000000\t1\t0\n"
+        result = subprocess.CompletedProcess(args=[], returncode=0, stdout=old_line, stderr="")
+        with patch("app.tmux.subprocess.run", return_value=result):
+            r = client.get("/api/v1/tmux/sessions")
+        session = r.json()["sessions"][0]
+        assert session["status"] == "idle"
+        assert session["attached"] is False
+
+    def test_malformed_line_skipped(self) -> None:
+        bad_output = "incomplete\tdata\n"
+        result = subprocess.CompletedProcess(args=[], returncode=0, stdout=bad_output, stderr="")
+        with patch("app.tmux.subprocess.run", return_value=result):
+            r = client.get("/api/v1/tmux/sessions")
+        assert r.json()["total"] == 0

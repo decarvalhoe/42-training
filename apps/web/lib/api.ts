@@ -515,6 +515,36 @@ const fallbackAnalyticsData: AnalyticsData = {
   ]
 };
 
+// --- Tmux session types (Issue #178) ---
+
+export type TmuxSession = {
+  name: string;
+  status: "active" | "idle";
+  created_at: string;
+  last_activity: string;
+  windows: number;
+  attached: boolean;
+};
+
+export type TmuxSessionsData = {
+  sessions: TmuxSession[];
+  total: number;
+};
+
+export async function getTmuxSessions(): Promise<TmuxSessionsData> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+  try {
+    const response = await fetch(`${apiUrl}/api/v1/tmux/sessions`, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+    return (await response.json()) as TmuxSessionsData;
+  } catch {
+    return { sessions: [], total: 0 };
+  }
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 

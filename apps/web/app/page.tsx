@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 
-import { getDashboardData } from "@/lib/api";
+import { getDashboardData, getTmuxSessions } from "@/lib/api";
 import { SourcePolicyBadge } from "@/app/components/SourcePolicyBadge";
+import { TmuxSessions } from "@/app/components/TmuxSessions";
 
 function Pill({ children }: { children: ReactNode }) {
   return <span className="pill">{children}</span>;
 }
 
 export default async function HomePage() {
-  const data = await getDashboardData();
+  const [data, tmuxData] = await Promise.all([getDashboardData(), getTmuxSessions()]);
   const { curriculum, progression } = data;
   const activeCourse = progression.learning_plan?.active_course ?? "shell";
   const officialReferences = [
@@ -54,6 +55,8 @@ export default async function HomePage() {
               <Pill key={item}>{item}</Pill>
             ))}
           </div>
+          <h2>Agent sessions</h2>
+          <TmuxSessions sessions={tmuxData.sessions} />
         </aside>
       </section>
 

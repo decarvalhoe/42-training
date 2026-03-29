@@ -1,17 +1,22 @@
-"""Read-only tmux pane capture endpoint (Issue #179)."""
+"""Tmux session discovery and pane capture (Issues #178, #179)."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
 import shutil
+import subprocess
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException
 
-from .schemas import TmuxPaneResponse
+from .schemas import TmuxPaneResponse, TmuxSession, TmuxSessionsResponse
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Pane capture router (Issue #179)
+# ---------------------------------------------------------------------------
 
 router = APIRouter(prefix="/api/v1/tmux", tags=["tmux"])
 
@@ -81,3 +86,73 @@ async def get_tmux_pane(session: str) -> TmuxPaneResponse:
         cols=cols,
         timestamp=datetime.now(UTC).isoformat(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Session listing (Issue #178)
+# ---------------------------------------------------------------------------
+
+_IDLE_THRESHOLD_SECONDS = 300  # 5 minutes without activity → idle
+
+
+def _epoch_to_iso(epoch_str: str) -> str:
+    try:
+        return datetime.fromtimestamp(int(epoch_str), tz=UTC).isoformat()
+    except (ValueError, OSError):
+        return epoch_str
+
+
+def _parse_status(last_activity_epoch: str, attached: bool) -> str:
+    if attached:
+        return "active"
+    try:
+        elapsed = datetime.now(UTC).timestamp() - int(last_activity_epoch)
+        return "active" if elapsed < _IDLE_THRESHOLD_SECONDS else "idle"
+    except (ValueError, OSError):
+        return "idle"
+
+
+def list_tmux_sessions() -> TmuxSessionsResponse:
+    """Run ``tmux list-sessions`` and return structured data."""
+    try:
+        result = subprocess.run(
+            [
+                "tmux",
+                "list-sessions",
+                "-F",
+                "#{session_name}\t#{session_created}\t#{session_activity}\t#{session_windows}\t#{session_attached}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except FileNotFoundError:
+        logger.info("tmux binary not found")
+        return TmuxSessionsResponse(sessions=[], total=0)
+    except subprocess.TimeoutExpired:
+        logger.warning("tmux list-sessions timed out")
+        return TmuxSessionsResponse(sessions=[], total=0)
+
+    if result.returncode != 0:
+        logger.info("tmux list-sessions returned %d: %s", result.returncode, result.stderr.strip())
+        return TmuxSessionsResponse(sessions=[], total=0)
+
+    sessions: list[TmuxSession] = []
+    for line in result.stdout.strip().splitlines():
+        parts = line.split("\t")
+        if len(parts) < 5:
+            continue
+        name, created, activity, windows, attached_flag = parts[:5]
+        attached = attached_flag == "1"
+        sessions.append(
+            TmuxSession(
+                name=name,
+                status=_parse_status(activity, attached),  # type: ignore[arg-type]
+                created_at=_epoch_to_iso(created),
+                last_activity=_epoch_to_iso(activity),
+                windows=int(windows) if windows.isdigit() else 0,
+                attached=attached,
+            )
+        )
+
+    return TmuxSessionsResponse(sessions=sessions, total=len(sessions))
