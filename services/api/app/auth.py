@@ -56,11 +56,13 @@ class AuthTokenResponse(BaseModel):
     expires_in: int
     user: AuthUserResponse
     learner_profile: AuthLearnerProfileResponse | None = None
+    profiles: list[AuthLearnerProfileResponse] = Field(default_factory=list)
 
 
 class AuthMeResponse(BaseModel):
     user: AuthUserResponse
     learner_profile: AuthLearnerProfileResponse | None = None
+    profiles: list[AuthLearnerProfileResponse] = Field(default_factory=list)
 
 
 def get_jwt_secret() -> str:
@@ -106,12 +108,25 @@ def serialize_learner_profile(learner_profile: LearnerProfile | None) -> AuthLea
     )
 
 
+def serialize_profiles(profiles: list[LearnerProfile]) -> list[AuthLearnerProfileResponse]:
+    return [
+        AuthLearnerProfileResponse(
+            id=profile.id,
+            login=profile.login,
+            track=profile.track,
+            current_module=profile.current_module,
+        )
+        for profile in profiles
+    ]
+
+
 def build_token_response(user: UserAccount) -> AuthTokenResponse:
     return AuthTokenResponse(
         access_token=create_access_token(user),
         expires_in=ACCESS_TOKEN_TTL_MINUTES * 60,
         user=serialize_user(user),
-        learner_profile=serialize_learner_profile(user.learner_profile),
+        learner_profile=serialize_learner_profile(user.active_profile),
+        profiles=serialize_profiles(user.profiles),
     )
 
 
@@ -121,6 +136,21 @@ def unauthorized(detail: str = "Invalid authentication credentials") -> HTTPExce
         detail=detail,
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+async def load_user_with_profiles(
+    db: AsyncSession, *, user_id: str | None = None, email: str | None = None
+) -> UserAccount | None:
+    query = select(UserAccount).options(selectinload(UserAccount.active_profile), selectinload(UserAccount.profiles))
+    if user_id is not None:
+        query = query.where(UserAccount.id == user_id)
+    elif email is not None:
+        query = query.where(UserAccount.email == email)
+    else:
+        raise ValueError("load_user_with_profiles requires user_id or email")
+
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
 
 
 async def get_current_user(
@@ -139,10 +169,7 @@ async def get_current_user(
     if not isinstance(user_id, str) or not user_id:
         raise unauthorized()
 
-    result = await db.execute(
-        select(UserAccount).options(selectinload(UserAccount.learner_profile)).where(UserAccount.id == user_id)
-    )
-    user = result.scalar_one_or_none()
+    user = await load_user_with_profiles(db, user_id=user_id)
     if user is None:
         raise unauthorized()
 
@@ -169,7 +196,9 @@ async def register(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered") from exc
 
     await db.refresh(user)
-    return build_token_response(user)
+    hydrated_user = await load_user_with_profiles(db, user_id=user.id)
+    assert hydrated_user is not None
+    return build_token_response(hydrated_user)
 
 
 @router.post("/login", response_model=AuthTokenResponse)
@@ -177,10 +206,7 @@ async def login(
     payload: AuthCredentials,
     db: AsyncSession = Depends(get_db_session),
 ) -> AuthTokenResponse:
-    result = await db.execute(
-        select(UserAccount).options(selectinload(UserAccount.learner_profile)).where(UserAccount.email == payload.email)
-    )
-    user = result.scalar_one_or_none()
+    user = await load_user_with_profiles(db, email=payload.email)
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
@@ -193,5 +219,6 @@ async def login(
 async def me(current_user: UserAccount = Depends(get_current_user)) -> AuthMeResponse:
     return AuthMeResponse(
         user=serialize_user(current_user),
-        learner_profile=serialize_learner_profile(current_user.learner_profile),
+        learner_profile=serialize_learner_profile(current_user.active_profile),
+        profiles=serialize_profiles(current_user.profiles),
     )

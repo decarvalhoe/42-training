@@ -848,17 +848,30 @@ a {
   font: inherit;
 }
 
+.login-field select {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(28, 26, 23, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font: inherit;
+}
+
 .login-field input::placeholder {
   color: var(--muted);
 }
 
-.login-field input:focus {
+.login-field input:focus,
+.login-field select:focus {
   outline: 2px solid rgba(28, 93, 99, 0.22);
   outline-offset: 2px;
   border-color: rgba(28, 93, 99, 0.35);
 }
 
-.login-field input[aria-invalid="true"] {
+.login-field input[aria-invalid="true"],
+.login-field select[aria-invalid="true"] {
   border-color: rgba(178, 76, 43, 0.5);
 }
 
@@ -906,6 +919,101 @@ a {
   background: rgba(178, 76, 43, 0.1);
   border-color: rgba(178, 76, 43, 0.2);
   color: var(--c);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Profiles page                                                      */
+/* ------------------------------------------------------------------ */
+
+.profiles-page {
+  max-width: 1240px;
+}
+
+.profiles-hero,
+.profiles-list-panel,
+.profiles-create-panel,
+.profiles-card {
+  display: grid;
+  gap: 16px;
+}
+
+.profiles-hero-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.profiles-body,
+.profiles-card-grid,
+.profiles-create-header,
+.profiles-form,
+.profiles-note {
+  display: grid;
+  gap: 16px;
+}
+
+.profiles-card-grid {
+  gap: 12px;
+}
+
+.profiles-card {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.profiles-card--active {
+  border-color: rgba(216, 166, 87, 0.7);
+  background:
+    linear-gradient(135deg, rgba(216, 166, 87, 0.16), rgba(255, 255, 255, 0.54)),
+    rgba(255, 255, 255, 0.54);
+}
+
+.profiles-meta {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.profiles-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profiles-switch-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.profiles-switch-btn--active {
+  border-color: rgba(216, 166, 87, 0.45);
+  background: rgba(216, 166, 87, 0.18);
+}
+
+.profiles-inline-link {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.profiles-inline-link:hover {
+  color: var(--ink);
+}
+
+.profiles-note {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.48);
 }
 
 /* ================================================================== */
@@ -990,6 +1098,10 @@ a {
   .login-actions {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
+  }
+
+  .profiles-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .progression-hero,
@@ -1079,6 +1191,15 @@ a {
   .login-shell {
     grid-template-columns: 1.05fr 0.95fr;
     align-items: start;
+  }
+
+  .profiles-body {
+    grid-template-columns: 1.2fr 0.8fr;
+    align-items: start;
+  }
+
+  .profiles-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .progression-hero,

@@ -5,6 +5,7 @@ import { getDashboardData } from "@/lib/api";
 const NAV_LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/progression", label: "Progression" },
+  { href: "/profiles", label: "Profiles" },
   { href: "/login", label: "Login" },
 ] as const;
 

@@ -75,6 +75,28 @@ class LearnerProfile(BaseModel):
     updated_at: datetime
 
 
+class ProfileCreateRequest(BaseModel):
+    track: Track
+    login: str | None = Field(default=None, min_length=1, max_length=64)
+    current_module: str | None = Field(default=None, max_length=128)
+    activate: bool = True
+
+
+class ProfileResponse(BaseModel):
+    id: str
+    login: str
+    track: Track
+    current_module: str | None = None
+    started_at: datetime
+    updated_at: datetime
+
+
+class ProfilesResponse(BaseModel):
+    active_profile_id: str | None = None
+    active_profile: ProfileResponse | None = None
+    profiles: list[ProfileResponse] = Field(default_factory=list)
+
+
 class ProgressState(BaseModel):
     """Progress record for a learner on a specific module."""
 

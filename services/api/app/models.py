@@ -95,6 +95,9 @@ class LearnerProfile(Base):
     login: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     track: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     current_module: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    user_account_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("user_accounts.id"), nullable=True, index=True
+    )
     runtime_state: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -134,6 +137,11 @@ class UserAccount(Base):
     )
 
     learner_profile: Mapped[LearnerProfile | None] = relationship(back_populates="user_account")
+    profiles: Mapped[list[LearnerProfile]] = relationship(
+        back_populates="user_account",
+        foreign_keys="LearnerProfile.user_account_id",
+        viewonly=True,
+    )
 
 
 class Progression(Base):
