@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install lint tools
-        run: pip install ruff mypy pydantic fastapi
+        run: pip install ruff mypy pydantic fastapi sqlmodel
       - name: Ruff check (services/api)
         run: ruff check services/api
       - name: Ruff check (services/ai_gateway)
