@@ -35,7 +35,7 @@ async def _emit_event_async(
         session.add(event)
         await session.commit()
         await session.refresh(event)
-        return event.id
+        return event.id  # type: ignore[no-any-return]
 
 
 def emit_event(
