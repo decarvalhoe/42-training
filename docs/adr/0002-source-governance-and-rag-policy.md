@@ -8,6 +8,8 @@
 A learning product for 42-related preparation will inevitably encounter:
 
 - official campus information
+- official normative documents such as The Norm
+- mirrored repositories that contain official subject PDFs or support files
 - community guides
 - testers
 - solution repositories
@@ -22,6 +24,7 @@ The product will enforce a tiered source policy.
 Allowed tiers:
 
 - `official_42`: ground truth
+- `official_document_mirrors`: ground truth when the mirrored document origin is verified
 - `community_docs`: explanation and mapping
 - `testers_and_tooling`: verification
 - `solution_metadata`: path mapping only
@@ -36,6 +39,7 @@ Positive:
 - preserves pedagogical integrity
 - makes RAG behavior auditable
 - clarifies what is authoritative versus interpretive
+- makes private or mirrored official document packs usable without pretending they are public official publication endpoints
 - allows community material without turning the app into a cheating tool
 
 Negative:
