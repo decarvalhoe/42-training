@@ -8,15 +8,16 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db import get_db_session
 from app.main import app
-from app.models import Base
+from app.models import Base, Evidence
 
 
 @pytest.fixture
-def persistence_client(tmp_path: Path) -> Iterator[TestClient]:
+def persistence_context(tmp_path: Path) -> Iterator[tuple[TestClient, async_sessionmaker[AsyncSession]]]:
     database_path = tmp_path / "defense-review.db"
     engine = create_async_engine(f"sqlite+aiosqlite:///{database_path}", connect_args={"check_same_thread": False})
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -37,10 +38,17 @@ def persistence_client(tmp_path: Path) -> Iterator[TestClient]:
 
     try:
         with TestClient(app) as client:
-            yield client
+            yield client, session_factory
     finally:
         app.dependency_overrides.clear()
         asyncio.run(dispose_engine())
+
+
+@pytest.fixture
+def persistence_client(
+    persistence_context: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> TestClient:
+    return persistence_context[0]
 
 
 def test_create_and_get_defense_session(persistence_client: TestClient) -> None:
@@ -159,3 +167,110 @@ def test_list_review_attempts_can_filter_by_reviewer(persistence_client: TestCli
     payload = response.json()
     assert len(payload) == 1
     assert payload[0]["reviewer_id"] == "reviewer-a"
+
+
+def test_terminal_defense_session_persists_evidence(
+    persistence_context: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = persistence_context
+
+    response = client.post(
+        "/api/v1/defense-sessions",
+        json={
+            "session_id": "def-004",
+            "learner_id": "learner-defense",
+            "module_id": "shell-basics",
+            "questions": ["What does pwd do?"],
+            "answers": ["It prints the current working directory."],
+            "scores": [88],
+            "status": "passed",
+            "evidence_artifacts": [],
+        },
+    )
+
+    assert response.status_code == 201
+    artifacts = response.json()["evidence_artifacts"]
+    assert len(artifacts) == 1
+    assert artifacts[0]["type"] == "defense_summary"
+    assert artifacts[0]["evidence_id"]
+
+    async def fetch_evidence() -> Evidence:
+        async with session_factory() as session:
+            result = await session.execute(select(Evidence).where(Evidence.module_id == "shell-basics"))
+            evidence_rows = list(result.scalars())
+            assert len(evidence_rows) == 1
+            return evidence_rows[0]
+
+    evidence = asyncio.run(fetch_evidence())
+    assert evidence.learner_id == "learner-defense"
+    assert evidence.evidence_type == "defense_session"
+    assert evidence.self_evaluation == "pass"
+    assert '"session_id": "def-004"' in evidence.content
+
+
+def test_scheduled_defense_session_does_not_persist_evidence(
+    persistence_context: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = persistence_context
+
+    response = client.post(
+        "/api/v1/defense-sessions",
+        json={
+            "session_id": "def-005",
+            "learner_id": "learner-defense",
+            "module_id": "shell-basics",
+            "questions": ["What does pwd do?"],
+            "answers": [],
+            "scores": [],
+            "status": "scheduled",
+            "evidence_artifacts": [],
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["evidence_artifacts"] == []
+
+    async def count_evidence() -> int:
+        async with session_factory() as session:
+            result = await session.execute(select(Evidence))
+            return len(list(result.scalars()))
+
+    assert asyncio.run(count_evidence()) == 0
+
+
+def test_review_attempt_persists_evidence(
+    persistence_context: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = persistence_context
+
+    response = client.post(
+        "/api/v1/review-attempts",
+        json={
+            "learner_id": "learner-review",
+            "reviewer_id": "reviewer-review",
+            "module_id": "shell-basics",
+            "code_snippet": "pwd\nls -la",
+            "feedback": "Good shell commands and clear intent.",
+            "questions": ["Why list hidden files?"],
+            "score": 84,
+            "evidence_artifacts": [],
+        },
+    )
+
+    assert response.status_code == 201
+    artifacts = response.json()["evidence_artifacts"]
+    assert len(artifacts) == 1
+    assert artifacts[0]["type"] == "review_feedback"
+    assert artifacts[0]["evidence_id"]
+
+    async def fetch_evidence() -> Evidence:
+        async with session_factory() as session:
+            result = await session.execute(select(Evidence).where(Evidence.learner_id == "learner-review"))
+            evidence_rows = list(result.scalars())
+            assert len(evidence_rows) == 1
+            return evidence_rows[0]
+
+    evidence = asyncio.run(fetch_evidence())
+    assert evidence.evidence_type == "review_feedback"
+    assert evidence.description == "Good shell commands and clear intent."
+    assert evidence.content == "pwd\nls -la"

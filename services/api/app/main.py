@@ -13,6 +13,7 @@ from .analytics import build_analytics_dashboard, fetch_pedagogical_events
 from .auth import router as auth_router
 from .db import get_db_session
 from .events import _emit_event_async, emit_event
+from .evidence import persist_checkpoint_evidence, persist_defense_evidence, persist_review_evidence
 from .models import DefenseSession as DefenseSessionModel
 from .models import ReviewAttempt as ReviewAttemptModel
 from .profiles import router as profiles_router
@@ -413,6 +414,8 @@ async def create_defense_session(
         evidence_artifacts=payload.evidence_artifacts,
     )
     db.add(defense_session)
+    await db.flush()
+    await persist_defense_evidence(db, defense_session)
     await db.commit()
     await db.refresh(defense_session)
     return _serialize_defense_session(defense_session)
@@ -467,6 +470,8 @@ async def create_review_attempt(
         evidence_artifacts=payload.evidence_artifacts,
     )
     db.add(review_attempt)
+    await db.flush()
+    await persist_review_evidence(db, review_attempt)
     await db.commit()
     await db.refresh(review_attempt)
     return _serialize_review_attempt(review_attempt)
@@ -586,6 +591,7 @@ def submit_checkpoint(payload: CheckpointSubmission) -> CheckpointRecord:
             "submitted_at": now,
         },
     )
+    persist_checkpoint_evidence(record)
 
     return record
 
