@@ -37,7 +37,9 @@ class TestSqlAlchemyMetadata:
     def test_learner_profile_model_registered_in_metadata(self) -> None:
         table = Base.metadata.tables["learner_profile"]
         assert LearnerProfile.__table__.name == "learner_profile"
-        assert {"id", "login", "track", "current_module", "started_at", "updated_at"} <= set(table.columns.keys())
+        assert {"id", "login", "track", "current_module", "runtime_state", "started_at", "updated_at"} <= set(
+            table.columns.keys()
+        )
 
 
 class TestAlembicBootstrap:
@@ -52,7 +54,7 @@ class TestAlembicBootstrap:
         engine = create_engine(f"sqlite:///{db_path}")
         inspector = inspect(engine)
         table_names = set(inspector.get_table_names())
-        assert {"learner_profile", "progression", "evidence", "review"} <= table_names
+        assert {"learner_profile", "progression", "evidence", "review", "user_accounts"} <= table_names
 
         columns = {column["name"] for column in inspector.get_columns("learner_profile")}
-        assert {"id", "login", "track", "current_module", "started_at", "updated_at"} <= columns
+        assert {"id", "login", "track", "current_module", "runtime_state", "started_at", "updated_at"} <= columns
