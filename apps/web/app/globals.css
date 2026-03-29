@@ -2094,3 +2094,205 @@ a {
   background: var(--c);
   color: #fff;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Track Explorer — RPG talent tree                                   */
+/* ------------------------------------------------------------------ */
+
+.talent-hero {
+  text-align: center;
+  padding: 48px 32px;
+}
+
+.talent-legend {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.talent-legend-icon {
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+.talent-trees {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.talent-track {
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.talent-track-header {
+  padding: 24px 28px;
+  border-left: 6px solid var(--accent);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.talent-track-header h2 {
+  margin: 4px 0 8px;
+}
+
+.talent-track-progress {
+  min-width: 180px;
+  text-align: right;
+  font-size: 13px;
+}
+
+.talent-track-bar {
+  height: 8px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.talent-track-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.talent-phase {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.talent-phase-label {
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  padding: 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  border-right: 1px solid var(--line);
+}
+
+.talent-phase-nodes {
+  flex: 1;
+  padding: 8px 0;
+}
+
+.talent-node-wrapper {
+  position: relative;
+}
+
+.talent-node {
+  display: flex;
+  gap: 16px;
+  padding: 16px 24px;
+  transition: background 0.15s ease;
+}
+
+.talent-node:hover {
+  background: rgba(216, 166, 87, 0.06);
+}
+
+.talent-node--locked {
+  opacity: 0.5;
+}
+
+.talent-node--in_progress {
+  background: rgba(216, 166, 87, 0.08);
+}
+
+.talent-node-icon {
+  font-size: 20px;
+  line-height: 1;
+  padding-top: 2px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.talent-node-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.talent-node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.talent-node-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.talent-node-title:hover {
+  text-decoration: underline;
+}
+
+.talent-node--locked .talent-node-title {
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.talent-node-badges {
+  display: flex;
+  gap: 6px;
+}
+
+.talent-node-deliverable {
+  margin: 4px 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.talent-node-objectives {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.talent-node-objectives li {
+  margin-bottom: 2px;
+}
+
+.talent-edge {
+  width: 2px;
+  height: 12px;
+  border-left: 2px dashed var(--line);
+  margin-left: 35px;
+}
+
+@media (max-width: 640px) {
+  .talent-track-header {
+    flex-direction: column;
+  }
+  .talent-track-progress {
+    text-align: left;
+    min-width: auto;
+  }
+  .talent-legend {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
