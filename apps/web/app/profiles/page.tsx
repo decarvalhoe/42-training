@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/app/components/AuthProvider";
 import { getDashboardData, type TrackItem } from "@/lib/api";
@@ -63,36 +63,37 @@ export default function ProfilesPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [switchingId, setSwitchingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadPage = useCallback(async (cancelledRef?: { current: boolean }) => {
+    setLoadingState("loading");
 
-    async function loadPage() {
-      try {
-        const [dashboard, profiles] = await Promise.all([getDashboardData(), listProfiles()]);
-        if (cancelled) {
-          return;
-        }
+    try {
+      const [dashboard, profiles] = await Promise.all([getDashboardData(), listProfiles()]);
+      if (cancelledRef?.current) {
+        return;
+      }
 
-        setTracks(dashboard.curriculum.tracks);
-        setProfilesState(profiles);
-        setForm((current) => ({
-          ...current,
-          track: current.track || dashboard.curriculum.tracks[0]?.id || "",
-        }));
-        setLoadingState("ready");
-      } catch {
-        if (!cancelled) {
-          setLoadingState("error");
-        }
+      setTracks(dashboard.curriculum.tracks);
+      setProfilesState(profiles);
+      setForm((current) => ({
+        ...current,
+        track: current.track || dashboard.curriculum.tracks[0]?.id || "",
+      }));
+      setLoadingState("ready");
+    } catch {
+      if (!cancelledRef?.current) {
+        setLoadingState("error");
       }
     }
+  }, []);
 
-    void loadPage();
+  useEffect(() => {
+    const cancelledRef = { current: false };
+    void loadPage(cancelledRef);
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, []);
+  }, [loadPage]);
   const activeProfile = profilesState?.activeProfile ?? null;
   const sessionEmail = session?.user.email ?? "Authenticated learner";
 
@@ -170,9 +171,14 @@ export default function ProfilesPage() {
           <p className="lead">
             The UI could not load the profile catalog. Refresh the page or return to the dashboard.
           </p>
-          <Link href="/" className="action-btn">
-            Back to dashboard
-          </Link>
+          <div className="stack-list">
+            <button type="button" className="action-btn" onClick={() => void loadPage()}>
+              Retry
+            </button>
+            <Link href="/" className="action-btn">
+              Back to dashboard
+            </Link>
+          </div>
         </section>
       </main>
     );

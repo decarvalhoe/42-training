@@ -36,7 +36,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `bash -lc 'cd ${__dirname} && NEXT_PUBLIC_API_URL=http://127.0.0.1:${apiPort} NEXT_PUBLIC_ENABLE_DEMO_MODE=false npm run dev -- --hostname ${webHost} --port ${webPort}'`,
+      command: `bash -lc 'cd ${__dirname} && NEXT_PUBLIC_API_URL=http://127.0.0.1:${apiPort} NEXT_PUBLIC_ENABLE_DEMO_MODE=false NEXT_PUBLIC_ENABLE_E2E_API_OVERRIDE=true npm run dev -- --hostname ${webHost} --port ${webPort}'`,
       url: baseURL,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

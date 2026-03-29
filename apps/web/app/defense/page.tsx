@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getDashboardData, getTmuxSessions } from "@/lib/api";
+import { DataSourceBadge } from "@/app/components/DataSourceBadge";
 
 import DefenseClient from "./DefenseClient";
 
@@ -50,6 +51,9 @@ export default async function DefensePage() {
           simulates the 42-style oral defense where you must demonstrate genuine
           understanding.
         </p>
+        <div className="stack-list">
+          <DataSourceBadge sourceMode={data.sourceMode} />
+        </div>
       </section>
 
       <DefenseClient modules={modules} apiUrl={apiUrl} tmuxSessions={tmuxSessions} />
