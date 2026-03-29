@@ -384,3 +384,29 @@ class TmuxSession(BaseModel):
 class TmuxSessionsResponse(BaseModel):
     sessions: list[TmuxSession]
     total: int
+
+
+# --- Tmux session lifecycle schemas (Issue #181) ---
+
+
+class TmuxStartRequest(BaseModel):
+    """Request to start or attach to a tmux session."""
+
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+
+
+class TmuxStartResponse(BaseModel):
+    name: str
+    status: str
+
+
+class TmuxAttachResponse(BaseModel):
+    name: str
+    command: str
+
+
+class TmuxSessionInfo(BaseModel):
+    name: str
+    created_at: int
+    windows: int
+    attached: bool

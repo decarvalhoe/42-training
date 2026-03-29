@@ -44,11 +44,9 @@ from .schemas import (
     ProgressUpdate,
     ReviewAttemptCreate,
     ReviewAttemptRecord,
-    TmuxSessionsResponse,
     TrackDetail,
     TrackSummary,
 )
-from .tmux import list_tmux_sessions
 from .tmux import router as tmux_router
 from .validation import find_module, validate_module_activation
 
@@ -182,16 +180,6 @@ async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSON
 @app.get("/health")
 def health() -> HealthResponse:
     return HealthResponse(status="ok", service="api")
-
-
-# ---------------------------------------------------------------------------
-# Tmux sessions (Issue #178)
-# ---------------------------------------------------------------------------
-
-
-@app.get("/api/v1/tmux/sessions", response_model=TmuxSessionsResponse)
-def tmux_sessions() -> TmuxSessionsResponse:
-    return list_tmux_sessions()
 
 
 # ---------------------------------------------------------------------------

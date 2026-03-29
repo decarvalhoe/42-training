@@ -1871,3 +1871,108 @@ a {
     align-items: start;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Sessions page                                                      */
+/* ------------------------------------------------------------------ */
+
+.sessions-hero { margin-bottom: 20px; }
+
+.sessions-content {
+  display: grid;
+  gap: 20px;
+}
+
+.sessions-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sessions-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: "IBM Plex Mono", monospace;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.sessions-input::placeholder { color: var(--muted); }
+
+.sessions-error {
+  margin-top: 8px;
+  color: var(--c);
+  font-size: 13px;
+}
+
+.sessions-attach-hint {
+  font-size: 14px;
+}
+
+.sessions-cmd {
+  display: block;
+  margin-top: 6px;
+  padding: 10px 14px;
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 6px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  user-select: all;
+}
+
+.sessions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.sessions-table th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sessions-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sessions-name {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+}
+
+.sessions-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn--small {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.btn--small:hover { background: var(--bg); }
+
+.btn--danger {
+  color: var(--c);
+  border-color: var(--c);
+}
+
+.btn--danger:hover {
+  background: var(--c);
+  color: #fff;
+}
