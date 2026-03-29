@@ -5,7 +5,6 @@ from types import SimpleNamespace
 
 from app.analytics import build_analytics_dashboard
 
-
 _CURRICULUM = {
     "tracks": [
         {
