@@ -13,6 +13,25 @@ class MentorRequest(BaseModel):
     phase: Literal["foundation", "practice", "core", "advanced"] = "foundation"
 
 
+IntentRole = Literal["mentor", "librarian", "reviewer", "examiner"]
+
+
+class IntentRequest(BaseModel):
+    message: str = Field(min_length=3, max_length=2000)
+    track_id: str | None = None
+    module_id: str | None = None
+    phase: Literal["foundation", "practice", "core", "advanced"] = "foundation"
+
+
+class IntentResponse(BaseModel):
+    status: str
+    active_role: IntentRole
+    route: str
+    reason: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    classifier: Literal["llm", "fallback"]
+
+
 class SourceUsed(BaseModel):
     tier: str
     label: str
