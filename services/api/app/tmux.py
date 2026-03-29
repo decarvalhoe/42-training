@@ -39,10 +39,10 @@ async def _capture_pane(session: str) -> tuple[str, int, int]:
         raise HTTPException(status_code=504, detail="tmux capture timed out") from err
 
     if proc.returncode != 0:
-        err = stderr.decode("utf-8", errors="replace").strip()
-        if "session not found" in err or "can't find" in err:
+        stderr_text = stderr.decode("utf-8", errors="replace").strip()
+        if "session not found" in stderr_text or "can't find" in stderr_text:
             raise HTTPException(status_code=404, detail=f"tmux session '{session}' not found")
-        raise HTTPException(status_code=502, detail=f"tmux error: {err}")
+        raise HTTPException(status_code=502, detail=f"tmux error: {stderr_text}")
 
     content = stdout.decode("utf-8", errors="replace")
 
