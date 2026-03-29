@@ -177,9 +177,7 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
 
     response_source = "llm"
     try:
-        llm_result = _normalize_mentor_payload(
-            get_mentor_response(request, track_title, module_title, active_course)
-        )
+        llm_result = _normalize_mentor_payload(get_mentor_response(request, track_title, module_title, active_course))
         observation = llm_result["observation"]
         question = llm_result["question"]
         hint = llm_result["hint"]

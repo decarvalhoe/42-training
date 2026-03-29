@@ -34,9 +34,11 @@ def test_get_mentor_response_calls_anthropic_sdk() -> None:
     fake_client = MagicMock()
     fake_client.messages.create.return_value = fake_message
 
-    with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=False):
-        with patch("app.llm_client._build_anthropic_client", return_value=fake_client) as mock_builder:
-            response = get_mentor_response(request, "Shell 0 to Hero", "Shell Basics", "shell")
+    with (
+        patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=False),
+        patch("app.llm_client._build_anthropic_client", return_value=fake_client) as mock_builder,
+    ):
+        response = get_mentor_response(request, "Shell 0 to Hero", "Shell Basics", "shell")
 
     assert response == {
         "observation": "Tu travailles sur les bases shell.",
@@ -55,9 +57,8 @@ def test_get_mentor_response_calls_anthropic_sdk() -> None:
 def test_get_mentor_response_requires_api_key() -> None:
     request = MentorRequest(question="Je bloque sur cp")
 
-    with patch.dict("os.environ", {}, clear=True):
-        with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY not set"):
-            get_mentor_response(request, "Shell 0 to Hero", "Shell Basics", "shell")
+    with patch.dict("os.environ", {}, clear=True), pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY not set"):
+        get_mentor_response(request, "Shell 0 to Hero", "Shell Basics", "shell")
 
 
 def test_get_mentor_response_rejects_invalid_json() -> None:
@@ -65,10 +66,12 @@ def test_get_mentor_response_rejects_invalid_json() -> None:
     fake_client = MagicMock()
     fake_client.messages.create.return_value = _build_fake_message("pas du json")
 
-    with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=False):
-        with patch("app.llm_client._build_anthropic_client", return_value=fake_client):
-            with pytest.raises(ValueError):
-                get_mentor_response(request, "Shell 0 to Hero", "Shell Basics", "shell")
+    with (
+        patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=False),
+        patch("app.llm_client._build_anthropic_client", return_value=fake_client),
+        pytest.raises(ValueError),
+    ):
+        get_mentor_response(request, "Shell 0 to Hero", "Shell Basics", "shell")
 
 
 def test_get_mentor_response_rejects_missing_required_field() -> None:
@@ -84,7 +87,9 @@ def test_get_mentor_response_rejects_missing_required_field() -> None:
         """
     )
 
-    with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=False):
-        with patch("app.llm_client._build_anthropic_client", return_value=fake_client):
-            with pytest.raises(ValueError, match="next_action"):
-                get_mentor_response(request, "Shell 0 to Hero", "Shell Basics", "shell")
+    with (
+        patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}, clear=False),
+        patch("app.llm_client._build_anthropic_client", return_value=fake_client),
+        pytest.raises(ValueError, match="next_action"),
+    ):
+        get_mentor_response(request, "Shell 0 to Hero", "Shell Basics", "shell")
