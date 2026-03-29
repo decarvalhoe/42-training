@@ -17,6 +17,8 @@ Documentation principale:
 - `docs/PRODUCT_METRICS.md` — KPIs produit et pedagogiques, SQL analytics et structure de dashboard
 - `docs/JSON_TO_PG_MIGRATION.md` — design du pipeline d'import `progression.json` vers PostgreSQL et strategie de transition
 - `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
+- `docs/42_REFERENCE_STACK.md`
+- `docs/NEW_TC_PROJECT_PREDICTIONS.md`
 - `ARCHITECTURE_TARGET.md`
 - `docs/DEVOPS_RBOK_ADAPTATION.md`
 - `docs/adr/README.md`
@@ -146,6 +148,8 @@ Core documentation:
 - `docs/PRODUCT_METRICS.md` — product and pedagogical KPIs, analytics SQL and dashboard structure
 - `docs/JSON_TO_PG_MIGRATION.md` — initial `progression.json` to PostgreSQL import design and transition strategy
 - `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
+- `docs/42_REFERENCE_STACK.md`
+- `docs/NEW_TC_PROJECT_PREDICTIONS.md`
 - `ARCHITECTURE_TARGET.md`
 - `docs/DEVOPS_RBOK_ADAPTATION.md`
 - `docs/adr/README.md`
