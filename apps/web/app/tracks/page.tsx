@@ -45,10 +45,10 @@ const STATE_ICON: Record<ModuleState, string> = {
   locked: "◇",
 };
 
-const TRACK_COLORS: Record<string, string> = {
-  shell: "var(--shell)",
-  c: "var(--c)",
-  python_ai: "var(--python)",
+const TRACK_CLASS: Record<string, string> = {
+  shell: "track-shell",
+  c: "track-c",
+  python_ai: "track-python",
 };
 
 /* ------------------------------------------------------------------ */
@@ -58,12 +58,10 @@ const TRACK_COLORS: Record<string, string> = {
 function TalentNode({
   mod,
   state,
-  trackColor,
   isLast,
 }: {
   mod: ModuleItem;
   state: ModuleState;
-  trackColor: string;
   isLast: boolean;
 }) {
   const phaseLabel = mod.phase.charAt(0).toUpperCase() + mod.phase.slice(1);
@@ -71,7 +69,7 @@ function TalentNode({
   return (
     <div className="talent-node-wrapper">
       <div className={`talent-node talent-node--${state}`}>
-        <div className="talent-node-icon" style={{ color: state === "locked" ? "var(--muted)" : trackColor }}>
+        <div className="talent-node-icon">
           {STATE_ICON[state]}
         </div>
         <div className="talent-node-body">
@@ -101,7 +99,7 @@ function TalentNode({
         </div>
       </div>
       {!isLast && (
-        <div className="talent-edge" style={{ borderColor: trackColor }} />
+        <div className="talent-edge" />
       )}
     </div>
   );
@@ -116,7 +114,7 @@ function TrackTree({
   activeTrack: string | undefined;
   activeModule: string | undefined;
 }) {
-  const trackColor = TRACK_COLORS[track.id] ?? "var(--accent)";
+  const trackCls = TRACK_CLASS[track.id] ?? "";
   const phases = [...new Set(track.modules.map((m) => m.phase))].sort(
     (a, b) => (PHASE_ORDER[a] ?? 99) - (PHASE_ORDER[b] ?? 99),
   );
@@ -127,8 +125,8 @@ function TrackTree({
   const pct = track.modules.length > 0 ? Math.round((doneCount / track.modules.length) * 100) : 0;
 
   return (
-    <article className="talent-track">
-      <div className="talent-track-header" style={{ borderLeftColor: trackColor }}>
+    <article className={`talent-track ${trackCls}`}>
+      <div className="talent-track-header">
         <div>
           <p className="eyebrow">{track.id}</p>
           <h2>{track.title}</h2>
@@ -138,7 +136,7 @@ function TrackTree({
           <div className="talent-track-bar">
             <div
               className="talent-track-bar-fill"
-              style={{ width: `${pct}%`, backgroundColor: trackColor }}
+              style={{ width: `${pct}%` }}
             />
           </div>
           <span className="muted">
@@ -163,7 +161,6 @@ function TrackTree({
                     key={mod.id}
                     mod={mod}
                     state={state}
-                    trackColor={trackColor}
                     isLast={isLastInPhase && isLastPhase}
                   />
                 );
@@ -204,10 +201,10 @@ export default async function TracksPage() {
           Complete modules to unlock the next tier and progress through foundation, practice, core and advanced phases.
         </p>
         <div className="talent-legend">
-          <span><span className="talent-legend-icon" style={{ color: "var(--accent)" }}>◆</span> Done</span>
-          <span><span className="talent-legend-icon" style={{ color: "var(--shell)" }}>▶</span> In progress</span>
+          <span><span className="talent-legend-icon status-completed">◆</span> Done</span>
+          <span><span className="talent-legend-icon status-in-progress">▶</span> In progress</span>
           <span><span className="talent-legend-icon">○</span> Available</span>
-          <span><span className="talent-legend-icon" style={{ color: "var(--muted)" }}>◇</span> Locked</span>
+          <span><span className="talent-legend-icon status-locked">◇</span> Locked</span>
         </div>
       </section>
 
