@@ -1,13 +1,10 @@
 /**
- * Electron preload script.
- *
- * Exposes a minimal API to the renderer via contextBridge.
- * Keeps contextIsolation enabled for security.
+ * Preload script — runs in renderer context before web content loads.
+ * Exposes a minimal API surface via contextBridge.
  */
-
 const { contextBridge } = require("electron");
 
 contextBridge.exposeInMainWorld("desktop", {
   platform: process.platform,
-  isElectron: true,
+  isDesktop: true,
 });
