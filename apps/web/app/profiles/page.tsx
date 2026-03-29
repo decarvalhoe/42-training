@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useAuth } from "@/app/components/AuthProvider";
 import { getDashboardData, type TrackItem } from "@/lib/api";
-import { getMockSessionEmail } from "@/services/auth";
 import {
   createProfile,
   listProfiles,
@@ -52,10 +52,10 @@ function formatDateLabel(value: string) {
 }
 
 export default function ProfilesPage() {
+  const { session } = useAuth();
   const [tracks, setTracks] = useState<TrackItem[]>([]);
   const [profilesState, setProfilesState] = useState<ProfilesState | null>(null);
   const [form, setForm] = useState<ProfileFormState>(INITIAL_FORM);
-  const [sessionEmail, setSessionEmail] = useState("demo@42lausanne.ch");
   const [errors, setErrors] = useState<FormErrors>({});
   const [loadingState, setLoadingState] = useState<"loading" | "ready" | "error">("loading");
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -73,7 +73,6 @@ export default function ProfilesPage() {
           return;
         }
 
-        setSessionEmail(getMockSessionEmail() ?? "demo@42lausanne.ch");
         setTracks(dashboard.curriculum.tracks);
         setProfilesState(profiles);
         setForm((current) => ({
@@ -95,6 +94,7 @@ export default function ProfilesPage() {
     };
   }, []);
   const activeProfile = profilesState?.activeProfile ?? null;
+  const sessionEmail = session?.user.email ?? "Authenticated learner";
 
   function updateField(field: keyof ProfileFormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -203,7 +203,7 @@ export default function ProfilesPage() {
           </div>
           <div className="metric-card">
             <span>Data source</span>
-            <strong>{profilesState.mocked ? "Mocked web state" : "API live state"}</strong>
+            <strong>{profilesState.mocked ? "Profiles fallback" : "API live state"}</strong>
           </div>
         </div>
       </section>
@@ -313,8 +313,8 @@ export default function ProfilesPage() {
           <div className="profiles-note">
             <strong>Current integration state</strong>
             <p className="muted">
-              The page calls the real `/api/v1/profiles` endpoints when a bearer token is available. Otherwise it keeps
-              the same UX using mocked browser state so frontend work can progress independently.
+              This page uses the JWT created at login time and calls the real `/api/v1/profiles` endpoints. A browser
+              fallback remains available only when the profile API is temporarily unreachable.
             </p>
           </div>
         </aside>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AuthStatus } from "@/app/components/AuthStatus";
 import { getDashboardData } from "@/lib/api";
 
 const NAV_LINKS = [
@@ -10,7 +11,6 @@ const NAV_LINKS = [
   { href: "/evidence", label: "Evidence" },
   { href: "/profiles", label: "Profiles" },
   { href: "/analytics", label: "Analytics" },
-  { href: "/login", label: "Login" },
 ] as const;
 
 export async function NavHeader() {
@@ -38,6 +38,7 @@ export async function NavHeader() {
             {track.title}
           </Link>
         ))}
+        <AuthStatus />
       </nav>
     </header>
   );

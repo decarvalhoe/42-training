@@ -321,6 +321,49 @@ a {
   -webkit-overflow-scrolling: touch;
 }
 
+.nav-auth {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+.nav-auth-copy {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+  min-width: max-content;
+}
+
+.nav-auth-copy strong,
+.nav-auth-copy span,
+.nav-auth-loading {
+  font-size: 12px;
+}
+
+.nav-auth-copy span,
+.nav-auth-loading {
+  color: var(--muted);
+}
+
+.nav-auth-btn {
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nav-auth-btn:hover {
+  background: rgba(28, 26, 23, 0.05);
+}
+
 .nav-link {
   padding: 8px 14px;
   border-radius: 10px;
@@ -858,6 +901,15 @@ a {
 /*  Login page                                                         */
 /* ------------------------------------------------------------------ */
 
+.auth-gate-page {
+  min-height: calc(100vh - 96px);
+  place-items: center;
+}
+
+.auth-gate-panel {
+  max-width: 680px;
+}
+
 .login-page {
   max-width: 1100px;
 }
@@ -894,6 +946,33 @@ a {
 .login-card-header {
   display: grid;
   gap: 4px;
+}
+
+.login-mode-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.login-mode-btn {
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-mode-btn--active {
+  background: rgba(28, 93, 99, 0.12);
+  color: var(--shell);
 }
 
 .login-form {
@@ -1160,6 +1239,10 @@ a {
     overflow-x: visible;
   }
 
+  .nav-auth {
+    padding-left: 16px;
+  }
+
   .prog-next-content {
     flex-direction: row;
     align-items: center;
@@ -1249,6 +1332,11 @@ a {
 
   .nav-header {
     padding: 14px 32px;
+  }
+
+  .nav-auth-copy strong,
+  .nav-auth-copy span {
+    font-size: 13px;
   }
 
   .prog-stats-grid {
