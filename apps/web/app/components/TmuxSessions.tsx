@@ -1,15 +1,16 @@
 import type { TmuxSession } from "@/lib/api";
 
 function StatusDot({ status }: { status: TmuxSession["status"] }) {
-  const color = status === "active" ? "var(--python)" : "var(--muted)";
+  const cls = status === "active" ? "status-in-progress" : "status-locked";
   return (
     <span
+      className={cls}
       style={{
         display: "inline-block",
         width: 8,
         height: 8,
         borderRadius: "50%",
-        backgroundColor: color,
+        backgroundColor: "var(--status-color)",
         marginRight: 6,
       }}
     />

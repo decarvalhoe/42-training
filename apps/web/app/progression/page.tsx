@@ -59,10 +59,10 @@ function stateLabel(state: ModuleState): string {
   }
 }
 
-const TRACK_COLORS: Record<string, string> = {
-  shell: "var(--shell)",
-  c: "var(--c)",
-  python_ai: "var(--python)",
+const TRACK_CLASS: Record<string, string> = {
+  shell: "track-shell",
+  c: "track-c",
+  python_ai: "track-python",
 };
 
 /* ------------------------------------------------------------------ */
@@ -165,16 +165,13 @@ export default async function ProgressionPage() {
             <p className="muted">{totalDone} / {totalModules} modules</p>
           </div>
           {trackStats.map((ts) => (
-            <div key={ts.id} className="metric-card">
+            <div key={ts.id} className={`metric-card ${TRACK_CLASS[ts.id] ?? ""}`}>
               <span>{ts.title}</span>
               <strong>{ts.percent}%</strong>
               <div className="progress-bar">
                 <div
                   className="progress-bar-fill"
-                  style={{
-                    width: `${ts.percent}%`,
-                    backgroundColor: TRACK_COLORS[ts.id] ?? "var(--accent)",
-                  }}
+                  style={{ width: `${ts.percent}%` }}
                 />
               </div>
               <p className="muted">{ts.done} / {ts.total} modules</p>

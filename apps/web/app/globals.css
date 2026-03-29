@@ -17,6 +17,18 @@
 }
 
 /* ------------------------------------------------------------------ */
+/*  Semantic track & status classes                                    */
+/* ------------------------------------------------------------------ */
+
+.track-shell  { --track-color: var(--shell); }
+.track-c      { --track-color: var(--c); }
+.track-python { --track-color: var(--python); }
+
+.status-completed   { --status-color: var(--accent); }
+.status-in-progress { --status-color: var(--shell); }
+.status-locked      { --status-color: var(--muted); }
+
+/* ------------------------------------------------------------------ */
 /*  Reset & base (mobile-first)                                        */
 /* ------------------------------------------------------------------ */
 
@@ -225,6 +237,9 @@ a {
 .track-card:nth-child(1) { border-top: 6px solid var(--shell); }
 .track-card:nth-child(2) { border-top: 6px solid var(--c); }
 .track-card:nth-child(3) { border-top: 6px solid var(--python); }
+
+/* Semantic alternative: .track-card.track-shell etc. */
+.track-card[class*="track-"] { border-top: 6px solid var(--track-color); }
 
 .card-topline {
   display: flex;
@@ -718,6 +733,7 @@ a {
   height: 100%;
   border-radius: 3px;
   transition: width 0.3s ease;
+  background-color: var(--track-color, var(--accent));
 }
 
 .prog-next-action {
@@ -799,6 +815,7 @@ a {
   height: 100%;
   border-radius: 999px;
   transition: width 0.28s ease;
+  background-color: var(--track-color, var(--accent));
 }
 
 .prog-next-content h2 {
@@ -2371,6 +2388,10 @@ a {
   margin-right: 4px;
 }
 
+.talent-legend-icon.status-completed   { color: var(--status-color); }
+.talent-legend-icon.status-in-progress { color: var(--status-color); }
+.talent-legend-icon.status-locked      { color: var(--status-color); }
+
 .talent-trees {
   display: flex;
   flex-direction: column;
@@ -2386,7 +2407,7 @@ a {
 
 .talent-track-header {
   padding: 24px 28px;
-  border-left: 6px solid var(--accent);
+  border-left: 6px solid var(--track-color, var(--accent));
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -2416,6 +2437,7 @@ a {
   height: 100%;
   border-radius: 4px;
   transition: width 0.4s ease;
+  background-color: var(--track-color, var(--accent));
 }
 
 .talent-phase {
@@ -2476,6 +2498,11 @@ a {
   flex-shrink: 0;
   width: 24px;
   text-align: center;
+  color: var(--track-color, var(--accent));
+}
+
+.talent-node--locked .talent-node-icon {
+  color: var(--muted);
 }
 
 .talent-node-body {
@@ -2532,7 +2559,7 @@ a {
 .talent-edge {
   width: 2px;
   height: 12px;
-  border-left: 2px dashed var(--line);
+  border-left: 2px dashed var(--track-color, var(--line));
   margin-left: 35px;
 }
 

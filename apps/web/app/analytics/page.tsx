@@ -3,10 +3,10 @@ import Link from "next/link";
 import { getAnalyticsData } from "@/lib/api";
 import type { AnalyticsChartRow } from "@/lib/api";
 
-const TRACK_COLORS: Record<string, string> = {
-  shell: "var(--shell)",
-  c: "var(--c)",
-  python_ai: "var(--python)",
+const TRACK_CLASS: Record<string, string> = {
+  shell: "track-shell",
+  c: "track-c",
+  python_ai: "track-python",
 };
 
 function formatMinutes(value: number): string {
@@ -64,13 +64,10 @@ function AnalyticsBarChart({
                   </div>
                   <span className="analytics-bar-value">{formatter(row)}</span>
                 </div>
-                <div className="analytics-bar-track">
+                <div className={`analytics-bar-track ${TRACK_CLASS[row.track_id] ?? ""}`}>
                   <div
                     className="analytics-bar-fill"
-                    style={{
-                      width,
-                      backgroundColor: TRACK_COLORS[row.track_id] ?? "var(--accent)",
-                    }}
+                    style={{ width }}
                   />
                 </div>
               </div>
