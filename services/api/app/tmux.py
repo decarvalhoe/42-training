@@ -26,13 +26,17 @@ async def _capture_pane(session: str) -> tuple[str, int, int]:
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            "tmux", "capture-pane", "-t", session, "-p",
+            "tmux",
+            "capture-pane",
+            "-t",
+            session,
+            "-p",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5.0)
-    except asyncio.TimeoutError:
-        raise HTTPException(status_code=504, detail="tmux capture timed out")
+    except TimeoutError as err:
+        raise HTTPException(status_code=504, detail="tmux capture timed out") from err
 
     if proc.returncode != 0:
         err = stderr.decode("utf-8", errors="replace").strip()
@@ -46,7 +50,12 @@ async def _capture_pane(session: str) -> tuple[str, int, int]:
     rows, cols = _DEFAULT_ROWS, _DEFAULT_COLS
     try:
         dim_proc = await asyncio.create_subprocess_exec(
-            "tmux", "display-message", "-t", session, "-p", "#{pane_height} #{pane_width}",
+            "tmux",
+            "display-message",
+            "-t",
+            session,
+            "-p",
+            "#{pane_height} #{pane_width}",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -55,7 +64,7 @@ async def _capture_pane(session: str) -> tuple[str, int, int]:
             parts = dim_out.decode().strip().split()
             if len(parts) == 2:
                 rows, cols = int(parts[0]), int(parts[1])
-    except (asyncio.TimeoutError, ValueError):
+    except (TimeoutError, ValueError):
         pass  # keep defaults
 
     return content, rows, cols

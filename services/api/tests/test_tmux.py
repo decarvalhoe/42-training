@@ -29,10 +29,12 @@ async def test_tmux_pane_returns_content():
             proc.communicate = AsyncMock(return_value=(b"24 80\n", b""))
         return proc
 
-    with patch("app.tmux.asyncio.create_subprocess_exec", side_effect=fake_capture):
-        with patch("app.tmux.shutil.which", return_value="/usr/bin/tmux"):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                resp = await ac.get("/api/v1/tmux/pane/my-session")
+    with (
+        patch("app.tmux.asyncio.create_subprocess_exec", side_effect=fake_capture),
+        patch("app.tmux.shutil.which", return_value="/usr/bin/tmux"),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get("/api/v1/tmux/pane/my-session")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -53,10 +55,12 @@ async def test_tmux_pane_session_not_found():
         proc.communicate = AsyncMock(return_value=(b"", b"can't find session: nope\n"))
         return proc
 
-    with patch("app.tmux.asyncio.create_subprocess_exec", side_effect=fake_capture):
-        with patch("app.tmux.shutil.which", return_value="/usr/bin/tmux"):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                resp = await ac.get("/api/v1/tmux/pane/nope")
+    with (
+        patch("app.tmux.asyncio.create_subprocess_exec", side_effect=fake_capture),
+        patch("app.tmux.shutil.which", return_value="/usr/bin/tmux"),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get("/api/v1/tmux/pane/nope")
 
     assert resp.status_code == 404
     assert "not found" in resp.json()["detail"]
@@ -82,10 +86,12 @@ async def test_tmux_pane_timeout():
         proc.communicate = AsyncMock(side_effect=asyncio.TimeoutError)
         return proc
 
-    with patch("app.tmux.asyncio.create_subprocess_exec", side_effect=slow_capture):
-        with patch("app.tmux.shutil.which", return_value="/usr/bin/tmux"):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                resp = await ac.get("/api/v1/tmux/pane/slow")
+    with (
+        patch("app.tmux.asyncio.create_subprocess_exec", side_effect=slow_capture),
+        patch("app.tmux.shutil.which", return_value="/usr/bin/tmux"),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get("/api/v1/tmux/pane/slow")
 
     assert resp.status_code == 504
     assert "timed out" in resp.json()["detail"]
@@ -101,10 +107,12 @@ async def test_tmux_pane_generic_error():
         proc.communicate = AsyncMock(return_value=(b"", b"server exited unexpectedly\n"))
         return proc
 
-    with patch("app.tmux.asyncio.create_subprocess_exec", side_effect=failing_capture):
-        with patch("app.tmux.shutil.which", return_value="/usr/bin/tmux"):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                resp = await ac.get("/api/v1/tmux/pane/broken")
+    with (
+        patch("app.tmux.asyncio.create_subprocess_exec", side_effect=failing_capture),
+        patch("app.tmux.shutil.which", return_value="/usr/bin/tmux"),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get("/api/v1/tmux/pane/broken")
 
     assert resp.status_code == 502
     assert "tmux error" in resp.json()["detail"]
