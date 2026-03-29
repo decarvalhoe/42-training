@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getDashboardData } from "@/lib/api";
+import { getDashboardData, getTmuxSessions } from "@/lib/api";
 
 import DefenseClient from "./DefenseClient";
 
@@ -25,6 +25,14 @@ export default async function DefensePage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+  /* Fetch available tmux sessions so the learner can attach terminal context */
+  const tmuxData = await getTmuxSessions();
+  const tmuxSessions = tmuxData.sessions.map((s) => ({
+    name: s.name,
+    status: s.status,
+    attached: s.attached,
+  }));
+
   return (
     <main className="page-shell defense-page">
       <nav className="breadcrumb">
@@ -44,7 +52,7 @@ export default async function DefensePage() {
         </p>
       </section>
 
-      <DefenseClient modules={modules} apiUrl={apiUrl} />
+      <DefenseClient modules={modules} apiUrl={apiUrl} tmuxSessions={tmuxSessions} />
     </main>
   );
 }
