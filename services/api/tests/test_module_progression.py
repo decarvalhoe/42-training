@@ -133,6 +133,18 @@ class TestModuleStart:
         assert r.status_code == 200
         assert r.json()["status"] == "in_progress"
 
+    def test_start_after_legacy_completed_modules(self) -> None:
+        prog = {"learning_plan": {}, "progress": {"completed_modules": ["shell-basics"]}}
+        p_cur, p_load, p_write, _prog, written = _patch_repo(prog)
+        with p_cur, p_load, p_write:
+            r = client.post("/api/v1/modules/shell-streams/start")
+        assert r.status_code == 200
+        assert r.json()["status"] == "in_progress"
+        assert len(written) == 1
+        assert "completed_modules" not in written[0]["progress"]
+        assert written[0]["module_status"]["shell-basics"]["status"] == "completed"
+        assert written[0]["module_status"]["shell-streams"]["status"] == "in_progress"
+
     def test_start_unknown_module(self) -> None:
         p_cur, p_load, p_write, _prog, _w = _patch_repo()
         with p_cur, p_load, p_write:

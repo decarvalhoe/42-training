@@ -119,9 +119,11 @@ _CURRICULUM = {
 
 
 def _prog(active_course: str = "shell", completed_modules: list[str] | None = None) -> dict[str, object]:
+    statuses = {module_id: {"status": "completed"} for module_id in (completed_modules or [])}
     return {
         "learning_plan": {"active_course": active_course},
-        "progress": {"completed_modules": completed_modules or []},
+        "progress": {},
+        "module_status": statuses,
     }
 
 
@@ -358,6 +360,17 @@ class TestValidateEndpoint:
         assert r.status_code == 200
         assert r.json()["valid"] is True
 
+    def test_validate_legacy_completed_modules_still_works(self) -> None:
+        legacy_progression = {
+            "learning_plan": {"active_course": "shell"},
+            "progress": {"completed_modules": ["shell-basics", "shell-streams", "shell-permissions"]},
+        }
+        p_cur, p_load, p_write, _p, _w = _patch_repo(legacy_progression)
+        with p_cur, p_load, p_write:
+            r = client.post("/api/v1/modules/shell-tooling/validate")
+        assert r.status_code == 200
+        assert r.json()["valid"] is True
+
 
 class TestProgressionValidation:
     """POST /api/v1/progression with active_module triggers validation."""
@@ -419,3 +432,18 @@ class TestProgressionValidation:
         with p_cur, p_load, p_write:
             r = client.post("/api/v1/progression", json={"active_module": "c-basics"})
         assert r.status_code == 200
+
+    def test_legacy_completed_modules_are_canonicalized_on_write(self) -> None:
+        legacy_progression = {
+            "learning_plan": {"active_course": "shell"},
+            "progress": {"completed_modules": ["shell-basics", "shell-streams", "shell-permissions"]},
+        }
+        p_cur, p_load, p_write, _p, written = _patch_repo(legacy_progression)
+        with p_cur, p_load, p_write:
+            r = client.post("/api/v1/progression", json={"active_module": "shell-tooling"})
+        assert r.status_code == 200
+        assert len(written) == 1
+        assert "completed_modules" not in written[0]["progress"]
+        assert written[0]["module_status"]["shell-basics"]["status"] == "completed"
+        assert written[0]["module_status"]["shell-streams"]["status"] == "completed"
+        assert written[0]["module_status"]["shell-permissions"]["status"] == "completed"
