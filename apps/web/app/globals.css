@@ -1301,4 +1301,267 @@ a {
   .action-btn {
     min-height: unset;
   }
+
+  .defense-field-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .defense-results-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Defense page                                                       */
+/* ------------------------------------------------------------------ */
+
+.defense-page {
+  max-width: 900px;
+}
+
+.defense-hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  line-height: 1.1;
+}
+
+/* Setup form */
+
+.defense-setup {
+  display: grid;
+  gap: 16px;
+}
+
+.defense-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.defense-field {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.defense-field select,
+.defense-field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(28, 26, 23, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font: inherit;
+}
+
+.defense-field select:focus,
+.defense-field input:focus {
+  outline: 2px solid rgba(28, 93, 99, 0.22);
+  outline-offset: 2px;
+  border-color: rgba(28, 93, 99, 0.35);
+}
+
+.defense-field-row {
+  display: grid;
+  gap: 16px;
+}
+
+/* Active session */
+
+.defense-active {
+  display: grid;
+  gap: 16px;
+}
+
+.defense-progress {
+  display: grid;
+  gap: 10px;
+}
+
+.defense-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.defense-timer {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ink);
+  transition: color 0.2s;
+}
+
+.defense-timer--warning {
+  color: #7a5a16;
+}
+
+.defense-timer--critical {
+  color: var(--c);
+  animation: pulse 1s infinite;
+}
+
+.defense-question {
+  display: grid;
+  gap: 12px;
+}
+
+.defense-question-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.defense-question-text {
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.defense-answer {
+  display: grid;
+  gap: 14px;
+}
+
+.defense-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(28, 26, 23, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.defense-textarea:focus {
+  outline: 2px solid rgba(28, 93, 99, 0.22);
+  outline-offset: 2px;
+  border-color: rgba(28, 93, 99, 0.35);
+}
+
+.defense-textarea::placeholder {
+  color: var(--muted);
+}
+
+/* Feedback flash */
+
+.defense-feedback {
+  display: grid;
+  gap: 8px;
+}
+
+.defense-feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.defense-feedback--good {
+  border-left: 5px solid var(--python);
+}
+
+.defense-feedback--partial {
+  border-left: 5px solid var(--accent);
+}
+
+.defense-feedback--low {
+  border-left: 5px solid var(--c);
+}
+
+/* Results */
+
+.defense-results {
+  display: grid;
+  gap: 18px;
+}
+
+.defense-results-hero {
+  text-align: center;
+}
+
+.defense-results-hero--passed {
+  border-left: 6px solid var(--python);
+}
+
+.defense-results-hero--failed {
+  border-left: 6px solid var(--c);
+}
+
+.defense-results-score {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 8px 0;
+  line-height: 1;
+}
+
+.defense-results-list {
+  display: grid;
+  gap: 14px;
+}
+
+.defense-result-card {
+  display: grid;
+  gap: 10px;
+}
+
+.defense-result-card--good {
+  border-left: 4px solid var(--python);
+}
+
+.defense-result-card--partial {
+  border-left: 4px solid var(--accent);
+}
+
+.defense-result-card--low {
+  border-left: 4px solid var(--c);
+}
+
+.defense-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.defense-result-question {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.defense-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.defense-result-meta strong {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 1.1rem;
+}
+
+.defense-result-feedback {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.defense-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.defense-error {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(178, 76, 43, 0.1);
+  border: 1px solid rgba(178, 76, 43, 0.2);
+  color: var(--c);
+  font-size: 14px;
 }
