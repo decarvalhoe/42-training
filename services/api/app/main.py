@@ -26,6 +26,7 @@ from .schemas import (
     DashboardResponse,
     DefenseSessionCreate,
     DefenseSessionRecord,
+    DefenseSessionUpdate,
     HealthResponse,
     MetaResponse,
     ModuleCompleteRequest,
@@ -423,6 +424,30 @@ async def get_defense_session(
     if defense_session is None:
         raise HTTPException(status_code=404, detail="Defense session not found")
 
+    return _serialize_defense_session(defense_session)
+
+
+@app.put("/api/v1/defense-sessions/{session_id}", response_model=DefenseSessionRecord)
+async def update_defense_session(
+    session_id: str,
+    payload: DefenseSessionUpdate,
+    db: AsyncSession = Depends(get_db_session),
+) -> DefenseSessionRecord:
+    result = await db.execute(select(DefenseSessionModel).where(DefenseSessionModel.session_id == session_id))
+    defense_session = result.scalar_one_or_none()
+    if defense_session is None:
+        raise HTTPException(status_code=404, detail="Defense session not found")
+
+    defense_session.learner_id = payload.learner_id
+    defense_session.module_id = payload.module_id
+    defense_session.questions = payload.questions
+    defense_session.answers = payload.answers
+    defense_session.scores = payload.scores
+    defense_session.status = payload.status
+    defense_session.evidence_artifacts = payload.evidence_artifacts
+
+    await db.commit()
+    await db.refresh(defense_session)
     return _serialize_defense_session(defense_session)
 
 

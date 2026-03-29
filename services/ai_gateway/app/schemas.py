@@ -137,6 +137,8 @@ class ReviewerResponse(BaseModel):
 class DefenseStartRequest(BaseModel):
     track_id: str
     module_id: str
+    learner_id: str | None = Field(default=None, min_length=1, max_length=64)
+    reviewer_id: str | None = Field(default=None, min_length=1, max_length=64)
     phase: Literal["foundation", "practice", "core", "advanced"] = "foundation"
     num_questions: int = Field(default=3, ge=1, le=10)
     question_time_limit_seconds: int = Field(default=60, ge=10, le=600)

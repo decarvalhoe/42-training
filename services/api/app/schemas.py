@@ -228,12 +228,22 @@ class DefenseSession(BaseModel):
     module_id: str = Field(min_length=1)
     questions: list[str] = Field(min_length=1)
     answers: list[str] = Field(default_factory=list)
-    scores: list[int] = Field(default_factory=list)
+    scores: list[float] = Field(default_factory=list)
     status: DefenseStatus = "scheduled"
 
 
 class DefenseSessionCreate(DefenseSession):
     learner_id: str | None = Field(default=None, min_length=1, max_length=64)
+    evidence_artifacts: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class DefenseSessionUpdate(BaseModel):
+    learner_id: str | None = Field(default=None, min_length=1, max_length=64)
+    module_id: str = Field(min_length=1)
+    questions: list[str] = Field(min_length=1)
+    answers: list[str] = Field(default_factory=list)
+    scores: list[float] = Field(default_factory=list)
+    status: DefenseStatus = "scheduled"
     evidence_artifacts: list[dict[str, Any]] = Field(default_factory=list)
 
 

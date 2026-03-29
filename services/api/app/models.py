@@ -237,7 +237,7 @@ class DefenseSession(Base):
     module_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     questions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     answers: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
-    scores: Mapped[list[int]] = mapped_column(JSON, default=list, nullable=False)
+    scores: Mapped[list[float]] = mapped_column(JSON, default=list, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="scheduled", index=True)
     evidence_artifacts: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

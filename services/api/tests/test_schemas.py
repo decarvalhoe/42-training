@@ -354,11 +354,11 @@ class TestDefenseSession:
         with pytest.raises(ValidationError):
             DefenseSession(session_id="", module_id="m", questions=["q"])
 
-    def test_scores_are_integers(self) -> None:
+    def test_scores_accept_fractional_values(self) -> None:
         ds = DefenseSession(
             session_id="s",
             module_id="m",
             questions=["q1", "q2"],
-            scores=[100, 0],
+            scores=[0.85, 0.0],
         )
-        assert ds.scores == [100, 0]
+        assert ds.scores == [0.85, 0.0]

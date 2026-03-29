@@ -27,6 +27,7 @@ class DefenseQuestion:
     text: str
     skill: str
     expected_keywords: list[str]
+    answer: str = ""
     answered: bool = False
     score: float = 0.0
     feedback: str = ""
@@ -40,11 +41,14 @@ class DefenseSession:
     track_id: str
     module_id: str
     phase: str
+    learner_id: str | None = None
+    reviewer_id: str | None = None
     questions: list[DefenseQuestion] = field(default_factory=list)
     question_time_limit_seconds: int = 60
     started_at: datetime = field(default_factory=_utc_now)
     current_question_started_at: datetime = field(default_factory=_utc_now)
     completed: bool = False
+    review_attempt_persisted: bool = False
 
 
 # In-memory session store (MVP)
@@ -59,6 +63,8 @@ def create_session(
     track: dict[str, Any],
     module: dict[str, Any],
     phase: str,
+    learner_id: str | None = None,
+    reviewer_id: str | None = None,
     num_questions: int = 3,
     question_time_limit_seconds: int = 60,
 ) -> DefenseSession:
@@ -71,6 +77,8 @@ def create_session(
         track_id=track["id"],
         module_id=module["id"],
         phase=phase,
+        learner_id=learner_id,
+        reviewer_id=reviewer_id,
         questions=questions,
         question_time_limit_seconds=question_time_limit_seconds,
         started_at=now,
@@ -216,12 +224,14 @@ def submit_answer(session: DefenseSession, question_id: str, answer: str) -> dic
     timed_out = deadline is not None and now > deadline
 
     if timed_out:
+        current_question.answer = answer
         score_val = 0.0
         feedback = (
             f"Time limit reached for '{current_question.skill}'. Try explaining the concept again from memory in one "
             "clear paragraph."
         )
     else:
+        current_question.answer = answer
         score_val, feedback = score_answer(current_question, answer)
 
     current_question.score = score_val
