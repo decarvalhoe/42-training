@@ -1003,6 +1003,6 @@ def test_start_session_questions_remain_socratic_with_context() -> None:
     data = response.json()
     for q in data["questions"]:
         text_lower = q["text"].lower()
-        assert any(
-            word in text_lower for word in ["explain", "what", "how", "describe", "looking", "based"]
-        ), f"Question should be Socratic: {q['text']}"
+        assert any(word in text_lower for word in ["explain", "what", "how", "describe", "looking", "based"]), (
+            f"Question should be Socratic: {q['text']}"
+        )
