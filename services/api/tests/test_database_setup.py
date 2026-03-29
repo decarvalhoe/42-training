@@ -8,10 +8,9 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect
-from sqlmodel import SQLModel
 
 from app.db import DEFAULT_DATABASE_URL, create_async_db_engine, get_database_url, is_async_database_url
-from app.models import LearnerProfileModel
+from app.models import Base, LearnerProfile
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,8 +32,8 @@ class TestDatabaseConfig:
 
 class TestSqlModelMetadata:
     def test_learner_profile_model_registered_in_metadata(self) -> None:
-        table = SQLModel.metadata.tables["learner_profiles"]
-        assert LearnerProfileModel.__table__.name == "learner_profiles"
+        table = Base.metadata.tables["learner_profile"]
+        assert LearnerProfile.__table__.name == "learner_profile"
         assert {"id", "login", "track", "current_module", "started_at", "updated_at"} <= set(table.columns.keys())
 
 
