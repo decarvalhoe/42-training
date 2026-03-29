@@ -11,6 +11,7 @@ from .defense import (
     create_session,
     get_current_question,
     get_current_question_deadline,
+    resume_session,
     submit_answer,
 )
 from .defense_persistence import (
@@ -33,6 +34,8 @@ from .schemas import (
     DefenseQuestionOut,
     DefenseQuestionResult,
     DefenseResultResponse,
+    DefenseResumeRequest,
+    DefenseResumeResponse,
     DefenseStartRequest,
     DefenseStartResponse,
     IntentRequest,
@@ -371,6 +374,50 @@ def defense_answer(request: DefenseAnswerRequest) -> DefenseAnswerResponse:
         elapsed_seconds=result["elapsed_seconds"],
         next_question_id=result["next_question_id"],
         next_question_deadline=result["next_question_deadline"],
+    )
+
+
+@app.post("/api/v1/defense/resume", response_model=DefenseResumeResponse)
+def defense_resume(request: DefenseResumeRequest) -> DefenseResumeResponse:
+    """Resume an interrupted defense session from persisted state."""
+    try:
+        session = load_defense_session(request.session_id)
+    except DefensePersistenceError as exc:
+        logger.warning("Defense session load failed during resume", exc_info=True)
+        raise HTTPException(status_code=503, detail="Defense persistence unavailable") from exc
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session = resume_session(session)
+    try:
+        sync_defense_session(session)
+    except DefensePersistenceError as exc:
+        logger.warning("Defense session sync failed during resume", exc_info=True)
+        raise HTTPException(status_code=503, detail="Defense persistence unavailable") from exc
+
+    current_question = get_current_question(session)
+    questions_answered = sum(1 for q in session.questions if q.answered)
+
+    return DefenseResumeResponse(
+        status="ok",
+        session_id=session.session_id,
+        track_id=session.track_id,
+        module_id=session.module_id,
+        questions=[
+            DefenseQuestionOut(
+                question_id=q.id,
+                text=q.text,
+                skill=q.skill,
+                time_limit_seconds=session.question_time_limit_seconds,
+            )
+            for q in session.questions
+        ],
+        total_questions=len(session.questions),
+        questions_answered=questions_answered,
+        question_time_limit_seconds=session.question_time_limit_seconds,
+        active_question_id=current_question.id if current_question else None,
+        current_question_deadline=get_current_question_deadline(session),
+        completed=session.completed,
     )
 
 

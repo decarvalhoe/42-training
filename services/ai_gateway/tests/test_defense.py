@@ -633,3 +633,196 @@ def test_result_question_results_structure() -> None:
     assert "answered" in qr
     assert "timed_out" in qr
     assert "elapsed_seconds" in qr
+
+
+# === Resume interrupted session ===
+
+RESUME_ENDPOINT = "/api/v1/defense/resume"
+
+
+def test_resume_interrupted_session_after_cache_clear(
+    _fake_persistence_backend: dict[str, Any],
+) -> None:
+    """Resuming a session whose in-memory state was lost reloads from persistence."""
+    session = _start_session(learner_id="learner-1", num_questions=2)
+    first_question = session["questions"][0]
+    client.post(
+        ANSWER_ENDPOINT,
+        json={
+            "session_id": session["session_id"],
+            "question_id": first_question["question_id"],
+            "answer": "pwd prints the current working directory because it tells me exactly where I am.",
+        },
+    )
+    clear_sessions()
+
+    response = client.post(RESUME_ENDPOINT, json={"session_id": session["session_id"]})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["session_id"] == session["session_id"]
+    assert data["questions_answered"] == 1
+    assert data["completed"] is False
+    assert data["active_question_id"] == session["questions"][1]["question_id"]
+    assert data["current_question_deadline"] is not None
+
+
+def test_resume_completed_session() -> None:
+    session = _start_session(num_questions=1)
+    q = session["questions"][0]
+    client.post(
+        ANSWER_ENDPOINT,
+        json={
+            "session_id": session["session_id"],
+            "question_id": q["question_id"],
+            "answer": "This concept is fundamental because it allows filesystem navigation.",
+        },
+    )
+    clear_sessions()
+
+    response = client.post(RESUME_ENDPOINT, json={"session_id": session["session_id"]})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["completed"] is True
+    assert data["active_question_id"] is None
+    assert data["current_question_deadline"] is None
+
+
+def test_resume_nonexistent_session() -> None:
+    response = client.post(RESUME_ENDPOINT, json={"session_id": "does-not-exist"})
+    assert response.status_code == 404
+
+
+def test_resume_then_continue_answering(
+    _fake_persistence_backend: dict[str, Any],
+) -> None:
+    """After resume, the learner can continue answering remaining questions."""
+    session = _start_session(learner_id="learner-1", num_questions=2)
+    first_question = session["questions"][0]
+    client.post(
+        ANSWER_ENDPOINT,
+        json={
+            "session_id": session["session_id"],
+            "question_id": first_question["question_id"],
+            "answer": "pwd prints the current working directory because it helps me navigate.",
+        },
+    )
+    clear_sessions()
+
+    client.post(RESUME_ENDPOINT, json={"session_id": session["session_id"]})
+
+    second_question = session["questions"][1]
+    response = client.post(
+        ANSWER_ENDPOINT,
+        json={
+            "session_id": session["session_id"],
+            "question_id": second_question["question_id"],
+            "answer": "ls lists files in a directory because it reads the directory entries. For example, ls -la shows hidden files.",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["questions_remaining"] == 0
+
+    result_response = client.get(f"/api/v1/defense/{session['session_id']}/result")
+    result_data = result_response.json()
+    assert len(result_data["question_results"]) == 2
+
+
+def test_resume_resets_question_timer(
+    _fake_persistence_backend: dict[str, Any],
+) -> None:
+    """Resuming should give a fresh deadline for the current question."""
+    start = datetime(2026, 3, 29, 12, 0, 0, tzinfo=UTC)
+    with patch("app.defense._utc_now", return_value=start):
+        session = _start_session(num_questions=2, question_time_limit_seconds=30)
+
+    first_question = session["questions"][0]
+    with patch("app.defense._utc_now", return_value=start + timedelta(seconds=10)):
+        client.post(
+            ANSWER_ENDPOINT,
+            json={
+                "session_id": session["session_id"],
+                "question_id": first_question["question_id"],
+                "answer": "pwd prints the current working directory because it helps me know where I am.",
+            },
+        )
+
+    clear_sessions()
+
+    resume_time = start + timedelta(minutes=30)
+    with patch("app.defense._utc_now", return_value=resume_time):
+        response = client.post(RESUME_ENDPOINT, json={"session_id": session["session_id"]})
+
+    data = response.json()
+    deadline_str = data["current_question_deadline"]
+    assert deadline_str is not None
+    deadline = datetime.fromisoformat(deadline_str)
+    expected_deadline = resume_time + timedelta(seconds=30)
+    assert abs((deadline - expected_deadline).total_seconds()) < 2
+
+
+# === Retry on transient persistence failures ===
+
+
+def test_retry_recovers_from_transient_post_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Persistence retries on 5xx and succeeds on subsequent attempt."""
+    call_count = 0
+    original_post = defense_persistence.httpx.post
+
+    def flaky_post(*args: Any, **kwargs: Any) -> Any:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return _FakeHttpxResponse(503, {"detail": "Service unavailable"})
+        return original_post(*args, **kwargs)
+
+    monkeypatch.setattr(defense_persistence, "RETRY_BASE_DELAY", 0.01)
+    monkeypatch.setattr(defense_persistence.httpx, "post", flaky_post)
+
+    response = client.post(
+        START_ENDPOINT,
+        json={"track_id": "shell", "module_id": "shell-basics"},
+    )
+    assert response.status_code == 200
+    assert call_count >= 2
+
+
+def test_retry_exhaustion_returns_503(monkeypatch: pytest.MonkeyPatch) -> None:
+    """After all retries are exhausted, the endpoint returns 503."""
+
+    def always_fail(*args: Any, **kwargs: Any) -> _FakeHttpxResponse:
+        return _FakeHttpxResponse(503, {"detail": "Service unavailable"})
+
+    monkeypatch.setattr(defense_persistence, "RETRY_BASE_DELAY", 0.01)
+    monkeypatch.setattr(defense_persistence.httpx, "post", always_fail)
+
+    response = client.post(
+        START_ENDPOINT,
+        json={"track_id": "shell", "module_id": "shell-basics"},
+    )
+    assert response.status_code == 503
+
+
+def test_retry_recovers_from_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Persistence retries on timeout exception and succeeds on retry."""
+    import httpx as real_httpx
+
+    call_count = 0
+    original_get = defense_persistence.httpx.get
+
+    def flaky_get(*args: Any, **kwargs: Any) -> Any:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise real_httpx.ConnectError("Connection refused")
+        return original_get(*args, **kwargs)
+
+    session = _start_session(num_questions=1)
+
+    monkeypatch.setattr(defense_persistence, "RETRY_BASE_DELAY", 0.01)
+    monkeypatch.setattr(defense_persistence.httpx, "get", flaky_get)
+
+    response = client.get(f"/api/v1/defense/{session['session_id']}/result")
+    assert response.status_code == 200
+    assert call_count >= 2
