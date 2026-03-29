@@ -75,9 +75,7 @@ export function TerminalPane({ session }: { session: string }) {
           role="log"
           aria-label="Terminal output"
           className="terminal-pane-content"
-          style={{
-            minHeight: data ? `${Math.min(data.rows, 24) * 1.3}em` : "12em",
-          }}
+          style={{ "--pane-min-height": data ? `${Math.min(data.rows, 24) * 1.3}em` : "12em" } as React.CSSProperties}
         >
           {data?.content ?? "Connecting..."}
         </pre>

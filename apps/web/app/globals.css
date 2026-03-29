@@ -878,6 +878,7 @@ a {
   height: 100%;
   border-radius: var(--radius-xs);
   transition: width 0.3s ease;
+  width: var(--bar-width, 0%);
   background-color: var(--track-color, var(--accent));
 }
 
@@ -960,6 +961,7 @@ a {
   height: 100%;
   border-radius: var(--radius-full);
   transition: width 0.28s ease;
+  width: var(--bar-width, 0%);
   background-color: var(--track-color, var(--accent));
 }
 
@@ -2018,6 +2020,7 @@ a {
   max-height: 400px;
   white-space: pre;
   tab-size: 8;
+  min-height: var(--pane-min-height, 12em);
 }
 
 .terminal-pane-error {
@@ -2161,6 +2164,46 @@ a {
 
 .action-btn--secondary:hover {
   background: rgba(28, 26, 23, 0.05);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Utility classes (component conventions)                            */
+/* ------------------------------------------------------------------ */
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--muted);
+  margin-right: 6px;
+}
+
+.status-dot--active {
+  background-color: var(--python);
+}
+
+.not-found-panel {
+  text-align: center;
+  padding: 48px;
+}
+
+.not-found-action {
+  margin-top: 24px;
+  display: inline-block;
+}
+
+.prereq-note {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.section-heading-spaced {
+  margin-top: 24px;
+}
+
+.section-note-spaced {
+  margin-top: 8px;
 }
 
 /* ------------------------------------------------------------------ */
@@ -2746,6 +2789,7 @@ a {
   height: 100%;
   border-radius: 4px;
   transition: width 0.4s ease;
+  width: var(--bar-width, 0%);
   background-color: var(--track-color, var(--accent));
 }
 

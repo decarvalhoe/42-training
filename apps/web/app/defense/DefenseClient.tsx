@@ -428,10 +428,7 @@ export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Pr
           <div className="progress-bar">
             <div
               className="progress-bar-fill"
-              style={{
-                width: `${((activeQuestionIndex + 1) / questions.length) * 100}%`,
-                backgroundColor: "var(--accent)",
-              }}
+              style={{ "--bar-width": `${((activeQuestionIndex + 1) / questions.length) * 100}%`, "--bar-color": "var(--accent)" } as React.CSSProperties}
             />
           </div>
         </div>
