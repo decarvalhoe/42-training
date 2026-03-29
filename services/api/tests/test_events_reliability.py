@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.events as events_module
@@ -25,7 +25,6 @@ from app.db import get_db_session
 from app.events import _emit_event_async, emit_event
 from app.main import app
 from app.models import Base, PedagogicalEvent
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -123,9 +122,11 @@ class TestEmitEventAsyncPropagation:
 
     @pytest.mark.asyncio
     async def test_raises_on_session_factory_error(self) -> None:
-        with patch.object(events_module, "get_session_factory", side_effect=RuntimeError("no DB")):
-            with pytest.raises(RuntimeError, match="no DB"):
-                await _emit_event_async("module_started", learner_id="learner-1")
+        with (
+            patch.object(events_module, "get_session_factory", side_effect=RuntimeError("no DB")),
+            pytest.raises(RuntimeError, match="no DB"),
+        ):
+            await _emit_event_async("module_started", learner_id="learner-1")
 
 
 # ---------------------------------------------------------------------------
@@ -345,9 +346,7 @@ class TestPayloadIntegrity:
 
         async def fetch_payload() -> dict:
             async with session_factory() as session:
-                result = await session.execute(
-                    select(PedagogicalEvent).where(PedagogicalEvent.id == event_id)
-                )
+                result = await session.execute(select(PedagogicalEvent).where(PedagogicalEvent.id == event_id))
                 return result.scalar_one().payload
 
         stored = asyncio.run(fetch_payload())
@@ -359,15 +358,11 @@ class TestPayloadIntegrity:
     ) -> None:
         _client, session_factory = reliability_db
 
-        event_id = asyncio.run(
-            _emit_event_async("module_started", learner_id="learner-empty")
-        )
+        event_id = asyncio.run(_emit_event_async("module_started", learner_id="learner-empty"))
 
         async def fetch_payload() -> dict:
             async with session_factory() as session:
-                result = await session.execute(
-                    select(PedagogicalEvent).where(PedagogicalEvent.id == event_id)
-                )
+                result = await session.execute(select(PedagogicalEvent).where(PedagogicalEvent.id == event_id))
                 return result.scalar_one().payload
 
         stored = asyncio.run(fetch_payload())
