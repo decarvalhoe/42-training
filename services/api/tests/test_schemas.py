@@ -1,5 +1,7 @@
 """Tests for Pydantic schemas (Issues #22, #36)."""
 
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 
@@ -17,37 +19,65 @@ from app.schemas import (
 
 class TestLearnerProfile:
     def test_minimal_creation(self) -> None:
-        profile = LearnerProfile(username="edecarva")
-        assert profile.username == "edecarva"
-        assert profile.active_course == "shell"
-        assert profile.active_module is None
-        assert profile.pace_mode == "normal"
-        assert profile.profile == {}
+        started_at = datetime(2026, 3, 27, 8, 30, tzinfo=UTC)
+        updated_at = datetime(2026, 3, 27, 9, 45, tzinfo=UTC)
+        profile = LearnerProfile(
+            id="learner-001",
+            login="edecarva",
+            track="shell",
+            started_at=started_at,
+            updated_at=updated_at,
+        )
+        assert profile.id == "learner-001"
+        assert profile.login == "edecarva"
+        assert profile.track == "shell"
+        assert profile.current_module is None
+        assert profile.started_at == started_at
+        assert profile.updated_at == updated_at
 
     def test_full_creation(self) -> None:
         profile = LearnerProfile(
-            username="jdoe",
-            active_course="c",
-            active_module="c-pointers",
-            pace_mode="intensive",
-            profile={"campus": "lausanne"},
+            id="learner-002",
+            login="jdoe",
+            track="c",
+            current_module="c-pointers",
+            started_at="2026-03-27T08:30:00Z",
+            updated_at="2026-03-28T10:15:00Z",
         )
-        assert profile.active_course == "c"
-        assert profile.active_module == "c-pointers"
-        assert profile.pace_mode == "intensive"
-        assert profile.profile["campus"] == "lausanne"
+        assert profile.track == "c"
+        assert profile.current_module == "c-pointers"
+        assert profile.started_at == datetime(2026, 3, 27, 8, 30, tzinfo=UTC)
+        assert profile.updated_at == datetime(2026, 3, 28, 10, 15, tzinfo=UTC)
 
     def test_invalid_track_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            LearnerProfile(username="x", active_course="rust")  # type: ignore[arg-type]
+            LearnerProfile(
+                id="learner-003",
+                login="x",
+                track="rust",  # type: ignore[arg-type]
+                started_at="2026-03-27T08:30:00Z",
+                updated_at="2026-03-27T08:45:00Z",
+            )
 
-    def test_empty_username_rejected(self) -> None:
+    def test_empty_id_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            LearnerProfile(username="")
+            LearnerProfile(
+                id="",
+                login="edecarva",
+                track="shell",
+                started_at="2026-03-27T08:30:00Z",
+                updated_at="2026-03-27T08:45:00Z",
+            )
 
-    def test_long_username_rejected(self) -> None:
+    def test_long_login_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            LearnerProfile(username="a" * 65)
+            LearnerProfile(
+                id="learner-004",
+                login="a" * 65,
+                track="shell",
+                started_at="2026-03-27T08:30:00Z",
+                updated_at="2026-03-27T08:45:00Z",
+            )
 
 
 # -- ProgressState ------------------------------------------------------------
@@ -55,25 +85,46 @@ class TestLearnerProfile:
 
 class TestProgressState:
     def test_minimal_creation(self) -> None:
-        state = ProgressState()
-        assert state.current_exercise is None
-        assert state.current_step is None
-        assert state.completed == []
-        assert state.in_progress == []
-        assert state.todo == []
+        started_at = datetime(2026, 3, 27, 8, 30, tzinfo=UTC)
+        state = ProgressState(
+            module_id="shell-basics",
+            status="in_progress",
+            started_at=started_at,
+        )
+        assert state.module_id == "shell-basics"
+        assert state.status == "in_progress"
+        assert state.started_at == started_at
+        assert state.completed_at is None
+        assert state.evidence == {}
 
     def test_full_creation(self) -> None:
         state = ProgressState(
-            current_exercise="shell-basics-ex01",
-            current_step="step-3",
-            completed=["shell-basics-ex00"],
-            in_progress=["shell-basics-ex01"],
-            todo=["shell-basics-ex02"],
+            module_id="shell-basics",
+            status="completed",
+            started_at="2026-03-27T08:30:00Z",
+            completed_at="2026-03-27T09:00:00Z",
+            evidence={"checkpoint": "passed", "notes": "Command sequence reproduced"},
         )
-        assert state.current_exercise == "shell-basics-ex01"
-        assert state.completed == ["shell-basics-ex00"]
-        assert len(state.in_progress) == 1
-        assert len(state.todo) == 1
+        assert state.module_id == "shell-basics"
+        assert state.status == "completed"
+        assert state.completed_at == datetime(2026, 3, 27, 9, 0, tzinfo=UTC)
+        assert state.evidence["checkpoint"] == "passed"
+
+    def test_invalid_status_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            ProgressState(
+                module_id="shell-basics",
+                status="blocked",  # type: ignore[arg-type]
+                started_at="2026-03-27T08:30:00Z",
+            )
+
+    def test_empty_module_id_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            ProgressState(
+                module_id="",
+                status="not_started",
+                started_at="2026-03-27T08:30:00Z",
+            )
 
 
 # -- ProgressUpdate -----------------------------------------------------------
