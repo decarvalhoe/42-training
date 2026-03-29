@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   createReviewAttempt,
@@ -124,31 +124,32 @@ export default function ReviewClient({ modules }: Props) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<"success" | "error">("success");
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadItems = useCallback(async (cancelledRef?: { current: boolean }) => {
+    setLoadingState("loading");
 
-    async function loadItems() {
-      try {
-        const result = await listReviewAttempts();
-        if (cancelled) {
-          return;
-        }
-        setItems(result.items);
-        setSourceMode(result.mocked ? "mocked" : "live");
-        setLoadingState("ready");
-      } catch {
-        if (!cancelled) {
-          setLoadingState("error");
-        }
+    try {
+      const result = await listReviewAttempts();
+      if (cancelledRef?.current) {
+        return;
+      }
+      setItems(result.items);
+      setSourceMode(result.mocked ? "mocked" : "live");
+      setLoadingState("ready");
+    } catch {
+      if (!cancelledRef?.current) {
+        setLoadingState("error");
       }
     }
+  }, []);
 
-    void loadItems();
+  useEffect(() => {
+    const cancelledRef = { current: false };
+    void loadItems(cancelledRef);
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, []);
+  }, [loadItems]);
 
   const reviewQuestions = useMemo(
     () =>
@@ -238,6 +239,9 @@ export default function ReviewClient({ modules }: Props) {
       <section className="panel review-shell">
         <h2>Review workspace unavailable</h2>
         <p className="muted">The page could not load recent review attempts.</p>
+        <button type="button" className="action-btn" onClick={() => void loadItems()}>
+          Retry
+        </button>
       </section>
     );
   }

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { getAnalyticsData } from "@/lib/api";
 import type { AnalyticsChartRow } from "@/lib/api";
+import { DataSourceBadge } from "@/app/components/DataSourceBadge";
 
 const TRACK_CLASS: Record<string, string> = {
   shell: "track-shell",
@@ -113,6 +114,9 @@ export default async function AnalyticsPage() {
           A first internal view of pedagogical events, module throughput and checkpoint quality,
           aligned with the KPI definitions from <code>docs/PRODUCT_METRICS.md</code>.
         </p>
+        <div className="stack-list">
+          <DataSourceBadge sourceMode={analytics.sourceMode} />
+        </div>
 
         <div className="analytics-summary-grid">
           {summaryCards.map((card) => (

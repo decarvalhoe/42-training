@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { getDashboardData, getTmuxSessions } from "@/lib/api";
 import type { ModuleItem, TrackItem } from "@/lib/api";
+import { DataSourceBadge } from "@/app/components/DataSourceBadge";
 import { TmuxSessions } from "@/app/components/TmuxSessions";
 
 /* ------------------------------------------------------------------ */
@@ -118,6 +119,9 @@ export default async function DashboardPage() {
             Visual overview of every skill in the curriculum, organized by track and module.
             Each node reflects your current progression state.
           </p>
+          <div className="stack-list">
+            <DataSourceBadge sourceMode={data.sourceMode} />
+          </div>
         </div>
         <div className="dashboard-hero-stats">
           <div className="metric-card">
