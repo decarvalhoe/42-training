@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "name": "ft_strlen_demo",
+      "path": "scripts/fixtures/c/ft_strlen_demo",
+      "norminette": [
+        "ft_strlen.c",
+        "ft_strlen.h",
+        "main.c"
+      ],
+      "moulinette": [
+        "make re",
+        "./strlen_demo > /tmp/ft_strlen_demo.out",
+        "diff -u expected.out /tmp/ft_strlen_demo.out",
+        "make fclean"
+      ]
+    }
+  ]
+}
