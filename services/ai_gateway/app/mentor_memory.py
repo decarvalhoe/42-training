@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from fnmatch import fnmatch
 from functools import lru_cache
 from typing import Protocol, TypedDict
@@ -75,9 +75,7 @@ class InMemoryConversationStore:
         return deleted
 
 
-def _ttl_delta(ttl_seconds: int):
-    from datetime import timedelta
-
+def _ttl_delta(ttl_seconds: int) -> timedelta:
     return timedelta(seconds=ttl_seconds)
 
 
@@ -120,7 +118,7 @@ def get_conversation_store() -> ConversationStore:
     try:
         import redis
 
-        return redis.Redis.from_url(redis_url, decode_responses=True)
+        return redis.Redis.from_url(redis_url, decode_responses=True)  # type: ignore[return-value]
     except Exception:
         logger.warning("Redis unavailable for mentor memory, using in-memory fallback", exc_info=True)
         return _fallback_store()
@@ -179,7 +177,7 @@ def load_conversation_history(learner_id: str, module_id: str | None) -> list[Me
         raw = raw.decode("utf-8")
 
     try:
-        payload = json.loads(raw)
+        payload = json.loads(raw)  # type: ignore[arg-type]
     except json.JSONDecodeError:
         logger.warning("Mentor memory payload invalid JSON, dropping history")
         return []
