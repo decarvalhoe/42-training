@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .analytics import build_analytics_dashboard, fetch_pedagogical_events
 from .auth import router as auth_router
 from .db import get_db_session
-from .evidence import persist_checkpoint_evidence, persist_defense_evidence, persist_review_evidence
 from .events import _emit_event_async, emit_event
+from .evidence import persist_checkpoint_evidence, persist_defense_evidence, persist_review_evidence
 from .models import DefenseSession as DefenseSessionModel
 from .models import ReviewAttempt as ReviewAttemptModel
 from .profiles import router as profiles_router

@@ -222,7 +222,9 @@ def test_checkpoint_submission_persists_evidence_row(sqlite_progression_repo: di
     async def fetch_evidence() -> tuple[Evidence, Progression]:
         async with session_factory() as session:
             evidence_result = await session.execute(select(Evidence))
-            progression_result = await session.execute(select(Progression).where(Progression.module_id == "shell-basics"))
+            progression_result = await session.execute(
+                select(Progression).where(Progression.module_id == "shell-basics")
+            )
             evidence = evidence_result.scalar_one()
             progression = progression_result.scalar_one()
             return evidence, progression
