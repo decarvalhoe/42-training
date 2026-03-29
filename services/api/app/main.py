@@ -47,6 +47,7 @@ from .schemas import (
     TrackDetail,
     TrackSummary,
 )
+from .tmux import router as tmux_router
 from .validation import find_module, validate_module_activation
 
 logger = logging.getLogger(__name__)
@@ -73,6 +74,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(profiles_router)
+app.include_router(tmux_router)
 
 
 def _default_error_code(status_code: int) -> str:

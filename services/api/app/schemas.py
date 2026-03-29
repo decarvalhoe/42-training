@@ -352,3 +352,14 @@ class AnalyticsDashboardResponse(BaseModel):
     modules_completed: list[AnalyticsChartRow]
     average_time: list[AnalyticsChartRow]
     success_rate: list[AnalyticsChartRow]
+
+
+# --- Tmux terminal pane (Issue #179) ---
+
+
+class TmuxPaneResponse(BaseModel):
+    session: str
+    content: str
+    rows: int
+    cols: int
+    timestamp: str

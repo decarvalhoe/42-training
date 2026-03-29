@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getDashboardData } from "@/lib/api";
 import type { ModuleItem } from "@/lib/api";
 import { SourcePolicyBadge } from "@/app/components/SourcePolicyBadge";
+import { TerminalPane } from "@/app/components/TerminalPane";
 import { isDisplayableSourcePolicyTier } from "@/lib/sourcePolicy";
 
 /* ------------------------------------------------------------------ */
@@ -235,6 +236,11 @@ export default async function ModuleDetailPage({
                 ))}
               </ul>
             </article>
+          )}
+
+          {/* Live terminal (visible when module is in progress) */}
+          {state === "in_progress" && (
+            <TerminalPane session={id} />
           )}
         </div>
 
