@@ -5,6 +5,7 @@ import { getDashboardData } from "@/lib/api";
 const NAV_LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/progression", label: "Progression" },
+  { href: "/login", label: "Login" },
 ] as const;
 
 export async function NavHeader() {
