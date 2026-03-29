@@ -26,6 +26,7 @@ from .defense_persistence import (
 from .intent import route_intent
 from .librarian import search_librarian
 from .llm_client import get_mentor_response
+from .mentor_memory import append_conversation_turn, clear_conversation_history, load_conversation_history
 from .repository import load_curriculum, load_progression
 from .reviewer import build_review
 from .schemas import (
@@ -189,6 +190,12 @@ def _normalize_mentor_payload(payload: dict[str, str]) -> dict[str, str]:
     return normalized
 
 
+@app.delete("/api/v1/mentor/conversations/{learner_id}")
+def clear_mentor_conversations(learner_id: str) -> dict[str, object]:
+    deleted_keys = clear_conversation_history(learner_id)
+    return {"status": "ok", "learner_id": learner_id, "deleted_keys": deleted_keys}
+
+
 @app.post("/api/v1/mentor/respond", response_model=MentorResponse)
 def mentor_respond(request: MentorRequest) -> MentorResponse:
     curriculum = load_curriculum()
@@ -209,8 +216,17 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
     module_title = module["title"] if module else None
 
     response_source = "llm"
+    conversation_history = load_conversation_history(request.learner_id, request.module_id)
     try:
-        llm_result = _normalize_mentor_payload(get_mentor_response(request, track_title, module_title, active_course))
+        llm_result = _normalize_mentor_payload(
+            get_mentor_response(
+                request,
+                track_title,
+                module_title,
+                active_course,
+                conversation_history=conversation_history,
+            )
+        )
         observation = llm_result["observation"]
         question = llm_result["question"]
         hint = llm_result["hint"]
@@ -231,7 +247,7 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
         response_source,
     )
 
-    return MentorResponse(
+    response = MentorResponse(
         status="ok",
         observation=observation,
         question=question,
@@ -243,6 +259,16 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
         confidence_level=confidence_level,
         reasoning_trace=reasoning_trace,
     )
+    append_conversation_turn(
+        request.learner_id,
+        request.module_id,
+        user_question=request.question,
+        mentor_observation=observation,
+        mentor_question=question,
+        mentor_hint=hint,
+        mentor_next_action=next_action,
+    )
+    return response
 
 
 @app.post("/api/v1/librarian/search", response_model=LibrarianResponse)
