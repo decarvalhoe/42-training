@@ -1565,3 +1565,126 @@ a {
   color: var(--c);
   font-size: 14px;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Review / evidence pages                                            */
+/* ------------------------------------------------------------------ */
+
+.review-page,
+.evidence-page {
+  max-width: 1180px;
+}
+
+.review-hero h1,
+.evidence-hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  line-height: 1.1;
+  max-width: 16ch;
+}
+
+.review-shell,
+.evidence-shell,
+.review-form,
+.review-grid,
+.review-history-list,
+.review-guidance,
+.evidence-list,
+.evidence-summary,
+.evidence-list-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.review-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.review-lens-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.review-lens {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  cursor: pointer;
+}
+
+.review-lens input {
+  margin: 0;
+}
+
+.review-lens--active {
+  border-color: rgba(216, 166, 87, 0.42);
+  background: rgba(216, 166, 87, 0.14);
+}
+
+.review-history-card,
+.evidence-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.review-history-meta,
+.evidence-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.evidence-list {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.evidence-card--review {
+  border-left: 4px solid var(--accent);
+}
+
+.evidence-card--defense {
+  border-left: 4px solid var(--shell);
+}
+
+.evidence-content {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(28, 26, 23, 0.05);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 899px) {
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 900px) {
+  .review-shell {
+    grid-template-columns: 1.2fr 0.8fr;
+    align-items: start;
+  }
+
+  .evidence-shell {
+    grid-template-columns: 0.9fr 1.1fr;
+    align-items: start;
+  }
+}
