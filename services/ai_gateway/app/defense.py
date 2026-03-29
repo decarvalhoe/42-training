@@ -357,7 +357,7 @@ def _generate_questions(
     questions: list[DefenseQuestion] = []
     track_id = track["id"]
     has_context = terminal_context is not None and not terminal_context.is_empty()
-    cwd = terminal_context.cwd if has_context else ""
+    cwd = terminal_context.cwd if has_context and terminal_context is not None else ""
 
     if has_context:
         templates = _CONTEXT_QUESTION_TEMPLATES.get(track_id, _CONTEXT_QUESTION_TEMPLATES["shell"])
