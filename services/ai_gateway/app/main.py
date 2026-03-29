@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .defense import compute_session_result, create_session, get_session, score_answer
+from .intent import route_intent
 from .llm_client import get_mentor_response
 from .repository import load_curriculum, load_progression
 from .retrieval import StaticSourceProvider
@@ -19,6 +20,8 @@ from .schemas import (
     DefenseResultResponse,
     DefenseStartRequest,
     DefenseStartResponse,
+    IntentRequest,
+    IntentResponse,
     LibrarianRequest,
     LibrarianResponse,
     LibrarianResult,
@@ -53,6 +56,11 @@ def source_policy() -> dict[str, object]:
     curriculum = load_curriculum()
     result: dict[str, object] = curriculum["source_policy"]
     return result
+
+
+@app.post("/api/v1/intent", response_model=IntentResponse)
+def intent_route(request: IntentRequest) -> IntentResponse:
+    return IntentResponse(**route_intent(request))  # type: ignore[arg-type]
 
 
 def _static_fallback(request: MentorRequest, focus: str, active_course: str) -> dict[str, str]:
