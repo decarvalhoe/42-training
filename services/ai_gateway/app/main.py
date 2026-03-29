@@ -30,6 +30,7 @@ from .schemas import (
 )
 
 logger = logging.getLogger(__name__)
+REQUIRED_MENTOR_FIELDS = ("observation", "question", "hint", "next_action")
 
 app = FastAPI(title="42-training AI Gateway", version="0.1.0")
 
@@ -145,6 +146,16 @@ def _build_provenance(
     return sources, confidence, trace
 
 
+def _normalize_mentor_payload(payload: dict[str, str]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for field in REQUIRED_MENTOR_FIELDS:
+        value = payload.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Mentor payload missing valid '{field}'")
+        normalized[field] = value.strip()
+    return normalized
+
+
 @app.post("/api/v1/mentor/respond", response_model=MentorResponse)
 def mentor_respond(request: MentorRequest) -> MentorResponse:
     curriculum = load_curriculum()
@@ -166,11 +177,11 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
 
     response_source = "llm"
     try:
-        llm_result = get_mentor_response(request, track_title, module_title, active_course)
-        observation = llm_result.get("observation", "")
-        question = llm_result.get("question", "")
-        hint = llm_result.get("hint", "")
-        next_action = llm_result.get("next_action", "")
+        llm_result = _normalize_mentor_payload(get_mentor_response(request, track_title, module_title, active_course))
+        observation = llm_result["observation"]
+        question = llm_result["question"]
+        hint = llm_result["hint"]
+        next_action = llm_result["next_action"]
     except Exception:
         logger.warning("LLM call failed, using static fallback", exc_info=True)
         response_source = "fallback"
