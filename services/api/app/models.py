@@ -105,9 +105,9 @@ class LearnerProfile(Base):
     )
 
     user_account: Mapped[UserAccount | None] = relationship(
-        back_populates="learner_profile",
-        uselist=False,
         foreign_keys="LearnerProfile.user_account_id",
+        uselist=False,
+        viewonly=True,
     )
     progressions: Mapped[list[Progression]] = relationship(back_populates="learner")
     evidence_items: Mapped[list[Evidence]] = relationship(back_populates="learner")
@@ -141,8 +141,8 @@ class UserAccount(Base):
     )
 
     learner_profile: Mapped[LearnerProfile | None] = relationship(
-        back_populates="user_account",
         foreign_keys="UserAccount.learner_profile_id",
+        uselist=False,
     )
     profiles: Mapped[list[LearnerProfile]] = relationship(
         back_populates="user_account",
