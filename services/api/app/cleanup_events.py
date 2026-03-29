@@ -39,7 +39,7 @@ async def _delete_before(
         .execution_options(synchronize_session=False)
     )
     result = await session.execute(stmt)
-    return int(result.rowcount or 0)
+    return int(result.rowcount or 0)  # type: ignore[attr-defined]
 
 
 async def cleanup_expired_events(
