@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .auth import router as auth_router
 from .db import get_db_session
+from .events import emit_event
 from .models import DefenseSession as DefenseSessionModel
 from .models import ReviewAttempt as ReviewAttemptModel
 from .progression_state import canonicalize_progression, get_completed_module_ids, get_module_statuses
@@ -29,6 +30,8 @@ from .schemas import (
     ModuleSkipRequest,
     ModuleStartRequest,
     ModuleStatusResponse,
+    PedagogicalEventCreate,
+    PedagogicalEventResponse,
     ProgressionResponse,
     ProgressUpdate,
     ReviewAttemptCreate,
@@ -565,3 +568,22 @@ def list_checkpoints(module_id: str) -> CheckpointListResponse:
         )
 
     return CheckpointListResponse(module_id=module_id, checkpoints=result)
+
+
+# ---------------------------------------------------------------------------
+# Pedagogical Events
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/v1/events", response_model=PedagogicalEventResponse)
+async def create_event(payload: PedagogicalEventCreate) -> PedagogicalEventResponse:
+    event_id = await emit_event(
+        payload.event_type,
+        learner_id=payload.learner_id,
+        track_id=payload.track_id,
+        module_id=payload.module_id,
+        checkpoint_index=payload.checkpoint_index,
+        source_service=payload.source_service,
+        payload=payload.payload,
+    )
+    return PedagogicalEventResponse(status="recorded", event_id=event_id)
