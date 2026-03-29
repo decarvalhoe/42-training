@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import jwt
@@ -14,10 +15,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.auth import JWT_ALGORITHM, get_jwt_secret
+from app.auth import JWT_ALGORITHM, create_access_token, get_jwt_secret, hash_password
 from app.db import get_db_session
 from app.main import app
-from app.models import Base, UserAccount
+from app.models import Base, LearnerProfile, UserAccount
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -59,6 +60,38 @@ async def _get_user_by_email(
         return result.scalar_one()
 
 
+async def _create_user_with_profile(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    email: str = "student@example.com",
+    password: str = "supersecret",
+    profile_id: str = "profile-shell",
+    login: str = "student-shell",
+    track: str = "shell",
+) -> tuple[UserAccount, LearnerProfile]:
+    async with session_factory() as session:
+        profile = LearnerProfile(
+            id=profile_id,
+            login=login,
+            track=track,
+            current_module="shell-basics",
+            runtime_state={},
+            started_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        user = UserAccount(
+            email=email,
+            password_hash=hash_password(password),
+            status="active",
+            learner_profile=profile,
+        )
+        session.add_all([profile, user])
+        await session.commit()
+        await session.refresh(user)
+        await session.refresh(profile)
+        return user, profile
+
+
 def test_register_creates_user_with_bcrypt_hash(
     auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
 ) -> None:
@@ -78,6 +111,7 @@ def test_register_creates_user_with_bcrypt_hash(
     token_payload = jwt.decode(data["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
     assert token_payload["email"] == "student@example.com"
     assert token_payload["sub"] == data["user"]["id"]
+    assert token_payload["active_profile_id"] is None
 
     user = asyncio.run(_get_user_by_email(session_factory, "student@example.com"))
     assert user.password_hash != "supersecret"
@@ -144,6 +178,143 @@ def test_me_returns_current_user_from_bearer_token(
         },
         "learner_profile": None,
     }
+
+
+def test_login_issues_token_bound_to_active_profile(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    _user, profile = asyncio.run(_create_user_with_profile(session_factory))
+
+    response = client.post("/api/v1/auth/login", json={"email": "student@example.com", "password": "supersecret"})
+
+    assert response.status_code == 200
+    data = response.json()
+    token_payload = jwt.decode(data["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    assert token_payload["active_profile_id"] == profile.id
+    assert data["learner_profile"]["id"] == profile.id
+    assert data["learner_profile"]["track"] == "shell"
+
+
+def test_me_uses_active_profile_from_token(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    user, profile = asyncio.run(_create_user_with_profile(session_factory))
+    token = create_access_token(user, profile.id)
+
+    response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    assert response.json()["learner_profile"] == {
+        "id": profile.id,
+        "login": profile.login,
+        "track": profile.track,
+        "current_module": "shell-basics",
+    }
+
+
+def test_me_falls_back_to_linked_profile_for_legacy_token(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    user, profile = asyncio.run(_create_user_with_profile(session_factory))
+    now = datetime.now(UTC)
+    legacy_token = jwt.encode(
+        {
+            "sub": user.id,
+            "email": user.email,
+            "iat": now,
+            "exp": now + timedelta(minutes=15),
+        },
+        get_jwt_secret(),
+        algorithm=JWT_ALGORITHM,
+    )
+
+    response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {legacy_token}"})
+
+    assert response.status_code == 200
+    assert response.json()["learner_profile"]["id"] == profile.id
+
+
+def test_me_rejects_token_with_unavailable_active_profile(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    user, _profile = asyncio.run(_create_user_with_profile(session_factory))
+    token = create_access_token(user, "missing-profile")
+
+    response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Active profile is no longer available"
+
+
+def test_refresh_returns_new_token_for_active_profile(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    user, profile = asyncio.run(_create_user_with_profile(session_factory))
+    token = create_access_token(user, profile.id)
+
+    response = client.post("/api/v1/auth/refresh", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    data = response.json()
+    refreshed_payload = jwt.decode(data["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    assert refreshed_payload["sub"] == user.id
+    assert refreshed_payload["active_profile_id"] == profile.id
+    assert data["learner_profile"]["id"] == profile.id
+
+
+def test_switch_profile_returns_new_token_for_selected_profile(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    user, profile = asyncio.run(_create_user_with_profile(session_factory))
+    token = create_access_token(user)
+
+    response = client.post(
+        "/api/v1/auth/switch-profile",
+        json={"profile_id": profile.id},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    switched_payload = jwt.decode(data["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    assert switched_payload["active_profile_id"] == profile.id
+    assert data["learner_profile"]["id"] == profile.id
+
+
+def test_switch_profile_rejects_unavailable_profile(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    user, profile = asyncio.run(_create_user_with_profile(session_factory))
+    token = create_access_token(user, profile.id)
+
+    response = client.post(
+        "/api/v1/auth/switch-profile",
+        json={"profile_id": "profile-c"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Profile not available for this account"
+
+
+def test_logout_requires_auth_and_returns_success(
+    auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
+) -> None:
+    client, session_factory = auth_client
+    user, profile = asyncio.run(_create_user_with_profile(session_factory))
+    token = create_access_token(user, profile.id)
+
+    response = client.post("/api/v1/auth/logout", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    assert response.json() == {"success": True}
 
 
 def test_me_requires_bearer_token(auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]]) -> None:

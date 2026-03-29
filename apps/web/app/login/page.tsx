@@ -67,8 +67,9 @@ export default function LoginPage() {
       const result = await loginWithPassword(form);
       setServerMessage(result.message);
       setSubmitState(result.ok ? "success" : "error");
-    } catch {
-      setServerMessage("The mocked login flow failed unexpectedly.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "The authentication flow failed unexpectedly.";
+      setServerMessage(message);
       setSubmitState("error");
     } finally {
       setIsSubmitting(false);
@@ -82,8 +83,8 @@ export default function LoginPage() {
           <p className="eyebrow">Authentication</p>
           <h1>Sign in with your learner account.</h1>
           <p className="lead">
-            The backend authentication flow is still in progress. This page validates client-side inputs
-            and uses a mocked password login so the web flow can be integrated now.
+            This page validates client-side inputs, calls the API authentication flow, and stores the
+            returned bearer session in the browser for the active learner profile.
           </p>
           <div className="login-highlights">
             <div className="login-highlight">
@@ -95,14 +96,13 @@ export default function LoginPage() {
               <span className="muted">Checks email format and a minimal password length.</span>
             </div>
             <div className="login-highlight">
-              <strong>Mocked backend call</strong>
-              <span className="muted">Ready to swap with the real API when auth endpoints exist.</span>
+              <strong>JWT session storage</strong>
+              <span className="muted">The browser keeps the current bearer session and active profile.</span>
             </div>
           </div>
           <p className="muted">
-            Demo note: use any valid email and a password of at least 8 characters. The address
-            <span className="prog-code"> blocked@42lausanne.ch </span>
-            returns a mocked failure state.
+            Use a registered account and a password of at least 8 characters. The API response binds the
+            session JWT to the active learner profile when one is linked to the account.
           </p>
         </article>
 
