@@ -57,9 +57,10 @@ export function TerminalPane({ session }: { session: string }) {
         <div className="terminal-pane-controls">
           <span className="terminal-pane-session">{session}</span>
           <button
+            type="button"
             className="terminal-pane-toggle"
             onClick={() => setPaused((p) => !p)}
-            title={paused ? "Resume polling" : "Pause polling"}
+            aria-label={paused ? "Resume terminal polling" : "Pause terminal polling"}
           >
             {paused ? "Resume" : "Pause"}
           </button>
@@ -71,6 +72,8 @@ export function TerminalPane({ session }: { session: string }) {
       ) : (
         <pre
           ref={preRef}
+          role="log"
+          aria-label="Terminal output"
           className="terminal-pane-content"
           style={{
             minHeight: data ? `${Math.min(data.rows, 24) * 1.3}em` : "12em",

@@ -111,7 +111,9 @@ export default function SessionsClient() {
       <div className="panel sessions-create">
         <h2>Start a new session</h2>
         <div className="sessions-form">
+          <label htmlFor="session-name" className="sr-only">Session name</label>
           <input
+            id="session-name"
             className="sessions-input"
             type="text"
             value={newName}
@@ -121,11 +123,11 @@ export default function SessionsClient() {
             maxLength={64}
             onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
           />
-          <button className="btn btn--primary" onClick={handleStart} disabled={!newName.trim()}>
+          <button type="button" className="btn btn--primary" onClick={handleStart} disabled={!newName.trim()}>
             Start
           </button>
         </div>
-        {error && <p className="sessions-error">{error}</p>}
+        {error && <p className="sessions-error" role="alert">{error}</p>}
       </div>
 
       {attachCmd && (
@@ -135,7 +137,7 @@ export default function SessionsClient() {
         </div>
       )}
 
-      <div className="panel sessions-list">
+      <div className="panel sessions-list" aria-live="polite">
         <h2>Active sessions</h2>
         {loading && <p className="muted">Loading...</p>}
         {!loading && sessions.length === 0 && (
@@ -145,11 +147,11 @@ export default function SessionsClient() {
           <table className="sessions-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Created</th>
-                <th>Windows</th>
-                <th>Attached</th>
-                <th>Actions</th>
+                <th scope="col">Name</th>
+                <th scope="col">Created</th>
+                <th scope="col">Windows</th>
+                <th scope="col">Attached</th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -160,10 +162,10 @@ export default function SessionsClient() {
                   <td>{s.windows}</td>
                   <td>{s.attached ? "yes" : "no"}</td>
                   <td className="sessions-actions">
-                    <button className="btn btn--small" onClick={() => handleAttach(s.name)}>
+                    <button type="button" className="btn btn--small" onClick={() => handleAttach(s.name)} aria-label={`Attach to ${s.name}`}>
                       Attach
                     </button>
-                    <button className="btn btn--small btn--danger" onClick={() => handleKill(s.name)}>
+                    <button type="button" className="btn btn--small btn--danger" onClick={() => handleKill(s.name)} aria-label={`Kill session ${s.name}`}>
                       Kill
                     </button>
                   </td>

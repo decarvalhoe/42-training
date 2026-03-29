@@ -8,7 +8,7 @@ export const metadata = {
 export default function SessionsPage() {
   return (
     <main className="page-shell sessions-page">
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Sessions</span>

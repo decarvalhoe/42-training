@@ -142,7 +142,7 @@ export default async function ProgressionPage() {
   return (
     <main className="page-shell">
       {/* Breadcrumb */}
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Progression</span>

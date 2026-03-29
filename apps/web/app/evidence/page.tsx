@@ -22,7 +22,7 @@ export default async function EvidencePage() {
 
   return (
     <main className="page-shell evidence-page">
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Evidence</span>
