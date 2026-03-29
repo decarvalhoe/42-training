@@ -1400,6 +1400,82 @@ a {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Terminal pane (Issue #179)                                          */
+/* ------------------------------------------------------------------ */
+
+.terminal-pane {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(28, 26, 23, 0.18);
+}
+
+.terminal-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(28, 26, 23, 0.04);
+}
+
+.terminal-pane-header .eyebrow {
+  margin: 0;
+}
+
+.terminal-pane-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.terminal-pane-session {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.terminal-pane-toggle {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.terminal-pane-toggle:hover {
+  background: rgba(28, 26, 23, 0.05);
+  color: var(--ink);
+}
+
+.terminal-pane-content {
+  margin: 0;
+  padding: 14px 16px;
+  background: #1c1a17;
+  color: #d4cfc8;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 400px;
+  white-space: pre;
+  tab-size: 8;
+}
+
+.terminal-pane-error {
+  padding: 14px 16px;
+  background: rgba(178, 76, 43, 0.08);
+  color: var(--c);
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Defense page                                                       */
 /* ------------------------------------------------------------------ */
 

@@ -19,6 +19,7 @@ from .evidence import persist_checkpoint_evidence, persist_defense_evidence, per
 from .models import DefenseSession as DefenseSessionModel
 from .models import ReviewAttempt as ReviewAttemptModel
 from .profiles import router as profiles_router
+from .tmux import router as tmux_router
 from .progression_state import canonicalize_progression, get_completed_module_ids, get_module_statuses
 from .repository import load_curriculum, load_progression, write_progression
 from .schemas import (
@@ -73,6 +74,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(profiles_router)
+app.include_router(tmux_router)
 
 
 def _default_error_code(status_code: int) -> str:
