@@ -1,4 +1,18 @@
-FROM python:3.13-slim
+# syntax=docker/dockerfile:1
+
+# ---------- deps ----------
+FROM python:3.13-slim AS deps
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /build
+COPY services/api/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
+
+# ---------- runtime ----------
+FROM python:3.13-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -6,15 +20,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY services/api/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
 
-# Copy application code
+# Application code
 COPY services/api/app ./app
 COPY services/api/alembic.ini ./alembic.ini
 COPY services/api/alembic ./alembic
 
-# Copy data files that repository.py needs (parents[3] = /app -> needs /packages and /progression.json)
+# Shared data files (repository.py resolves DATA_ROOT or traverses parents)
 COPY packages/curriculum/data /packages/curriculum/data
 COPY progression.json /progression.json
 
