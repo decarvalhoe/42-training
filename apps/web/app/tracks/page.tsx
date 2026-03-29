@@ -45,10 +45,10 @@ const STATE_ICON: Record<ModuleState, string> = {
   locked: "◇",
 };
 
-const TRACK_CLASS: Record<string, string> = {
-  shell: "track-shell",
-  c: "track-c",
-  python_ai: "track-python",
+const TRACK_COLORS: Record<string, string> = {
+  shell: "var(--shell)",
+  c: "var(--c)",
+  python_ai: "var(--python)",
 };
 
 /* ------------------------------------------------------------------ */
@@ -59,10 +59,12 @@ function TalentNode({
   mod,
   state,
   isLast,
+  trackColor,
 }: {
   mod: ModuleItem;
   state: ModuleState;
   isLast: boolean;
+  trackColor: string;
 }) {
   const phaseLabel = mod.phase.charAt(0).toUpperCase() + mod.phase.slice(1);
 
@@ -114,7 +116,7 @@ function TrackTree({
   activeTrack: string | undefined;
   activeModule: string | undefined;
 }) {
-  const trackCls = TRACK_CLASS[track.id] ?? "";
+  const trackColor = TRACK_COLORS[track.id] ?? "var(--accent)";
   const phases = [...new Set(track.modules.map((m) => m.phase))].sort(
     (a, b) => (PHASE_ORDER[a] ?? 99) - (PHASE_ORDER[b] ?? 99),
   );
@@ -162,6 +164,7 @@ function TrackTree({
                     mod={mod}
                     state={state}
                     isLast={isLastInPhase && isLastPhase}
+                    trackColor={trackColor}
                   />
                 );
               })}

@@ -65,6 +65,12 @@ const TRACK_CLASS: Record<string, string> = {
   python_ai: "track-python",
 };
 
+const TRACK_COLORS: Record<string, string> = {
+  shell: "var(--shell)",
+  c: "var(--c)",
+  python_ai: "var(--python)",
+};
+
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */

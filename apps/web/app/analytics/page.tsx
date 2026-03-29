@@ -9,6 +9,12 @@ const TRACK_CLASS: Record<string, string> = {
   python_ai: "track-python",
 };
 
+const TRACK_COLORS: Record<string, string> = {
+  shell: "var(--shell)",
+  c: "var(--c)",
+  python_ai: "var(--python)",
+};
+
 function formatMinutes(value: number): string {
   if (value >= 60) {
     return `${(value / 60).toFixed(1)} h`;
