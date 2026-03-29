@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -110,8 +110,8 @@ def _defense_session_update_payload(session: DefenseSession) -> dict[str, Any]:
 
 def _find_artifact(payload: dict[str, Any], artifact_type: str) -> dict[str, Any] | None:
     for artifact in payload.get("evidence_artifacts", []):
-        if artifact.get("type") == artifact_type:
-            return artifact
+        if isinstance(artifact, dict) and artifact.get("type") == artifact_type:
+            return cast(dict[str, Any], artifact)
     return None
 
 
@@ -166,7 +166,7 @@ def create_defense_session(session: DefenseSession) -> dict[str, Any]:
         response.raise_for_status()
     except httpx.HTTPError as exc:
         raise DefensePersistenceError("Failed to create defense session") from exc
-    return response.json()
+    return cast(dict[str, Any], response.json())
 
 
 def sync_defense_session(session: DefenseSession, *, allow_create: bool = True) -> dict[str, Any]:
@@ -183,7 +183,7 @@ def sync_defense_session(session: DefenseSession, *, allow_create: bool = True) 
         response.raise_for_status()
     except httpx.HTTPError as exc:
         raise DefensePersistenceError("Failed to update defense session") from exc
-    return response.json()
+    return cast(dict[str, Any], response.json())
 
 
 def load_defense_session(session_id: str) -> DefenseSession | None:
@@ -251,4 +251,4 @@ def persist_review_attempt(session: DefenseSession) -> dict[str, Any] | None:
 
     session.review_attempt_persisted = True
     sync_defense_session(session)
-    return response.json()
+    return cast(dict[str, Any], response.json())
