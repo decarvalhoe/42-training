@@ -1,314 +1,351 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { getDashboardData } from "@/lib/api";
-import type { ModuleItem } from "@/lib/api";
+import { getLearningContext, getTrackTheme } from "@/lib/learner-progress";
 
-/* ------------------------------------------------------------------ */
-/*  Static prerequisite map (from documented dependency graph)         */
-/* ------------------------------------------------------------------ */
-
-const PREREQUISITE_MAP: Record<string, string[]> = {
-  "shell-basics": [],
-  "shell-streams": ["shell-basics"],
-  "shell-permissions": ["shell-basics"],
-  "shell-tooling": ["shell-streams", "shell-permissions"],
-  "c-basics": ["shell-basics"],
-  "c-memory": ["c-basics"],
-  "c-build-debug": ["c-basics", "shell-streams"],
-  "c-libft-pushswap-bridge": ["c-memory", "c-build-debug"],
-  "python-basics": ["shell-basics"],
-  "python-oop-scripting": ["python-basics"],
-  "ai-rag-agents": ["python-oop-scripting"],
-};
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-function Pill({ children, variant }: { children: ReactNode; variant?: string }) {
-  const cls = variant ? `pill pill--${variant}` : "pill";
-  return <span className={cls}>{children}</span>;
+function Panel({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`border border-[var(--shell-border)] bg-[var(--shell-panel)] ${className}`}>
+      {children}
+    </section>
+  );
 }
 
-type ModuleState = "done" | "in_progress" | "todo";
+function ActionLink({
+  href,
+  label,
+  variant = "primary",
+}: {
+  href: string;
+  label: string;
+  variant?: "primary" | "secondary";
+}) {
+  const className =
+    variant === "primary"
+      ? "border-[var(--shell-success)] bg-[var(--shell-success)] text-[var(--shell-canvas)] hover:bg-[var(--shell-success-strong)]"
+      : "border-[var(--shell-border-strong)] text-[var(--shell-ink)] hover:border-[var(--shell-success)] hover:text-[var(--shell-success)]";
 
-function deriveModuleState(
-  moduleId: string,
-  trackId: string,
-  activeTrack: string,
-  activeModule: string,
-  modules: ModuleItem[],
-): ModuleState {
-  if (trackId !== activeTrack) return "todo";
-  if (moduleId === activeModule) return "in_progress";
-  const activeIndex = modules.findIndex((m) => m.id === activeModule);
-  const currentIndex = modules.findIndex((m) => m.id === moduleId);
-  if (activeIndex === -1) return "todo";
-  return currentIndex < activeIndex ? "done" : "todo";
+  return (
+    <Link
+      href={href}
+      className={`inline-flex min-h-11 items-center justify-center border px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.28em] transition-colors ${className}`}
+    >
+      {label}
+    </Link>
+  );
 }
 
-function stateLabel(state: ModuleState): string {
-  switch (state) {
-    case "done":
-      return "Completed";
-    case "in_progress":
-      return "In progress";
-    case "todo":
-      return "Not started";
-  }
+function ModuleListItem({
+  href,
+  eyebrow,
+  title,
+  detail,
+  badge,
+  accent,
+}: {
+  href: string;
+  eyebrow: string;
+  title: string;
+  detail: string;
+  badge: string;
+  accent: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="block border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4 transition-colors hover:border-[var(--shell-success)]"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-[9px] uppercase tracking-[0.28em]" style={{ color: accent }}>
+            {eyebrow}
+          </p>
+          <h3 className="mt-2 font-mono text-sm font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+            {title}
+          </h3>
+        </div>
+        <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">{badge}</span>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-[var(--shell-muted)]">{detail}</p>
+    </Link>
+  );
 }
-
-const TRACK_CLASS: Record<string, string> = {
-  shell: "track-shell",
-  c: "track-c",
-  python_ai: "track-python",
-};
-
-const TRACK_COLORS: Record<string, string> = {
-  shell: "var(--shell)",
-  c: "var(--c)",
-  python_ai: "var(--python)",
-};
-
-/* ------------------------------------------------------------------ */
-/*  Page                                                               */
-/* ------------------------------------------------------------------ */
 
 export default async function ProgressionPage() {
   const data = await getDashboardData();
-  const { curriculum, progression } = data;
+  const { progression } = data;
+  const { activeTrack, learnerMode, modules, nextReadyModule, trackStats } = getLearningContext(data);
+  const activeModules = modules.filter((entry) => entry.state === "in_progress");
+  const completedModules = modules.filter((entry) => entry.state === "done");
 
-  const activeTrack = progression.learning_plan?.active_course ?? "shell";
-  const activeModule = progression.learning_plan?.active_module ?? "";
-
-  /* Build a flat list of all modules with their state and track */
-  type ModuleWithContext = {
-    module: ModuleItem;
-    trackId: string;
-    trackTitle: string;
-    state: ModuleState;
-  };
-
-  const allModules: ModuleWithContext[] = [];
-
-  for (const track of curriculum.tracks) {
-    for (const mod of track.modules) {
-      const state = deriveModuleState(mod.id, track.id, activeTrack, activeModule, track.modules);
-      allModules.push({
-        module: mod,
-        trackId: track.id,
-        trackTitle: track.title,
-        state,
-      });
+  const stateById = new Map(modules.map((entry) => [entry.module.id, entry.state]));
+  const readyModules = modules.filter((entry) => {
+    if (entry.state !== "todo") {
+      return false;
     }
-  }
 
-  const doneModules = allModules.filter((m) => m.state === "done");
-  const inProgressModules = allModules.filter((m) => m.state === "in_progress");
-  const todoModules = allModules.filter((m) => m.state === "todo");
-
-  /* Per-track completion stats */
-  type TrackStats = {
-    id: string;
-    title: string;
-    total: number;
-    done: number;
-    percent: number;
-  };
-
-  const trackStats: TrackStats[] = curriculum.tracks.map((track) => {
-    const trackModules = allModules.filter((m) => m.trackId === track.id);
-    const done = trackModules.filter((m) => m.state === "done").length;
-    const total = trackModules.length;
-    return {
-      id: track.id,
-      title: track.title,
-      total,
-      done,
-      percent: total > 0 ? Math.round((done / total) * 100) : 0,
-    };
+    const prerequisites = entry.module.prerequisites ?? [];
+    return prerequisites.every((prerequisiteId) => stateById.get(prerequisiteId) === "done");
   });
+  const lockedModules = modules.filter((entry) => entry.state === "todo" && !readyModules.some((ready) => ready.module.id === entry.module.id));
 
-  const totalModules = allModules.length;
-  const totalDone = doneModules.length;
-  const globalPercent = totalModules > 0 ? Math.round((totalDone / totalModules) * 100) : 0;
+  const totalModules = modules.length;
+  const percentComplete = totalModules === 0 ? 0 : Math.round((completedModules.length / totalModules) * 100);
+  const activeTrackStats = trackStats.find((track) => track.id === activeTrack) ?? trackStats[0] ?? null;
 
-  /* Next recommended action: first todo module whose prerequisites are all done */
-  function prerequisitesMet(moduleId: string): boolean {
-    const prereqs = PREREQUISITE_MAP[moduleId] ?? [];
-    return prereqs.every((pid) => {
-      const entry = allModules.find((m) => m.module.id === pid);
-      return entry?.state === "done";
-    });
-  }
+  const headline =
+    learnerMode === "active"
+      ? "Keep the next move obvious"
+      : learnerMode === "returning"
+        ? "Restart from the next ready module"
+        : "Shape the first runway";
 
-  const nextRecommended = todoModules.find((m) => prerequisitesMet(m.module.id));
+  const lead =
+    learnerMode === "active"
+      ? "Progression is now the planning surface. It shows what is currently active, what can be started immediately and what remains blocked by prerequisites."
+      : learnerMode === "returning"
+        ? "The learner journey no longer lives in the home page. This surface is where you decide how to re-enter, review readiness and sequence the next modules."
+        : "Before any real momentum exists, progression should show the unlocked entry points clearly and keep the rest of the curriculum in the background.";
+
+  const primaryAction =
+    activeModules[0] !== undefined
+      ? { href: `/modules/${activeModules[0].module.id}`, label: "Resume active module" }
+      : nextReadyModule !== null
+        ? { href: `/modules/${nextReadyModule.module.id}`, label: "Start next module" }
+        : { href: "/tracks", label: "Inspect tracks" };
 
   return (
-    <main className="page-shell">
-      {/* Breadcrumb */}
-      <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link href="/">Dashboard</Link>
-        <span className="breadcrumb-sep">/</span>
-        <span>Progression</span>
-      </nav>
+    <div className="grid gap-6">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_320px]">
+        <Panel className="px-6 py-6">
+          <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
+            progression // next-step planning
+          </p>
+          <h1 className="mt-4 font-mono text-3xl font-semibold uppercase tracking-[0.08em] text-[var(--shell-ink)] md:text-4xl">
+            {headline}
+          </h1>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--shell-muted)]">{lead}</p>
 
-      {/* Header */}
-      <section className="progression-hero panel">
-        <p className="eyebrow">Personal progression</p>
-        <h1>Your learning journey</h1>
-        <p className="lead">
-          Track your progress across Shell, C and Python + AI.
-          Complete prerequisites to unlock the next modules.
-        </p>
-
-        {/* Global stats */}
-        <div className="prog-stats-grid">
-          <div className="metric-card">
-            <span>Overall</span>
-            <strong>{globalPercent}%</strong>
-            <p className="muted">{totalDone} / {totalModules} modules</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <ActionLink href={primaryAction.href} label={primaryAction.label} />
+            <ActionLink href="/dashboard" label="Open skill graph" variant="secondary" />
+            <ActionLink href="/tracks" label="Inspect tracks" variant="secondary" />
           </div>
-          {trackStats.map((ts) => (
-            <div key={ts.id} className={`metric-card ${TRACK_CLASS[ts.id] ?? ""}`}>
-              <span>{ts.title}</span>
-              <strong>{ts.percent}%</strong>
-              <div className="progress-bar">
-                <div
-                  className="progress-bar-fill"
-                  style={{ "--bar-width": `${ts.percent}%`, "--bar-color": TRACK_COLORS[ts.id] ?? "var(--accent)" } as React.CSSProperties}
-                />
-              </div>
-              <p className="muted">{ts.done} / {ts.total} modules</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Next recommended action */}
-      {nextRecommended && (
-        <section className="panel prog-next-action">
-          <p className="eyebrow">Next recommended action</p>
-          <div className="prog-next-content">
-            <div>
-              <h2>{nextRecommended.module.title}</h2>
-              <p className="muted">
-                {nextRecommended.trackTitle} &middot; {nextRecommended.module.phase}
+          <div className="mt-8 grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+              <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Overall completion</p>
+              <p className="mt-3 font-mono text-lg font-semibold text-[var(--shell-ink)]">{percentComplete}%</p>
+              <p className="mt-2 font-mono text-[10px] leading-5 text-[var(--shell-muted)]">
+                {completedModules.length}/{totalModules} modules cleared
               </p>
-              <p>{nextRecommended.module.deliverable}</p>
             </div>
-            <Link
-              href={`/modules/${nextRecommended.module.id}`}
-              className="action-btn"
-            >
-              Start module
-            </Link>
+            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+              <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Ready now</p>
+              <p className="mt-3 font-mono text-lg font-semibold text-[var(--shell-ink)]">{readyModules.length}</p>
+              <p className="mt-2 font-mono text-[10px] leading-5 text-[var(--shell-muted)]">
+                Modules that can start immediately without missing prerequisites
+              </p>
+            </div>
+            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+              <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Blocked</p>
+              <p className="mt-3 font-mono text-lg font-semibold text-[var(--shell-ink)]">{lockedModules.length}</p>
+              <p className="mt-2 font-mono text-[10px] leading-5 text-[var(--shell-muted)]">
+                Modules still waiting on earlier checkpoints
+              </p>
+            </div>
+            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+              <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Current track</p>
+              <p className="mt-3 font-mono text-lg font-semibold text-[var(--shell-ink)]">
+                {getTrackTheme(activeTrack).label}
+              </p>
+              <p className="mt-2 font-mono text-[10px] leading-5 text-[var(--shell-muted)]">
+                {activeTrackStats?.percentComplete ?? 0}% complete · {progression.progress?.current_step ?? "No active step"}
+              </p>
+            </div>
           </div>
-        </section>
-      )}
+        </Panel>
 
-      {/* Two-column body: in-progress + backlog */}
-      <section className="section split prog-body">
-        {/* In-progress checklist */}
-        <article className="panel">
-          <p className="eyebrow">In progress</p>
-          <h2>Active modules ({inProgressModules.length})</h2>
-          {inProgressModules.length === 0 ? (
-            <p className="muted">No modules in progress.</p>
-          ) : (
-            <div className="prog-checklist">
-              {inProgressModules.map((m) => (
-                <Link
-                  key={m.module.id}
-                  href={`/modules/${m.module.id}`}
-                  className="prog-checklist-item prog-checklist-item--active"
-                >
-                  <span className="prog-check prog-check--in_progress" />
-                  <div className="prog-checklist-info">
-                    <strong>{m.module.title}</strong>
-                    <span className="muted">{m.trackTitle}</span>
-                  </div>
-                  <Pill variant="in_progress">{m.module.phase}</Pill>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* Completed checklist */}
-          {doneModules.length > 0 && (
-            <>
-              <h2 className="section-heading-spaced">Completed ({doneModules.length})</h2>
-              <div className="prog-checklist">
-                {doneModules.map((m) => (
-                  <Link
-                    key={m.module.id}
-                    href={`/modules/${m.module.id}`}
-                    className="prog-checklist-item prog-checklist-item--done"
-                  >
-                    <span className="prog-check prog-check--done">{"\u2713"}</span>
-                    <div className="prog-checklist-info">
-                      <strong>{m.module.title}</strong>
-                      <span className="muted">{m.trackTitle}</span>
-                    </div>
-                    <Pill variant="done">{stateLabel("done")}</Pill>
-                  </Link>
-                ))}
+        <Panel className="px-5 py-5">
+          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Next recommended</p>
+          <div className="mt-4 border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+            <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">
+              {nextReadyModule?.trackTitle ?? "No unlocked module"}
+            </p>
+            <h2 className="mt-3 font-mono text-base font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+              {nextReadyModule?.module.title ?? "Awaiting prerequisites"}
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-[var(--shell-muted)]">
+              {nextReadyModule?.module.deliverable ?? "Complete the currently blocked prerequisites to reveal the next recommended module."}
+            </p>
+            {nextReadyModule !== null ? (
+              <div className="mt-5">
+                <ActionLink href={`/modules/${nextReadyModule.module.id}`} label="Open module" />
               </div>
-            </>
-          )}
-        </article>
-
-        {/* Backlog */}
-        <article className="panel">
-          <p className="eyebrow">Backlog</p>
-          <h2>Upcoming modules ({todoModules.length})</h2>
-          {todoModules.length === 0 ? (
-            <p className="muted">All modules started or completed.</p>
-          ) : (
-            <div className="prog-checklist">
-              {todoModules.map((m) => {
-                const met = prerequisitesMet(m.module.id);
-                return (
-                  <Link
-                    key={m.module.id}
-                    href={`/modules/${m.module.id}`}
-                    className={`prog-checklist-item ${met ? "prog-checklist-item--ready" : "prog-checklist-item--blocked"}`}
-                  >
-                    <span className={`prog-check ${met ? "prog-check--ready" : "prog-check--blocked"}`}>
-                      {met ? "\u25CB" : "\u2022"}
-                    </span>
-                    <div className="prog-checklist-info">
-                      <strong>{m.module.title}</strong>
-                      <span className="muted">{m.trackTitle}</span>
-                      {!met && (
-                        <span className="prog-blocked-label">
-                          Requires: {(PREREQUISITE_MAP[m.module.id] ?? []).join(", ")}
-                        </span>
-                      )}
-                    </div>
-                    <Pill>{m.module.phase}</Pill>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </article>
+            ) : null}
+          </div>
+        </Panel>
       </section>
 
-      {/* Current session detail */}
-      {progression.progress?.current_exercise && (
-        <section className="panel">
-          <p className="eyebrow">Current session</p>
-          <h2>{progression.progress.current_exercise}</h2>
-          <p>{progression.progress.current_step ?? ""}</p>
-          {progression.next_command && (
-            <p className="section-note-spaced">
-              Next command: <code className="prog-code">{progression.next_command}</code>
-            </p>
-          )}
-        </section>
-      )}
-    </main>
+      <section className="grid gap-4 xl:grid-cols-3">
+        <Panel className="px-5 py-5">
+          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Active</p>
+          <h2 className="mt-3 font-mono text-lg font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+            In progress
+          </h2>
+          <div className="mt-5 space-y-3">
+            {activeModules.length === 0 ? (
+              <p className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4 text-sm leading-6 text-[var(--shell-muted)]">
+                No module is currently active. Use the ready column to pick the next checkpoint.
+              </p>
+            ) : (
+              activeModules.map((entry) => (
+                <ModuleListItem
+                  key={entry.module.id}
+                  href={`/modules/${entry.module.id}`}
+                  eyebrow={entry.trackTitle}
+                  title={entry.module.title}
+                  detail={entry.module.deliverable}
+                  badge="active"
+                  accent="var(--shell-warning)"
+                />
+              ))
+            )}
+          </div>
+        </Panel>
+
+        <Panel className="px-5 py-5">
+          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Ready</p>
+          <h2 className="mt-3 font-mono text-lg font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+            Startable now
+          </h2>
+          <div className="mt-5 space-y-3">
+            {readyModules.length === 0 ? (
+              <p className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4 text-sm leading-6 text-[var(--shell-muted)]">
+                Nothing is ready yet. Clear the active module or missing prerequisites to unlock the next lane.
+              </p>
+            ) : (
+              readyModules.map((entry) => (
+                <ModuleListItem
+                  key={entry.module.id}
+                  href={`/modules/${entry.module.id}`}
+                  eyebrow={entry.trackTitle}
+                  title={entry.module.title}
+                  detail={entry.module.deliverable}
+                  badge={entry.module.phase}
+                  accent={getTrackTheme(entry.trackId).accent}
+                />
+              ))
+            )}
+          </div>
+        </Panel>
+
+        <Panel className="px-5 py-5">
+          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Completed</p>
+          <h2 className="mt-3 font-mono text-lg font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+            Cleared checkpoints
+          </h2>
+          <div className="mt-5 space-y-3">
+            {completedModules.length === 0 ? (
+              <p className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4 text-sm leading-6 text-[var(--shell-muted)]">
+                Nothing has been completed yet. The first completed module will show up here.
+              </p>
+            ) : (
+              completedModules.map((entry) => (
+                <ModuleListItem
+                  key={entry.module.id}
+                  href={`/modules/${entry.module.id}`}
+                  eyebrow={entry.trackTitle}
+                  title={entry.module.title}
+                  detail={entry.module.deliverable}
+                  badge="done"
+                  accent={getTrackTheme(entry.trackId).accent}
+                />
+              ))
+            )}
+          </div>
+        </Panel>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        <Panel className="px-6 py-6">
+          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Track pacing</p>
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            {trackStats.map((track) => {
+              const theme = getTrackTheme(track.id);
+              const focusModule = track.activeModule ?? track.nextReadyModule;
+
+              return (
+                <Link
+                  key={track.id}
+                  href={`/tracks/${track.id}`}
+                  className="border px-4 py-4 transition-colors hover:border-[var(--shell-success)]"
+                  style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+                >
+                  <p className="font-mono text-[9px] uppercase tracking-[0.28em]" style={{ color: theme.accent }}>
+                    {theme.label}
+                  </p>
+                  <h3 className="mt-3 font-mono text-base font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+                    {track.title}
+                  </h3>
+                  <div className="mt-4 h-2 overflow-hidden border border-[var(--shell-border)] bg-[var(--shell-canvas)]">
+                    <div
+                      className="h-full"
+                      style={{ width: `${track.percentComplete}%`, backgroundColor: theme.accent }}
+                    />
+                  </div>
+                  <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">
+                    {track.completedModules}/{track.totalModules} modules
+                  </p>
+                  <p className="mt-3 text-sm text-[var(--shell-ink)]">
+                    {focusModule?.title ?? "No module unlocked yet"}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </Panel>
+
+        <Panel className="px-6 py-6">
+          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Still locked</p>
+          <h2 className="mt-3 font-mono text-xl font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+            Hidden behind prerequisites
+          </h2>
+          <div className="mt-5 space-y-3">
+            {lockedModules.length === 0 ? (
+              <p className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4 text-sm leading-6 text-[var(--shell-muted)]">
+                Nothing is blocked right now. The learner can move directly into the ready lane.
+              </p>
+            ) : (
+              lockedModules.map((entry) => (
+                <div
+                  key={entry.module.id}
+                  className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4"
+                >
+                  <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">
+                    {entry.trackTitle}
+                  </p>
+                  <h3 className="mt-2 font-mono text-sm font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+                    {entry.module.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-6 text-[var(--shell-muted)]">
+                    {(entry.module.prerequisites ?? []).length === 0
+                      ? "No prerequisites listed, but the module is still waiting on graph sequencing."
+                      : `Requires: ${(entry.module.prerequisites ?? []).join(", ")}`}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </Panel>
+      </section>
+    </div>
   );
 }
