@@ -63,7 +63,7 @@ test("dashboard, analytics and defense expose demo mode explicitly when fallback
   });
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /One learning system/i })).toBeVisible();
+  await expect(page.getByText(/mission control \/\/ learner home/i)).toBeVisible();
   await expect(page.getByText("Demo mode")).toBeVisible();
 
   await page.goto("/analytics");
