@@ -1,57 +1,32 @@
 <#
 .SYNOPSIS
-    Build Windows distributables (.exe) for 42 Training.
+    Build a Windows distributable (.exe / .msi) for 42 Training.
 
 .DESCRIPTION
     1. Builds the Next.js frontend in standalone mode.
-    2. Creates Python virtualenvs for the bundled API and AI Gateway.
-    3. Stages frontend, backend and data assets under desktop/.
-    4. Runs electron-builder to produce an NSIS installer and portable .exe.
+    2. Stages the standalone bundle into desktop/frontend.
+    3. Runs electron-builder to produce an NSIS installer and portable .exe.
     Outputs land in desktop/dist/.
 
 .PREREQUISITES
     - Node.js >= 20
     - npm
-    - Python 3.13
+    - Python 3.13 (for backend services — not bundled)
+    - Docker Desktop (recommended for running backend services)
 #>
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$DesktopDir = Join-Path $RepoRoot "desktop"
-$StageDir = Join-Path $DesktopDir "staging"
-$PythonExe = (Get-Command python -ErrorAction SilentlyContinue)?.Source
-$ReleaseVersion = $env:RELEASE_VERSION
-
-if (-not $ReleaseVersion -and $env:GITHUB_REF -like 'refs/tags/v*') {
-    $ReleaseVersion = $env:GITHUB_REF.Substring(11)
-}
-
-if (-not $PythonExe) {
-    Write-Error "python is required on PATH to build the bundled desktop services."
-    exit 1
-}
 
 Write-Host "=== 42 Training Windows Build ===" -ForegroundColor Cyan
-Write-Host "Root:    $RepoRoot"
-Write-Host "Python:  $(& $PythonExe --version)"
-Write-Host "Node:    $(node --version)"
 
-# ---- Step 1: Clean previous staging ----
-Write-Host "`n[1/6] Cleaning staging directory..." -ForegroundColor Yellow
-if (Test-Path $StageDir) {
-    Remove-Item $StageDir -Recurse -Force
-}
-New-Item -ItemType Directory -Force `
-    -Path (Join-Path $StageDir "backend/api"),
-          (Join-Path $StageDir "backend/ai_gateway"),
-          (Join-Path $StageDir "frontend"),
-          (Join-Path $StageDir "data") | Out-Null
-
-# ---- Step 2: Build Next.js standalone ----
-Write-Host "`n[2/6] Building Next.js standalone..." -ForegroundColor Yellow
+# ---- Step 1: Build Next.js standalone ----
+Write-Host "`n[1/4] Building Next.js standalone..." -ForegroundColor Yellow
 Push-Location "$RepoRoot\apps\web"
-npm ci
+npm install
+if ($LASTEXITCODE -ne 0) { throw "npm install failed in apps/web" }
 npm run build
+if ($LASTEXITCODE -ne 0) { throw "npm run build failed in apps/web" }
 Pop-Location
 
 if (-not (Test-Path "$RepoRoot\apps\web\.next\standalone")) {
@@ -61,64 +36,36 @@ if (-not (Test-Path "$RepoRoot\apps\web\.next\standalone")) {
 
 Write-Host "  Next.js standalone build OK" -ForegroundColor Green
 
-# Copy standalone output into the desktop staging area
-Copy-Item "$RepoRoot\apps\web\.next\standalone\*" (Join-Path $StageDir "frontend") -Recurse -Force
-New-Item -ItemType Directory -Force -Path (Join-Path $StageDir "frontend\.next") | Out-Null
-Copy-Item "$RepoRoot\apps\web\.next\static" (Join-Path $StageDir "frontend\.next") -Recurse -Force
+# ---- Step 2: Stage frontend bundle for Electron ----
+Write-Host "`n[2/4] Staging frontend bundle..." -ForegroundColor Yellow
+$DesktopFrontend = Join-Path $RepoRoot "desktop\frontend"
+Remove-Item -LiteralPath $DesktopFrontend -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path $DesktopFrontend | Out-Null
+
+Copy-Item -Path "$RepoRoot\apps\web\.next\standalone\*" -Destination $DesktopFrontend -Recurse -Force
+New-Item -ItemType Directory -Path "$DesktopFrontend\.next" -Force | Out-Null
+Copy-Item -Path "$RepoRoot\apps\web\.next\static" -Destination "$DesktopFrontend\.next" -Recurse -Force
+
 if (Test-Path "$RepoRoot\apps\web\public") {
-    Copy-Item "$RepoRoot\apps\web\public" (Join-Path $StageDir "frontend") -Recurse -Force
+    Copy-Item -Path "$RepoRoot\apps\web\public" -Destination $DesktopFrontend -Recurse -Force
 }
 
-# ---- Step 3: Create Python virtualenvs ----
-Write-Host "`n[3/6] Creating Python virtualenvs..." -ForegroundColor Yellow
-foreach ($svc in @("api", "ai_gateway")) {
-    $srcDir = Join-Path $RepoRoot "services\$svc"
-    $dstDir = Join-Path $StageDir "backend\$svc"
+Write-Host "  Frontend bundle staged to desktop\frontend" -ForegroundColor Green
 
-    & $PythonExe -m venv "$dstDir\venv"
-    & "$dstDir\venv\Scripts\python.exe" -m pip install --upgrade pip
-    & "$dstDir\venv\Scripts\pip.exe" install -r "$srcDir\requirements.txt"
-
-    Copy-Item "$srcDir\app" $dstDir -Recurse -Force
-    Copy-Item "$srcDir\requirements.txt" $dstDir -Force
-
-    if (Test-Path "$srcDir\alembic") {
-        Copy-Item "$srcDir\alembic" $dstDir -Recurse -Force
-    }
-    if (Test-Path "$srcDir\alembic.ini") {
-        Copy-Item "$srcDir\alembic.ini" $dstDir -Force
-    }
-}
-
-Write-Host "  Python services staged OK" -ForegroundColor Green
-
-# ---- Step 4: Copy shared data ----
-Write-Host "`n[4/6] Copying shared data..." -ForegroundColor Yellow
-Copy-Item "$RepoRoot\packages\curriculum\data\42_lausanne_curriculum.json" (Join-Path $StageDir "data") -Force
-Copy-Item "$RepoRoot\progression.json" (Join-Path $StageDir "data") -Force
-
-# ---- Step 5: Assemble desktop app ----
-Write-Host "`n[5/6] Assembling Electron app..." -ForegroundColor Yellow
-Remove-Item "$DesktopDir\backend", "$DesktopDir\frontend", "$DesktopDir\data" -Recurse -Force -ErrorAction SilentlyContinue
-Move-Item (Join-Path $StageDir "backend") "$DesktopDir\backend"
-Move-Item (Join-Path $StageDir "frontend") "$DesktopDir\frontend"
-Move-Item (Join-Path $StageDir "data") "$DesktopDir\data"
-Remove-Item $StageDir -Recurse -Force
-
-Push-Location $DesktopDir
+# ---- Step 3: Install Electron deps ----
+Write-Host "`n[3/4] Installing Electron dependencies..." -ForegroundColor Yellow
+Push-Location "$RepoRoot\desktop"
 npm ci
-if ($ReleaseVersion) {
-    Write-Host "  Applying desktop version: $ReleaseVersion" -ForegroundColor Green
-    npm version $ReleaseVersion --no-git-tag-version
-}
+if ($LASTEXITCODE -ne 0) { throw "npm ci failed in desktop" }
 Pop-Location
 
 Write-Host "  Electron deps OK" -ForegroundColor Green
 
-# ---- Step 6: Build Electron distributable ----
-Write-Host "`n[6/6] Building Windows distributable..." -ForegroundColor Yellow
-Push-Location $DesktopDir
-npm run dist:win
+# ---- Step 4: Build Electron distributable ----
+Write-Host "`n[4/4] Building Windows distributable..." -ForegroundColor Yellow
+Push-Location "$RepoRoot\desktop"
+npx electron-builder --win
+if ($LASTEXITCODE -ne 0) { throw "electron-builder --win failed" }
 Pop-Location
 
 Write-Host "`n=== Build complete ===" -ForegroundColor Cyan

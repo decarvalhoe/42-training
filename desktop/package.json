@@ -1,19 +1,16 @@
 {
   "name": "42-training-desktop",
   "version": "1.0.0",
-  "description": "42-training — native desktop application",
-  "author": "42-training",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/decarvalhoe/42-training.git"
-  },
+  "description": "42-training desktop application",
   "main": "main.js",
+  "private": true,
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --publish never",
-    "dist:dmg": "electron-builder --mac dmg --publish never",
-    "dist:dir": "electron-builder --mac dir --publish never",
-    "dist:win": "electron-builder --win nsis portable --publish never"
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:dmg": "electron-builder --mac dmg",
+    "dist:dir": "electron-builder --mac dir"
   },
   "build": {
     "appId": "com.42training.desktop",
@@ -25,22 +22,25 @@
     "files": [
       "main.js",
       "preload.js",
-      "backend/**/*",
-      "frontend/**/*",
-      "data/**/*"
+      "scripts/**/*"
     ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        },
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
-      ]
-    },
+    "extraResources": [
+      {
+        "from": "frontend",
+        "to": "frontend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "data",
+        "to": "data",
+        "filter": ["**/*"]
+      }
+    ],
     "mac": {
       "category": "public.app-category.education",
       "target": [
@@ -61,19 +61,28 @@
         { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
       ]
     },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "portable": {
+      "artifactName": "42-Training-${version}-portable.exe"
+    },
     "afterSign": "scripts/notarize.js",
-    "extraResources": [
-      {
-        "from": "backend",
-        "to": "backend",
-        "filter": ["**/*"]
-      },
-      {
-        "from": "data",
-        "to": "data",
-        "filter": ["**/*"]
-      }
-    ]
+    "publish": null
   },
   "devDependencies": {
     "electron": "^33.0.0",

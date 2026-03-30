@@ -14,26 +14,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
+          cache: "npm"
           cache-dependency-path: |
             apps/web/package-lock.json
             desktop/package-lock.json
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install web dependencies
-        working-directory: apps/web
-        run: npm ci
-
-      - name: Build Next.js standalone
-        working-directory: apps/web
-        run: npm run build
-
       - name: Build Windows distributable
-        run: .\scripts\build-windows.ps1
         shell: pwsh
+        run: .\scripts\build-windows.ps1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -41,4 +31,5 @@ jobs:
           name: windows-dist
           path: |
             desktop/dist/*.exe
+            desktop/dist/*.msi
           retention-days: 30
