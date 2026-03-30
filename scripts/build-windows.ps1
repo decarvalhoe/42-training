@@ -20,6 +20,11 @@ $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $DesktopDir = Join-Path $RepoRoot "desktop"
 $StageDir = Join-Path $DesktopDir "staging"
 $PythonExe = (Get-Command python -ErrorAction SilentlyContinue)?.Source
+$ReleaseVersion = $env:RELEASE_VERSION
+
+if (-not $ReleaseVersion -and $env:GITHUB_REF -like 'refs/tags/v*') {
+    $ReleaseVersion = $env:GITHUB_REF.Substring(11)
+}
 
 if (-not $PythonExe) {
     Write-Error "python is required on PATH to build the bundled desktop services."
@@ -102,6 +107,10 @@ Remove-Item $StageDir -Recurse -Force
 
 Push-Location $DesktopDir
 npm ci
+if ($ReleaseVersion) {
+    Write-Host "  Applying desktop version: $ReleaseVersion" -ForegroundColor Green
+    npm version $ReleaseVersion --no-git-tag-version
+}
 Pop-Location
 
 Write-Host "  Electron deps OK" -ForegroundColor Green
