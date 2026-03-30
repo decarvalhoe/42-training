@@ -187,21 +187,20 @@ The output from `get_design_context` is a **reference**, not final code. Always 
 
 ### Adaptation checklist
 
-1. **Replace Tailwind classes** with existing CSS classes from `globals.css` or new BEM-style classes
-2. **Use CSS custom properties** (`var(--accent)`) instead of raw hex values
-3. **Match the component pattern** — server components for data fetching, client components (`"use client"`) for interactivity
-4. **Reuse existing components** before creating new ones:
+1. **Use the canonical shell first** — authenticated pages should compose inside the shared `AppShell` instead of inventing local chrome
+2. **Prefer Tailwind for new layout work** and reserve global CSS for tokens, reset and legacy compatibility
+3. **Use CSS custom properties** (`var(--shell-success)`) instead of raw hex values
+4. **Match the component pattern** — server components for data fetching, client components (`"use client"`) for interactivity
+5. **Reuse existing components** before creating new ones:
+   - `AppShell` for authenticated frame, top bar and rail behavior
    - `SourcePolicyBadge` for trust tier indicators
    - `TerminalPane` for terminal output display
    - `TmuxSessions` for session lists
-   - `Pill` (inline in pages) for badges
-5. **Follow the layout structure**:
-   - `<main className="page-shell">` for page wrapper
-   - `.panel` for card containers
-   - `.section` / `.section-heading` for content areas
-   - `.breadcrumb` for navigation context
-6. **Check for design annotations** — notes from the designer override default assumptions
-7. **Check for Code Connect mappings** — if a Figma component has a Code Connect mapping, use the mapped codebase component directly
+6. **Follow the layout structure**:
+   - authenticated surfaces live inside the canonical shell
+   - page-level content can still use `.page-shell`, `.panel`, `.section` and `.breadcrumb` while legacy pages are being migrated
+7. **Check for design annotations** — notes from the designer override default assumptions
+8. **Check for Code Connect mappings** — if a Figma component has a Code Connect mapping, use the mapped codebase component directly
 
 ### Example workflow
 
@@ -209,11 +208,11 @@ The output from `get_design_context` is a **reference**, not final code. Always 
 1. Get Figma URL from the designer
 2. Parse fileKey and nodeId
 3. Call get_design_context → get reference code + screenshot
-4. Identify reusable components (panel, pill, action-btn, etc.)
+4. Identify reusable shell and component primitives first
 5. Create or edit the page in apps/web/app/<feature>/page.tsx
-6. Map Figma tokens → CSS custom properties
-7. Add new CSS classes to globals.css if needed (BEM naming)
-8. Verify with tsc --noEmit and visual check
+6. Implement new layout composition with Tailwind and semantic tokens
+7. Extend global CSS only for tokens, reset or legacy compatibility when necessary
+8. Verify with tsc --noEmit, lint and visual check
 ```
 
 ---
@@ -232,7 +231,7 @@ Use `get_code_connect_suggestions` to see which Figma components can be mapped, 
 |----------------|------------|------|
 | Source badge | `<SourcePolicyBadge tier={tier} />` | `app/components/SourcePolicyBadge.tsx` |
 | Terminal pane | `<TerminalPane session={name} />` | `app/components/TerminalPane.tsx` |
-| Navigation header | `<NavHeader />` | `app/components/NavHeader.tsx` |
+| App shell | `<AppShell>{children}</AppShell>` | `app/components/AppShell.tsx` |
 | Auth status | `<AuthStatus />` | `app/components/AuthStatus.tsx` |
 | Boot sequence | `<BootSequence lines={lines} />` | `app/components/BootSequence.tsx` |
 | Tmux sessions | `<TmuxSessions sessions={sessions} />` | `app/components/TmuxSessions.tsx` |
@@ -270,10 +269,11 @@ Always load the `figma-use` skill **before** calling `use_figma`. This skill pro
 
 ## Component inventory
 
-### CSS class reference for Figma mapping
+### CSS class and component reference for Figma mapping
 
 | Visual pattern | CSS class(es) | Notes |
 |---------------|--------------|-------|
+| Authenticated shell | `AppShell` | Canonical top bar, sidebar rail and responsive shell behavior |
 | Page wrapper | `.page-shell` | max-width: 1280px, centered grid |
 | Card / panel | `.panel` | Backdrop blur, rounded corners, shadow |
 | Hero section | `.hero`, `.hero-copy` | Top-of-page feature area |
@@ -306,16 +306,16 @@ Always load the `figma-use` skill **before** calling `use_figma`. This skill pro
 ### Do
 
 - Map Figma color styles to CSS custom properties, not raw hex
-- Use the existing spacing scale (4-6-8-10-12-14-16-18-20px)
-- Follow BEM-like naming for new CSS classes (`.feature-element--modifier`)
-- Add new styles to the end of `globals.css` under a section comment
+- Use the existing spacing scale (4-6-8-10-12-14-16-18-20px) as the token baseline
+- Prefer Tailwind for new layout and shell composition work
+- Keep global CSS focused on tokens, reset and legacy compatibility
 - Verify TypeScript compiles after implementing (`npx tsc --noEmit`)
 - Prefer server components; use `"use client"` only when state or interactivity is needed
 
 ### Do not
 
-- Do not introduce Tailwind, CSS modules, or styled-components
-- Do not duplicate existing CSS patterns — check `globals.css` first
+- Do not create new page-level layout systems outside the canonical shell
+- Do not duplicate existing shell and token patterns
 - Do not inline styles unless the value is dynamic (e.g., computed dimensions)
 - Do not add UI polish disconnected from pedagogical value (per CLAUDE.md)
 - Do not bypass the architecture boundaries (`apps/web` is presentation only)

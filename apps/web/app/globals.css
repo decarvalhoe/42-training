@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 /* ------------------------------------------------------------------ */
 /*  Design tokens                                                      */
 /* ------------------------------------------------------------------ */
@@ -7,7 +9,7 @@
 
   /* --- Base palette --- */
   --bg: #f7f0e5;
-  --bg-warm: var(--bg-warm);
+  --bg-warm: #efe4d2;
   --panel: rgba(255, 252, 247, 0.86);
   --white: #fff;
   --ink: #1c1a17;
@@ -105,6 +107,43 @@
 
   /* --- Shadows --- */
   --shadow: 0 18px 40px rgba(50, 40, 20, 0.12);
+
+  /* --- HUD shell tokens --- */
+  --shell-canvas: #111114;
+  --shell-sidebar: #17191d;
+  --shell-panel: #1b1d22;
+  --shell-border: #2d2f36;
+  --shell-border-strong: #3a3d46;
+  --shell-ink: #e0e4e9;
+  --shell-muted: #808690;
+  --shell-dim: #50545c;
+  --shell-success: #00e06e;
+  --shell-success-strong: #15f482;
+  --shell-warning: #f7be16;
+  --shell-danger: #ff5d5d;
+}
+
+:root,
+[data-theme="hacker-hud"] {
+  --theme-surface: var(--shell-canvas);
+}
+
+[data-theme="warm-classic"] {
+  --theme-surface: var(--bg);
+}
+
+[data-contrast="high"] {
+  --shell-border: #515763;
+  --shell-border-strong: #7d8593;
+  --shell-muted: #a6afbf;
+}
+
+[data-density="compact"] {
+  --shell-density-gap: 12px;
+}
+
+[data-density="comfortable"] {
+  --shell-density-gap: 16px;
 }
 
 /* ------------------------------------------------------------------ */

@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
+import { AppShell } from "@/app/components/AppShell";
 import { useAuth } from "@/app/components/AuthProvider";
 
 const PUBLIC_PATHS = new Set(["/login"]);
@@ -15,7 +16,7 @@ function normalizeNextPath(value: string | null) {
   return value;
 }
 
-export function AuthGuard({ children, header }: { children: ReactNode; header: ReactNode }) {
+export function AuthGuard({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -44,12 +45,7 @@ export function AuthGuard({ children, header }: { children: ReactNode; header: R
   }
 
   if (status === "authenticated") {
-    return (
-      <>
-        {header}
-        {children}
-      </>
-    );
+    return <AppShell>{children}</AppShell>;
   }
 
   return (
