@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import {
+  GuidedActionButton,
+  GuidedBadge,
+  GuidedField,
+  GuidedPanel,
+  GuidedSelect,
+  GuidedStatusBar,
+  GuidedTextarea,
+  GuidedSidebarSection,
+} from "@/app/components/GuidedSurface";
 import { TerminalPane } from "@/app/components/TerminalPane";
-
-/* ------------------------------------------------------------------ */
-/*  Types matching the AI Gateway defense API                          */
-/* ------------------------------------------------------------------ */
 
 type DefenseQuestion = {
   question_id: string;
@@ -61,11 +67,18 @@ type DefenseResultResponse = {
   question_results: QuestionResult[];
 };
 
-type Phase = "setup" | "active" | "results";
+type QuestionProgress = {
+  questionId: string;
+  question: string;
+  skill: string;
+  answer: string;
+  score: number;
+  feedback: string;
+  timedOut: boolean;
+  elapsedSeconds: number;
+};
 
-/* ------------------------------------------------------------------ */
-/*  Module / track data passed from the server component               */
-/* ------------------------------------------------------------------ */
+type Phase = "setup" | "active" | "results";
 
 type ModuleOption = {
   id: string;
@@ -73,6 +86,8 @@ type ModuleOption = {
   phase: string;
   trackId: string;
   trackTitle: string;
+  skillCount: number;
+  deliverable: string;
 };
 
 type TmuxSessionOption = {
@@ -85,14 +100,34 @@ type Props = {
   modules: ModuleOption[];
   apiUrl: string;
   tmuxSessions?: TmuxSessionOption[];
+  sourceMode: "live" | "demo";
 };
 
-/* ------------------------------------------------------------------ */
-/*  Component                                                          */
-/* ------------------------------------------------------------------ */
+function formatTimer(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+}
 
-export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Props) {
-  /* Setup state */
+function formatFiveScale(score: number) {
+  return (score * 5).toFixed(1);
+}
+
+function scoreBars(score: number | null) {
+  if (score === null) {
+    return "░░░░░░░░░░";
+  }
+
+  const filled = Math.max(0, Math.min(10, Math.round(score * 10)));
+  return `${"█".repeat(filled)}${"░".repeat(10 - filled)}`;
+}
+
+export default function DefenseClient({
+  modules,
+  apiUrl,
+  tmuxSessions = [],
+  sourceMode,
+}: Props) {
   const [selectedModule, setSelectedModule] = useState(modules[0]?.id ?? "");
   const [numQuestions, setNumQuestions] = useState(3);
   const [timeLimit, setTimeLimit] = useState(60);
@@ -100,7 +135,6 @@ export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Pr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* Session state */
   const [phase, setPhase] = useState<Phase>("setup");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<DefenseQuestion[]>([]);
@@ -108,7 +142,6 @@ export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Pr
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
-  /* Answer state */
   const [answer, setAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [lastFeedback, setLastFeedback] = useState<{
@@ -116,130 +149,173 @@ export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Pr
     feedback: string;
     timed_out: boolean;
   } | null>(null);
+  const [history, setHistory] = useState<QuestionProgress[]>([]);
 
-  /* Results state */
   const [results, setResults] = useState<DefenseResultResponse | null>(null);
 
-  /* Derived */
-  const currentModule = modules.find((m) => m.id === selectedModule);
+  const currentModule = modules.find((module) => module.id === selectedModule) ?? modules[0] ?? null;
   const currentQuestion = questions[activeQuestionIndex] ?? null;
-
-  /* ---------------------------------------------------------------- */
-  /*  Timer                                                            */
-  /* ---------------------------------------------------------------- */
+  const currentTmux = tmuxSessions.find((session) => session.name === selectedTmux) ?? null;
 
   useEffect(() => {
-    if (phase !== "active" || !deadline) return;
+    if (phase !== "active" || deadline === null) {
+      return;
+    }
 
     const tick = () => {
-      const remaining = Math.max(
-        0,
-        Math.ceil((deadline.getTime() - Date.now()) / 1000)
-      );
+      const remaining = Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 1000));
       setSecondsLeft(remaining);
     };
 
     tick();
-    const interval = setInterval(tick, 500);
-    return () => clearInterval(interval);
+    const intervalId = setInterval(tick, 500);
+    return () => clearInterval(intervalId);
   }, [phase, deadline]);
 
-  /* ---------------------------------------------------------------- */
-  /*  Start defense                                                    */
-  /* ---------------------------------------------------------------- */
+  const runningScore = useMemo(() => {
+    if (history.length === 0) {
+      return null;
+    }
+
+    const average = history.reduce((total, item) => total + item.score, 0) / history.length;
+    return average;
+  }, [history]);
+
+  const breakdown = useMemo(() => {
+    return questions.map((question) => {
+      const entry = history.find((item) => item.questionId === question.question_id) ?? null;
+      return {
+        id: question.question_id,
+        label: `Q${questions.findIndex((candidate) => candidate.question_id === question.question_id) + 1}`,
+        score: entry?.score ?? null,
+      };
+    });
+  }, [history, questions]);
+
+  const evidenceLines = useMemo(() => {
+    const lines = [
+      `${currentModule?.id ?? "module"} // armed`,
+      `${currentModule?.deliverable ?? "deliverable pending"} // target`,
+    ];
+
+    if (currentTmux !== null) {
+      lines.push(`${currentTmux.name} // ${currentTmux.status}`);
+    }
+
+    if (history.length > 0) {
+      lines.push(`${history.length} answers // captured`);
+    }
+
+    return lines.slice(0, 4);
+  }, [currentModule, currentTmux, history.length]);
 
   async function handleStart() {
-    if (!selectedModule) return;
+    if (!selectedModule || currentModule === null) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
-    const trackId = currentModule?.trackId ?? "shell";
-    const modulePhase = currentModule?.phase ?? "foundation";
+    let terminalContext: Record<string, unknown> | undefined;
+    if (selectedTmux) {
+      try {
+        const paneResponse = await fetch(`${apiUrl}/api/v1/tmux/pane/${encodeURIComponent(selectedTmux)}`);
+        if (paneResponse.ok) {
+          const pane = await paneResponse.json();
+          terminalContext = { panes: { [selectedTmux]: pane.content } };
+        }
+      } catch {
+        // Terminal context is optional.
+      }
+    }
 
     try {
-      /* Capture terminal context if a tmux session is selected */
-      let terminalContext: Record<string, unknown> | undefined;
-      if (selectedTmux) {
-        try {
-          const paneRes = await fetch(
-            `${apiUrl}/api/v1/tmux/pane/${encodeURIComponent(selectedTmux)}`
-          );
-          if (paneRes.ok) {
-            const pane = await paneRes.json();
-            terminalContext = {
-              panes: { [selectedTmux]: pane.content },
-            };
-          }
-        } catch {
-          /* Terminal context is optional — proceed without it */
-        }
-      }
-
-      const res = await fetch(`${apiUrl}/api/v1/defense/start`, {
+      const response = await fetch(`${apiUrl}/api/v1/defense/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          track_id: trackId,
+          track_id: currentModule.trackId,
           module_id: selectedModule,
-          phase: modulePhase,
+          phase: currentModule.phase,
           num_questions: numQuestions,
           question_time_limit_seconds: timeLimit,
-          ...(terminalContext && { terminal_context: terminalContext }),
+          ...(terminalContext ? { terminal_context: terminalContext } : {}),
         }),
       });
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(body.detail ?? `API error ${res.status}`);
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ detail: response.statusText }));
+        throw new Error(body.detail ?? `API error ${response.status}`);
       }
 
-      const data: DefenseStartResponse = await res.json();
-
+      const data = (await response.json()) as DefenseStartResponse;
       setSessionId(data.session_id);
       setQuestions(data.questions);
       setActiveQuestionIndex(0);
       setAnswer("");
       setLastFeedback(null);
       setResults(null);
-
-      if (data.current_question_deadline) {
-        setDeadline(new Date(data.current_question_deadline));
-      }
-
+      setHistory([]);
+      setDeadline(data.current_question_deadline ? new Date(data.current_question_deadline) : null);
       setPhase("active");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start defense");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to start defense");
     } finally {
       setLoading(false);
     }
   }
 
-  /* ---------------------------------------------------------------- */
-  /*  Submit answer                                                    */
-  /* ---------------------------------------------------------------- */
+  async function fetchResults(currentSessionId: string) {
+    const response = await fetch(`${apiUrl}/api/v1/defense/${currentSessionId}/result`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch results: ${response.status}`);
+    }
 
-  async function handleSubmitAnswer() {
-    if (!sessionId || !currentQuestion || submitting) return;
+    const data = (await response.json()) as DefenseResultResponse;
+    setResults(data);
+    setPhase("results");
+  }
+
+  async function handleSubmitAnswer(answerToSend: string) {
+    if (sessionId === null || currentQuestion === null || submitting) {
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
     try {
-      const res = await fetch(`${apiUrl}/api/v1/defense/answer`, {
+      const response = await fetch(`${apiUrl}/api/v1/defense/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: sessionId,
           question_id: currentQuestion.question_id,
-          answer,
+          answer: answerToSend,
         }),
       });
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(body.detail ?? `API error ${res.status}`);
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ detail: response.statusText }));
+        throw new Error(body.detail ?? `API error ${response.status}`);
       }
 
-      const data: DefenseAnswerResponse = await res.json();
+      const data = (await response.json()) as DefenseAnswerResponse;
+
+      setHistory((previous) => [
+        ...previous,
+        {
+          questionId: currentQuestion.question_id,
+          question: currentQuestion.text,
+          skill: currentQuestion.skill,
+          answer: answerToSend,
+          score: data.score,
+          feedback: data.feedback,
+          timedOut: data.timed_out,
+          elapsedSeconds: data.elapsed_seconds,
+        },
+      ]);
 
       setLastFeedback({
         score: data.score,
@@ -248,54 +324,21 @@ export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Pr
       });
 
       if (data.questions_remaining === 0) {
-        /* Fetch final results */
-        await fetchResults();
+        await fetchResults(sessionId);
       } else {
-        /* Move to next question after a brief pause to show feedback */
         setTimeout(() => {
-          setActiveQuestionIndex((i) => i + 1);
+          setActiveQuestionIndex((value) => value + 1);
           setAnswer("");
           setLastFeedback(null);
-          if (data.next_question_deadline) {
-            setDeadline(new Date(data.next_question_deadline));
-          }
-        }, 2500);
+          setDeadline(data.next_question_deadline ? new Date(data.next_question_deadline) : null);
+        }, 1800);
       }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to submit answer"
-      );
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to submit answer");
     } finally {
       setSubmitting(false);
     }
   }
-
-  /* ---------------------------------------------------------------- */
-  /*  Fetch results                                                    */
-  /* ---------------------------------------------------------------- */
-
-  const fetchResults = useCallback(async () => {
-    if (!sessionId) return;
-    try {
-      const res = await fetch(
-        `${apiUrl}/api/v1/defense/${sessionId}/result`
-      );
-      if (!res.ok) {
-        throw new Error(`Failed to fetch results: ${res.status}`);
-      }
-      const data: DefenseResultResponse = await res.json();
-      setResults(data);
-      setPhase("results");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch results"
-      );
-    }
-  }, [sessionId, apiUrl]);
-
-  /* ---------------------------------------------------------------- */
-  /*  Reset                                                            */
-  /* ---------------------------------------------------------------- */
 
   function handleReset() {
     setPhase("setup");
@@ -307,274 +350,362 @@ export default function DefenseClient({ modules, apiUrl, tmuxSessions = [] }: Pr
     setResults(null);
     setError(null);
     setDeadline(null);
+    setHistory([]);
   }
 
-  /* ---------------------------------------------------------------- */
-  /*  Render: Setup                                                    */
-  /* ---------------------------------------------------------------- */
+  const sidebar = (
+    <GuidedPanel className="flex flex-col gap-5 px-4 py-4">
+      <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.28em] text-[var(--shell-dim)]">
+        ◂ collapse
+      </p>
+
+      <GuidedSidebarSection label="Running score">
+        <div className="space-y-1">
+          <p className="font-mono text-4xl font-bold text-[var(--shell-warning)]">
+            {runningScore === null ? "__ / 5" : `${formatFiveScale(runningScore)} / 5`}
+          </p>
+          <GuidedBadge tone={sourceMode === "live" ? "success" : "warning"}>
+            {sourceMode === "live" ? "API live" : "demo mode"}
+          </GuidedBadge>
+        </div>
+      </GuidedSidebarSection>
+
+      <GuidedSidebarSection label="Breakdown">
+        <div className="space-y-1 font-mono text-[10px] leading-5 text-[var(--shell-ink)]">
+          {breakdown.length === 0 ? (
+            <p>No question started yet</p>
+          ) : (
+            breakdown.map((entry) => (
+              <p key={entry.id}>
+                {entry.label} {scoreBars(entry.score)} {entry.score === null ? "___" : `${Math.round(entry.score * 5)}/5`}
+              </p>
+            ))
+          )}
+        </div>
+      </GuidedSidebarSection>
+
+      <GuidedSidebarSection label="Evidence">
+        <div className="space-y-1 font-mono text-[9px] leading-5 text-[var(--shell-success)]">
+          {evidenceLines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      </GuidedSidebarSection>
+
+      <GuidedSidebarSection label="Rules">
+        <div className="space-y-1 font-mono text-[9px] leading-5 text-[var(--shell-dim)]">
+          <p>&gt; {timeLimit}s per question</p>
+          <p>&gt; no external docs</p>
+          <p>&gt; explain reasoning</p>
+          <p>&gt; live answer only</p>
+          <p>&gt; minimum 3/5 to pass</p>
+        </div>
+      </GuidedSidebarSection>
+
+      <GuidedSidebarSection label="Terminal snapshot">
+        <div className="space-y-1 font-mono text-[9px] leading-5 text-[var(--shell-success)]">
+          <p>cwd: {currentTmux?.name ?? "detached"}</p>
+          <p>status: {currentTmux?.status ?? "standby"}</p>
+          <p>attached: {currentTmux?.attached ? "yes" : "no"}</p>
+          <p>answers: {history.length}</p>
+        </div>
+      </GuidedSidebarSection>
+    </GuidedPanel>
+  );
 
   if (phase === "setup") {
     return (
-      <section className="defense-setup panel">
-        <p className="eyebrow">Configuration</p>
-        <h2>Start a defense session</h2>
-        <p className="muted">
-          Select a module and configure the session parameters. You will be
-          asked timed questions about the module skills. Explain your
-          understanding clearly — no solutions are provided.
-        </p>
+      <div className="grid gap-4">
+        <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+          {sidebar}
 
-        {error && <p className="defense-error">{error}</p>}
-
-        <div className="defense-form">
-          <label className="defense-field">
-            <span>Module</span>
-            <select
-              value={selectedModule}
-              onChange={(e) => setSelectedModule(e.target.value)}
-            >
-              {modules.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.trackTitle} — {m.title} ({m.phase})
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="defense-field-row">
-            <label className="defense-field">
-              <span>Questions</span>
-              <select
-                value={numQuestions}
-                onChange={(e) => setNumQuestions(Number(e.target.value))}
-              >
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="defense-field">
-              <span>Time per question</span>
-              <select
-                value={timeLimit}
-                onChange={(e) => setTimeLimit(Number(e.target.value))}
-              >
-                {[30, 45, 60, 90, 120, 180].map((s) => (
-                  <option key={s} value={s}>
-                    {s}s
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {tmuxSessions.length > 0 && (
-            <label className="defense-field">
-              <span>Terminal session (optional)</span>
-              <select
-                value={selectedTmux}
-                onChange={(e) => setSelectedTmux(e.target.value)}
-              >
-                <option value="">None — no terminal context</option>
-                {tmuxSessions.map((s) => (
-                  <option key={s.name} value={s.name}>
-                    {s.name} ({s.status}{s.attached ? ", attached" : ""})
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <button
-            className="action-btn"
-            onClick={handleStart}
-            disabled={loading || !selectedModule}
-          >
-            {loading ? "Starting..." : "Begin defense"}
-          </button>
-        </div>
-      </section>
-    );
-  }
-
-  /* ---------------------------------------------------------------- */
-  /*  Render: Active session                                           */
-  /* ---------------------------------------------------------------- */
-
-  if (phase === "active" && currentQuestion) {
-    const timerWarning = secondsLeft <= 15 && secondsLeft > 0;
-    const timerCritical = secondsLeft <= 5;
-
-    const qaColumn = (
-      <div className="defense-qa-column">
-        {/* Progress bar */}
-        <div className="defense-progress panel">
-          <div className="defense-progress-header">
-            <span className="eyebrow">
-              Question {activeQuestionIndex + 1} of {questions.length}
-            </span>
-            <span
-              role="timer"
-              aria-live="off"
-              aria-label={`${secondsLeft} seconds remaining`}
-              className={`defense-timer ${timerWarning ? "defense-timer--warning" : ""} ${timerCritical ? "defense-timer--critical" : ""}`}
-            >
-              {secondsLeft}s
-            </span>
-          </div>
-          <div className="progress-bar">
-            <div
-              className="progress-bar-fill"
-              style={{ "--bar-width": `${((activeQuestionIndex + 1) / questions.length) * 100}%`, "--bar-color": "var(--accent)" } as React.CSSProperties}
-            />
-          </div>
-        </div>
-
-        {/* Question */}
-        <div className="defense-question panel">
-          <div className="defense-question-meta">
-            <span className="pill">{currentQuestion.skill}</span>
-          </div>
-          <p className="defense-question-text">{currentQuestion.text}</p>
-        </div>
-
-        {/* Feedback (shown briefly after answering) */}
-        {lastFeedback && (
-          <div
-            role="status"
-            aria-live="polite"
-            className={`defense-feedback panel ${lastFeedback.score >= 0.7 ? "defense-feedback--good" : lastFeedback.score >= 0.4 ? "defense-feedback--partial" : "defense-feedback--low"}`}
-          >
-            <div className="defense-feedback-header">
-              <strong>
-                Score: {Math.round(lastFeedback.score * 100)}%
-              </strong>
-              {lastFeedback.timed_out && (
-                <span className="pill pill--in_progress">Timed out</span>
-              )}
-            </div>
-            <p>{lastFeedback.feedback}</p>
-          </div>
-        )}
-
-        {/* Answer form */}
-        {!lastFeedback && (
-          <div className="defense-answer panel">
-            {error && <p className="defense-error" role="alert">{error}</p>}
-            <label className="defense-field">
-              <span>Your explanation</span>
-              <textarea
-                className="defense-textarea"
-                rows={5}
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Explain your understanding of this concept in your own words..."
-                disabled={submitting}
-              />
-            </label>
-            <button
-              className="action-btn"
-              onClick={handleSubmitAnswer}
-              disabled={submitting || answer.trim().length === 0}
-            >
-              {submitting ? "Submitting..." : "Submit answer"}
-            </button>
-          </div>
-        )}
-      </div>
-    );
-
-    return (
-      <section className={`defense-active ${selectedTmux ? "defense-active--split" : ""}`}>
-        {qaColumn}
-        {selectedTmux && (
-          <div className="defense-terminal-column">
-            <TerminalPane session={selectedTmux} />
-          </div>
-        )}
-      </section>
-    );
-  }
-
-  /* ---------------------------------------------------------------- */
-  /*  Render: Results                                                  */
-  /* ---------------------------------------------------------------- */
-
-  if (phase === "results" && results) {
-    return (
-      <section className="defense-results">
-        {/* Summary */}
-        <div
-          className={`defense-results-hero panel ${results.passed ? "defense-results-hero--passed" : "defense-results-hero--failed"}`}
-        >
-          <p className="eyebrow">Defense complete</p>
-          <h2>{results.passed ? "Passed" : "Not passed"}</h2>
-          <p className="defense-results-score">
-            {Math.round(results.overall_score * 100)}%
-          </p>
-          <p>{results.summary}</p>
-          {results.timed_out_questions > 0 && (
-            <p className="muted">
-              {results.timed_out_questions} question(s) timed out
-            </p>
-          )}
-        </div>
-
-        {/* Per-question results */}
-        <div className="defense-results-list">
-          {results.question_results.map((qr, i) => (
-            <div
-              key={qr.question_id}
-              className={`defense-result-card panel ${qr.score >= 0.7 ? "defense-result-card--good" : qr.score >= 0.4 ? "defense-result-card--partial" : "defense-result-card--low"}`}
-            >
-              <div className="defense-result-header">
-                <span className="eyebrow">Question {i + 1}</span>
-                <span className="pill">{qr.skill}</span>
+          <div className="grid gap-4">
+            <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[rgba(255,65,65,0.3)] bg-[rgba(255,65,65,0.05)] px-6 py-3">
+              <div>
+                <p className="font-mono text-[13px] font-bold uppercase tracking-[0.22em] text-[var(--shell-danger)]">
+                  Defense // {currentModule?.id ?? "no-module"}
+                </p>
               </div>
-              <p className="defense-result-question">{qr.question}</p>
-              <div className="defense-result-meta">
-                <strong>{Math.round(qr.score * 100)}%</strong>
-                {qr.timed_out && (
-                  <span className="pill pill--in_progress">Timed out</span>
-                )}
-                {!qr.answered && (
-                  <span className="pill pill--todo">Not answered</span>
-                )}
-                <span className="muted">
-                  {qr.elapsed_seconds.toFixed(1)}s
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-[var(--shell-warning)]">
+                  timer: {formatTimer(timeLimit)} / {formatTimer(timeLimit)}
+                </span>
+                <span className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--shell-ink)]">
+                  q 0/{numQuestions}
                 </span>
               </div>
-              <p className="defense-result-feedback">{qr.feedback}</p>
-            </div>
-          ))}
+            </GuidedPanel>
+
+            <GuidedPanel className="px-6 py-6">
+              <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
+                oral defense // guided review
+              </p>
+              <h1 className="mt-4 font-mono text-3xl font-semibold uppercase tracking-[0.08em] text-[var(--shell-ink)]">
+                Defense and guided review
+              </h1>
+              <h2 className="mt-6 font-mono text-lg font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+                Start a defense session
+              </h2>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--shell-muted)]">
+                Configure the oral defense exactly once, attach terminal context if needed, then answer timed questions in your own words.
+                This flow stays strict on reasoning quality and never falls back to solution-style hints.
+              </p>
+
+              {error ? (
+                <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]" role="alert">
+                  {error}
+                </p>
+              ) : null}
+
+              <div className="mt-8 grid gap-4 lg:grid-cols-2">
+                <GuidedField label="Module">
+                  <GuidedSelect value={selectedModule} onChange={(event) => setSelectedModule(event.target.value)}>
+                    {modules.map((module) => (
+                      <option key={module.id} value={module.id}>
+                        {module.trackTitle} — {module.title} ({module.phase})
+                      </option>
+                    ))}
+                  </GuidedSelect>
+                </GuidedField>
+
+                <GuidedField label="Terminal session">
+                  <GuidedSelect value={selectedTmux} onChange={(event) => setSelectedTmux(event.target.value)}>
+                    <option value="">None — no terminal context</option>
+                    {tmuxSessions.map((session) => (
+                      <option key={session.name} value={session.name}>
+                        {session.name} ({session.status}
+                        {session.attached ? ", attached" : ""})
+                      </option>
+                    ))}
+                  </GuidedSelect>
+                </GuidedField>
+
+                <GuidedField label="Questions">
+                  <GuidedSelect value={numQuestions} onChange={(event) => setNumQuestions(Number(event.target.value))}>
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </GuidedSelect>
+                </GuidedField>
+
+                <GuidedField label="Time per question">
+                  <GuidedSelect value={timeLimit} onChange={(event) => setTimeLimit(Number(event.target.value))}>
+                    {[30, 45, 60, 90, 120, 180].map((value) => (
+                      <option key={value} value={value}>
+                        {value}s
+                      </option>
+                    ))}
+                  </GuidedSelect>
+                </GuidedField>
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <GuidedActionButton onClick={handleStart} disabled={loading || !selectedModule}>
+                  {loading ? "Starting..." : "Begin defense"}
+                </GuidedActionButton>
+              </div>
+            </GuidedPanel>
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="defense-actions">
-          <button className="action-btn" onClick={handleReset}>
-            New defense
-          </button>
-        </div>
-      </section>
+        <GuidedStatusBar
+          left="defense:setup // waiting for launch"
+          right={`42-training v1.0 // ${sourceMode === "live" ? "jwt:active" : "demo"}`}
+        />
+      </div>
     );
   }
 
-  /* Fallback: loading or error state */
+  if (phase === "active" && currentQuestion !== null) {
+    const timerTone = secondsLeft <= 5 ? "danger" : secondsLeft <= 15 ? "warning" : "default";
+
+    return (
+      <div className="grid gap-4">
+        <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+          {sidebar}
+
+          <div className="grid gap-4">
+            <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[rgba(255,65,65,0.3)] bg-[rgba(255,65,65,0.05)] px-6 py-3">
+              <p className="font-mono text-[13px] font-bold uppercase tracking-[0.22em] text-[var(--shell-danger)]">
+                Defense // {currentModule?.id ?? "no-module"}
+              </p>
+              <div className="flex items-center gap-3">
+                <GuidedBadge tone={timerTone}>
+                  timer: {formatTimer(secondsLeft)} / {formatTimer(timeLimit)}
+                </GuidedBadge>
+                <span className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--shell-ink)]">
+                  q {activeQuestionIndex + 1}/{questions.length}
+                </span>
+              </div>
+            </GuidedPanel>
+
+            <GuidedPanel className="grid min-h-[560px] gap-6 px-6 py-6">
+              {history.length > 0 ? (
+                <div className="space-y-6 border-b border-[var(--shell-border)] pb-6 font-mono text-[12px] leading-7 text-[var(--shell-dim)]">
+                  {history.map((entry) => (
+                    <div key={entry.questionId} className="space-y-2">
+                      <p className="whitespace-pre-wrap">{`examiner> ${entry.question}`}</p>
+                      <p className="whitespace-pre-wrap text-[var(--shell-ink)]">{`learner > ${entry.answer || "[skipped]"}`}</p>
+                      <p className="text-[var(--shell-dim)]">{`[SCORE: ${Math.round(entry.score * 5)}/5]`}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="space-y-5">
+                <p className="font-mono text-[14px] font-bold leading-9 text-[var(--shell-success)]">
+                  examiner&gt; {currentQuestion.text}
+                </p>
+                <GuidedTextarea
+                  value={answer}
+                  onChange={(event) => setAnswer(event.target.value)}
+                  placeholder="learner > explain how you reason about this question..."
+                  disabled={submitting || lastFeedback !== null}
+                />
+              </div>
+
+              {lastFeedback ? (
+                <GuidedPanel
+                  className={`px-4 py-4 ${
+                    lastFeedback.score >= 0.7
+                      ? "border-[rgba(0,224,110,0.35)]"
+                      : lastFeedback.score >= 0.4
+                        ? "border-[rgba(255,175,0,0.35)]"
+                        : "border-[rgba(255,65,65,0.35)]"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <GuidedBadge tone={lastFeedback.score >= 0.7 ? "success" : lastFeedback.score >= 0.4 ? "warning" : "danger"}>
+                      score: {Math.round(lastFeedback.score * 100)}%
+                    </GuidedBadge>
+                    {lastFeedback.timed_out ? <GuidedBadge tone="danger">timed out</GuidedBadge> : null}
+                  </div>
+                  <p className="mt-4 text-sm leading-7 text-[var(--shell-muted)]">{lastFeedback.feedback}</p>
+                </GuidedPanel>
+              ) : null}
+
+              {error ? (
+                <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]" role="alert">
+                  {error}
+                </p>
+              ) : null}
+
+              <div className="flex flex-wrap gap-3">
+                <GuidedActionButton
+                  onClick={() => void handleSubmitAnswer(answer.trim())}
+                  disabled={submitting || answer.trim().length === 0 || lastFeedback !== null}
+                >
+                  {submitting ? "Submitting..." : "Submit"}
+                </GuidedActionButton>
+                <GuidedActionButton
+                  variant="secondary"
+                  onClick={() => void handleSubmitAnswer("[skipped by learner]")}
+                  disabled={submitting || lastFeedback !== null}
+                >
+                  Skip
+                </GuidedActionButton>
+              </div>
+            </GuidedPanel>
+
+            {selectedTmux ? (
+              <div className="grid gap-4">
+                <TerminalPane session={selectedTmux} />
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <GuidedStatusBar
+          left={`defense:active // Q${activeQuestionIndex + 1}/${questions.length} // timer:${secondsLeft}s`}
+          right={`42-training v1.0 // ${sourceMode === "live" ? "jwt:active" : "demo"}${selectedTmux ? " // terminal:injected" : ""}`}
+        />
+      </div>
+    );
+  }
+
+  if (phase === "results" && results !== null) {
+    return (
+      <div className="grid gap-4">
+        <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+          {sidebar}
+
+          <div className="grid gap-4">
+            <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[rgba(255,65,65,0.3)] bg-[rgba(255,65,65,0.05)] px-6 py-3">
+              <p className="font-mono text-[13px] font-bold uppercase tracking-[0.22em] text-[var(--shell-danger)]">
+                Defense // {currentModule?.id ?? "no-module"}
+              </p>
+              <GuidedBadge tone={results.passed ? "success" : "danger"}>
+                {results.passed ? "passed" : "not passed"}
+              </GuidedBadge>
+            </GuidedPanel>
+
+            <GuidedPanel className="px-6 py-6">
+              <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
+                defense complete
+              </p>
+              <h1 className="mt-4 font-mono text-3xl font-semibold uppercase tracking-[0.08em] text-[var(--shell-ink)]">
+                {results.passed ? "Defense passed" : "Defense not passed"}
+              </h1>
+              <p className="mt-4 font-mono text-4xl font-bold text-[var(--shell-warning)]">
+                {Math.round(results.overall_score * 100)}%
+              </p>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--shell-muted)]">{results.summary}</p>
+              {results.timed_out_questions > 0 ? (
+                <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]">
+                  {results.timed_out_questions} question(s) timed out
+                </p>
+              ) : null}
+
+              <div className="mt-8 grid gap-4 lg:grid-cols-2">
+                {results.question_results.map((item, index) => (
+                  <GuidedPanel key={item.question_id} className="px-4 py-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <GuidedBadge>question {index + 1}</GuidedBadge>
+                      <GuidedBadge tone={item.score >= 0.7 ? "success" : item.score >= 0.4 ? "warning" : "danger"}>
+                        {Math.round(item.score * 100)}%
+                      </GuidedBadge>
+                      <GuidedBadge>{item.skill}</GuidedBadge>
+                    </div>
+                    <p className="mt-4 font-mono text-sm leading-7 text-[var(--shell-ink)]">{item.question}</p>
+                    <p className="mt-4 text-sm leading-7 text-[var(--shell-muted)]">{item.feedback}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {item.timed_out ? <GuidedBadge tone="danger">timed out</GuidedBadge> : null}
+                      {!item.answered ? <GuidedBadge tone="warning">not answered</GuidedBadge> : null}
+                      <GuidedBadge>{item.elapsed_seconds.toFixed(1)}s</GuidedBadge>
+                    </div>
+                  </GuidedPanel>
+                ))}
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <GuidedActionButton onClick={handleReset}>New defense</GuidedActionButton>
+              </div>
+            </GuidedPanel>
+          </div>
+        </div>
+
+        <GuidedStatusBar
+          left={`defense:complete // score:${Math.round(results.overall_score * 100)}%`}
+          right={`42-training v1.0 // ${sourceMode === "live" ? "jwt:active" : "demo"}`}
+        />
+      </div>
+    );
+  }
+
   return (
-    <section className="panel">
+    <GuidedPanel className="px-6 py-6">
       {error ? (
         <>
-          <p className="defense-error">{error}</p>
-          <button className="action-btn" onClick={handleReset}>
-            Try again
-          </button>
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]">{error}</p>
+          <div className="mt-4">
+            <GuidedActionButton onClick={handleReset}>Try again</GuidedActionButton>
+          </div>
         </>
       ) : (
-        <p className="muted">Loading...</p>
+        <p className="font-mono text-sm text-[var(--shell-muted)]">Loading...</p>
       )}
-    </section>
+    </GuidedPanel>
   );
 }
