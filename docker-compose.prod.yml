@@ -52,6 +52,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      api_migrate:
+        condition: service_completed_successfully
     ports:
       - "8000:8000"
     healthcheck:
@@ -60,6 +62,21 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+
+  api_migrate:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+      target: runtime
+    restart: "no"
+    environment:
+      DATA_ROOT: /
+      DATABASE_URL: postgresql+asyncpg://training:training@postgres:5432/training
+      APP_SECRET_KEY: "${APP_SECRET_KEY:-change-me-in-production}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
 
   ai_gateway:
     build:
