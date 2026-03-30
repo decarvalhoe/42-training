@@ -31,8 +31,16 @@ const FRONTEND_DIR = path.join(RESOURCES, "frontend");
 
 const API_DIR = path.join(BACKEND_DIR, "api");
 const GATEWAY_DIR = path.join(BACKEND_DIR, "ai_gateway");
-const VENV_PYTHON_API = path.join(API_DIR, "venv", "bin", "python");
-const VENV_PYTHON_GW = path.join(GATEWAY_DIR, "venv", "bin", "python");
+
+function venvPythonPath(serviceDir) {
+  if (process.platform === "win32") {
+    return path.join(serviceDir, "venv", "Scripts", "python.exe");
+  }
+  return path.join(serviceDir, "venv", "bin", "python");
+}
+
+const VENV_PYTHON_API = venvPythonPath(API_DIR);
+const VENV_PYTHON_GW = venvPythonPath(GATEWAY_DIR);
 
 /* ------------------------------------------------------------------ */
 /*  Ports                                                              */
@@ -147,20 +155,31 @@ function startGateway() {
 }
 
 function startFrontend() {
-  const nodeBin = process.execPath.includes("Electron")
-    ? "node"
-    : process.execPath;
+  const env = {
+    NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
+    NEXT_PUBLIC_AI_GATEWAY_URL: `http://127.0.0.1:${GATEWAY_PORT}`,
+    PORT: String(WEB_PORT),
+  };
+
+  if (IS_PACKAGED) {
+    return spawnService(
+      "web",
+      process.execPath,
+      [path.join(FRONTEND_DIR, "server.js")],
+      FRONTEND_DIR,
+      {
+        ...env,
+        ELECTRON_RUN_AS_NODE: "1",
+      },
+    );
+  }
 
   return spawnService(
     "web",
-    nodeBin,
+    "node",
     ["node_modules/next/dist/bin/next", "start", "--port", String(WEB_PORT)],
     FRONTEND_DIR,
-    {
-      NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
-      NEXT_PUBLIC_AI_GATEWAY_URL: `http://127.0.0.1:${GATEWAY_PORT}`,
-      PORT: String(WEB_PORT),
-    },
+    env,
   );
 }
 
@@ -211,7 +230,7 @@ app.on("ready", async () => {
   } catch (err) {
     dialog.showErrorBox(
       "42-Training — Startup Error",
-      `A service failed to start:\n\n${err.message}\n\nCheck Console.app for details.`,
+      `A service failed to start:\n\n${err.message}\n\nCheck the application logs for details.`,
     );
     killAll();
     app.quit();
