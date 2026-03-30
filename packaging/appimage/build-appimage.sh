@@ -23,6 +23,8 @@ fi
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin"
 mkdir -p "$APPDIR/opt/42-training"
+mkdir -p "$APPDIR/opt/42-training/apps/web"
+mkdir -p "$APPDIR/opt/42-training/packages/curriculum"
 
 # --- Desktop entry ---
 cat > "$APPDIR/${PKG_NAME}.desktop" <<EOF
@@ -116,5 +118,8 @@ cp -r "$REPO_ROOT/packages/curriculum/data" "$APPDIR/opt/42-training/packages/cu
 cp "$REPO_ROOT/progression.json" "$APPDIR/opt/42-training/"
 
 echo "==> AppDir assembled at $APPDIR"
-echo "    To produce the final .AppImage, run on a system with FUSE:"
-echo "    ARCH=x86_64 $APPIMAGETOOL $APPDIR ${PKG_NAME}-${VERSION}-x86_64.AppImage"
+OUTPUT="$REPO_ROOT/packaging/appimage/${PKG_NAME}-${VERSION}-x86_64.AppImage"
+rm -f "$OUTPUT"
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGETOOL" "$APPDIR" "$OUTPUT"
+
+echo "==> Built: $OUTPUT"
