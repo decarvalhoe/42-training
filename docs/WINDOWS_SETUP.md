@@ -2,30 +2,19 @@
 
 ## Overview
 
-The 42 Training desktop app packages the Next.js frontend as a native Windows
-application via Electron. Backend services (API + AI Gateway) run separately,
-either through Docker Desktop or manual Python setup.
+The 42 Training desktop app packages the Next.js frontend and bundles the API +
+AI Gateway as a native Windows application via Electron.
 
 ## Architecture
 
 ```
 ┌──────────────────────────────────┐
 │   42 Training (.exe)             │
-│   ┌────────────────────────────┐ │
-│   │  Electron shell            │ │
-│   │  ┌──────────────────────┐  │ │
-│   │  │ Next.js standalone   │  │ │
-│   │  │ (port 3042)          │  │ │
-│   │  └──────────────────────┘  │ │
-│   └────────────────────────────┘ │
-└──────────┬───────────────────────┘
-           │ HTTP
-┌──────────▼───────────────────────┐
-│  Backend (Docker Desktop)        │
-│  ├─ API (port 8000)             │
-│  ├─ AI Gateway (port 8100)      │
-│  ├─ PostgreSQL (port 5432)      │
-│  └─ Redis (port 6379)           │
+│   ├─ Electron shell              │
+│   ├─ Next.js standalone          │
+│   ├─ Bundled API                 │
+│   ├─ Bundled AI Gateway          │
+│   └─ Local app data              │
 └──────────────────────────────────┘
 ```
 
@@ -35,23 +24,21 @@ either through Docker Desktop or manual Python setup.
 |--------------------|-----------|-----------------------------|
 | Windows            | 10+ x64   | Target platform             |
 | Node.js            | >= 20     | Build + Next.js runtime     |
-| Docker Desktop     | >= 4.0    | Backend services            |
 | Git                | >= 2.40   | Clone repository            |
-| Python (optional)  | 3.13      | Run backends without Docker |
+| Python             | 3.13      | Bundled backend build step  |
 
-## Quick Start (Docker backends)
+## Quick Start
 
 ```powershell
 # 1. Clone and enter the repository
 git clone https://github.com/decarvalhoe/42-training.git
 cd 42-training
 
-# 2. Start backend services via Docker
-docker compose up -d api ai_gateway
+# 2. Assemble the bundled desktop app
+.\scripts\build-windows.ps1
 
-# 3. Run the desktop app in development mode
+# 3. Run the staged desktop shell locally
 cd desktop
-npm install
 npm start
 ```
 
@@ -68,7 +55,7 @@ This produces two artifacts in `desktop\dist\`:
 
 ## Manual Backend Setup (without Docker)
 
-If Docker Desktop is not available, run the backends manually:
+If you want to run the services without the packaged desktop shell:
 
 ```powershell
 # Terminal 1 — API

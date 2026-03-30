@@ -6,12 +6,13 @@
 
 ## Package Formats
 
-| Format | Target distros | Install method | Directory |
-|--------|---------------|----------------|-----------|
-| `.deb` | Debian, Ubuntu, Pop!_OS, Mint | `dpkg -i` / `apt install` | `packaging/deb/` |
-| `.rpm` | Fedora, RHEL, CentOS, openSUSE | `rpm -i` / `dnf install` | `packaging/rpm/` |
-| AppImage | Any Linux (portable) | Download and run | `packaging/appimage/` |
-| Snap | Ubuntu, any snapd-enabled distro | `snap install` | `packaging/snap/` |
+| Format | Target distros | Install method | Directory | Release status |
+|--------|---------------|----------------|-----------|----------------|
+| `.deb` | Debian, Ubuntu, Pop!_OS, Mint | `dpkg -i` / `apt install` | `packaging/deb/` | Official release artifact |
+| AppImage | Any Linux (portable) | Download and run | `packaging/appimage/` | Official release artifact |
+| `.tar.gz` | Custom/minimal distros | Extract and build from source | generated in release workflow | Official release artifact |
+| `.rpm` | Fedora, RHEL, CentOS, openSUSE | `rpm -i` / `dnf install` | `packaging/rpm/` | Experimental script, not attached to official releases yet |
+| Snap | Ubuntu, any snapd-enabled distro | `snap install` | `packaging/snap/` | Experimental script, not attached to official releases yet |
 
 ## Architecture
 
@@ -72,6 +73,8 @@ All formats provide a `42-training` command:
 # Output: ~/rpmbuild/RPMS/x86_64/42-training-0.1.0-1.*.rpm
 ```
 
+This path is still experimental and is not currently published as a release asset.
+
 ### AppImage
 
 ```bash
@@ -88,6 +91,8 @@ cd packaging/snap
 snapcraft
 # Output: 42-training_0.1.0_amd64.snap
 ```
+
+This path is still experimental and is not currently published as a release asset.
 
 ## Dependencies
 
@@ -150,4 +155,4 @@ snapcraft
 
 **Recommended for 42 campuses:** `.deb` (most campuses run Ubuntu).
 **Recommended for portability:** AppImage (zero install, runs anywhere).
-**Recommended for store distribution:** Snap (auto-updates, Ubuntu Software Center).
+**Recommended for custom distros and reproducible local builds:** source `.tar.gz`.
