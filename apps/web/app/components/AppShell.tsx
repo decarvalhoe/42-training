@@ -158,7 +158,7 @@ function getRailActions(pathname: string): RailAction[] {
   return [];
 }
 
-function getSessionLabel(email: string | null) {
+function getSessionHandle(email: string | null) {
   if (email === null) {
     return "learner@42";
   }
@@ -261,7 +261,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sidebarWidth = isExpanded ? DESKTOP_EXPANDED_WIDTH : railWidth;
   const contentOffset = isDesktop && isExpanded ? DESKTOP_EXPANDED_WIDTH : railWidth;
   const railActions = getRailActions(pathname);
-  const sessionLabel = getSessionLabel(session?.user.email ?? null);
+  const sessionEmail = session?.user.email ?? "learner@42";
+  const sessionHandle = getSessionHandle(session?.user.email ?? null);
   const trackLabel = session?.learnerProfile?.track ?? "shell";
   const routeLabel = buildRouteLabel(pathname);
   const contentPadding = density === "compact" ? "px-4 py-4 lg:px-6 lg:py-5" : "px-4 py-5 lg:px-6 lg:py-6";
@@ -420,7 +421,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="ml-auto flex items-center gap-3 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--shell-muted)]">
               {status === "authenticated" && session !== null ? (
                 <>
-                  <span>{sessionLabel}</span>
+                  <span>{sessionHandle}</span>
+                  <span className="max-w-48 truncate text-[var(--shell-ink)]" title={sessionEmail}>
+                    {sessionEmail}
+                  </span>
                   <span>//</span>
                   <span>{trackLabel} track</span>
                   <span className="text-[var(--shell-success)]">●</span>
