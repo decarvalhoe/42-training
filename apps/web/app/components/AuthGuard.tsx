@@ -8,14 +8,6 @@ import { useAuth } from "@/app/components/AuthProvider";
 
 const PUBLIC_PATHS = new Set(["/login"]);
 
-function normalizeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/";
-  }
-
-  return value;
-}
-
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const pathname = usePathname();
@@ -31,14 +23,6 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       router.replace(`/login?next=${encodeURIComponent(nextTarget)}`);
     }
   }, [currentPath, isPublicPath, router, status]);
-
-  useEffect(() => {
-    if (status === "authenticated" && currentPath === "/login") {
-      const nextTarget =
-        typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("next");
-      router.replace(normalizeNextPath(nextTarget));
-    }
-  }, [currentPath, router, status]);
 
   if (isPublicPath) {
     return children;
