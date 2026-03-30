@@ -390,8 +390,8 @@ jobs:
         with:
           name: desktop-linux
           path: |
-            packaging/deb/dist/*.deb
-            packaging/appimage/dist/*.AppImage
+            packaging/deb/*.deb
+            packaging/appimage/*.AppImage
             packaging/source/dist/*.tar.gz
           retention-days: 5
 
@@ -488,9 +488,16 @@ jobs:
 
             const { owner, repo } = context.repo;
             const tag = process.env.GITHUB_REF.replace('refs/tags/', '');
-
-            const release = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
-            const body = release.data.body || '';
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+            const release = releases.find((candidate) => candidate.tag_name === tag);
+            if (!release) {
+              throw new Error(`release not found for tag ${tag}`);
+            }
+            const body = release.body || '';
 
             const block = [
               '',
@@ -509,6 +516,6 @@ jobs:
 
             await github.rest.repos.updateRelease({
               owner, repo,
-              release_id: release.data.id,
+              release_id: release.id,
               body: cleanBody + block,
             });
