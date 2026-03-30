@@ -101,7 +101,6 @@ export default function LoginPage() {
     const requestedNext =
       typeof window === "undefined" ? "/" : normalizeNextPath(new URLSearchParams(window.location.search).get("next"));
     router.replace(buildPostAuthTarget(session, requestedNext, "resume"));
-    router.refresh();
   }, [router, session, status]);
 
   function updateField(field: keyof FormState, value: string) {
@@ -137,7 +136,6 @@ export default function LoginPage() {
       );
       setSubmitState("success");
       router.replace(destination);
-      router.refresh();
     } catch (error) {
       setServerMessage(
         isAuthApiError(error)
