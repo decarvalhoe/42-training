@@ -14,32 +14,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
-          cache-dependency-path: apps/web/package-lock.json
-
-      - name: Install web dependencies
-        working-directory: apps/web
-        run: npm ci
-
-      - name: Build Next.js standalone
-        working-directory: apps/web
-        run: npm run build
-
-      - name: Verify standalone output
-        run: |
-          if (!(Test-Path "apps/web/.next/standalone")) {
-            Write-Error "Standalone build directory not found"
-            exit 1
-          }
-        shell: pwsh
-
-      - name: Install Electron dependencies
-        working-directory: desktop
-        run: npm ci
+          cache: "npm"
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            desktop/package-lock.json
 
       - name: Build Windows distributable
-        working-directory: desktop
-        run: npx electron-builder --win
+        shell: pwsh
+        run: .\scripts\build-windows.ps1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
