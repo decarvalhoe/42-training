@@ -7,14 +7,15 @@
 ## Table of contents
 
 1. [Overview](#overview)
-2. [Prerequisites](#prerequisites)
-3. [Design token mapping](#design-token-mapping)
-4. [Reading designs from Figma](#reading-designs-from-figma)
-5. [Implementing a design](#implementing-a-design)
-6. [Code Connect](#code-connect)
-7. [Writing back to Figma](#writing-back-to-figma)
-8. [Component inventory](#component-inventory)
-9. [Conventions](#conventions)
+2. [Canonical references](#canonical-references)
+3. [Prerequisites](#prerequisites)
+4. [Design token mapping](#design-token-mapping)
+5. [Reading designs from Figma](#reading-designs-from-figma)
+6. [Implementing a design](#implementing-a-design)
+7. [Code Connect](#code-connect)
+8. [Writing back to Figma](#writing-back-to-figma)
+9. [Component inventory](#component-inventory)
+10. [Conventions](#conventions)
 
 ---
 
@@ -28,7 +29,65 @@ The project uses the **Figma MCP server** (`claude.ai Figma`) to bridge design a
 - **Write** designs back into Figma (`use_figma`)
 - **Generate** diagrams in FigJam (`generate_diagram`)
 
-The frontend stack is **Next.js 16 + React 19 + TypeScript** with plain CSS (no Tailwind, no CSS-in-JS). All styles live in `apps/web/app/globals.css` using CSS custom properties as design tokens.
+The frontend stack is **Next.js 16 + React 19 + TypeScript**.
+
+Current implementation state:
+- the shipped code still relies heavily on `apps/web/app/globals.css`
+- the legacy workflow in this document originally assumed plain global CSS as the styling system
+
+Approved product direction:
+- the **Figma design file is the canonical UI and UX reference**
+- the authenticated app shell is defined in Figma before page implementation
+- frontend governance is moving toward **Tailwind + centralized tokens + themes/skins + accessibility controls**
+- implementation work must distinguish between the current code state and the target governance state
+
+## Canonical references
+
+Use these references in this order:
+
+### 1. Product and flow framing
+
+- FigJam board:
+  `https://www.figma.com/board/GEBta7NTiYf3I8e4rZluHI/Sans-titre?node-id=0-1&p=f&t=Anj427ymgsVB9ZE5-0`
+
+This board is the reference for:
+- product flow inventory
+- cross-flow coherence
+- error and exception branches
+- prioritization and design discussion
+
+### 2. Canonical UI design
+
+- Design file:
+  `https://www.figma.com/design/qqaNVWa3c7UoVrrBo9gk3c/42-Training-%E2%80%94-Hacker-HUD-Interface?node-id=0-1&p=f&t=8sdMMNFQH1ov2ppT-0`
+
+This file is the reference for implementation.
+
+Validated pages currently include:
+- `00 — App Shell (Canonical)`
+- `01 — Login`
+- `02 — Dashboard`
+- `03 — Track Explorer`
+- `04 — Module Learning`
+- `05 — Defense Session`
+- `06 — AI Mentor`
+
+### 3. Canonical authenticated shell rules
+
+The authenticated shell must follow the validated Figma behavior:
+
+- the sidebar never disappears
+- desktop expanded: `240px` sidebar
+- desktop collapsed: `48px` rail
+- tablet collapsed: `48px` rail with overlay expansion
+- mobile collapsed: `40px` rail with overlay expansion
+- persistent rail actions remain available on all breakpoints
+
+Minimum persistent rail slots:
+- collapse / expand control
+- primary action slot
+- secondary action slot when relevant
+- terminal or live-status slot
 
 ---
 

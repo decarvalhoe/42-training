@@ -14,6 +14,7 @@ Le depot contient maintenant deux couches qui coexistent:
 Documentation principale:
 
 - `docs/RUNBOOK_LOCAL.md` — demarrage local en 3 commandes et depannage
+- `docs/FIGMA_WORKFLOW.md` — reference Figma canonique, shell app valide et workflow design-to-code
 - `docs/PRODUCT_METRICS.md` — KPIs produit et pedagogiques, SQL analytics et structure de dashboard
 - `docs/JSON_TO_PG_MIGRATION.md` — design du pipeline d'import `progression.json` vers PostgreSQL et strategie de transition
 - `docs/APPROCHE_ARCHITECTURE_EXHAUSTIVE.md`
