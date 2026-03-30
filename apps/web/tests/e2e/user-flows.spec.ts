@@ -34,7 +34,7 @@ test("registers, creates a profile, visits a module, and submits a review", asyn
 
   await expect(page).toHaveURL(/\/profiles/);
   await expect(page.getByRole("heading", { name: /Choose your first learning track/i })).toBeVisible();
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.locator("#main-content").getByText(email)).toBeVisible();
 
   await expect(page.getByRole("heading", { name: "Add a track profile" })).toBeVisible();
 
