@@ -23,17 +23,45 @@ jobs:
         run: |
           TAG="${{ inputs.tag }}"
 
-          echo "Looking up release for tag: ${TAG}"
-          DRAFT=$(gh release view "${TAG}" --json isDraft --jq '.isDraft' 2>&1) || {
+          echo "Looking up release for tag or release name: ${TAG}"
+          RELEASE_JSON="$(gh api repos/${{ github.repository }}/releases)"
+          RELEASE_ID="$(printf '%s' "${RELEASE_JSON}" | python3 - "${TAG}" <<'PY'
+import json
+import sys
+
+tag = sys.argv[1]
+releases = json.load(sys.stdin)
+for release in releases:
+    if release.get("tag_name") == tag or release.get("name") == tag:
+        print(release["id"])
+        break
+PY
+)"
+
+          if [ -z "${RELEASE_ID}" ]; then
             echo "::error::Release '${TAG}' not found"
             exit 1
-          }
+          fi
+
+          RELEASE_STATE="$(gh api repos/${{ github.repository }}/releases/${RELEASE_ID} -q '{draft: .draft, prerelease: .prerelease, tag_name: .tag_name, name: .name}')"
+          echo "Matched release: ${RELEASE_STATE}"
+
+          DRAFT="$(printf '%s' "${RELEASE_STATE}" | python3 - <<'PY'
+import json
+import sys
+print(str(json.load(sys.stdin)["draft"]).lower())
+PY
+)"
 
           if [ "${DRAFT}" != "true" ]; then
             echo "Release '${TAG}' is already published (draft=${DRAFT}). Nothing to do."
             exit 0
           fi
 
-          echo "Promoting '${TAG}' from draft to stable..."
-          gh release edit "${TAG}" --draft=false
-          echo "Release '${TAG}' is now stable."
+          echo "Promoting '${TAG}' from draft to published release..."
+          gh api repos/${{ github.repository }}/releases/${RELEASE_ID} \
+            -X PATCH \
+            -f draft=false \
+            -f tag_name="${TAG}" \
+            -f name="${TAG}" >/dev/null
+          echo "Release '${TAG}' is now published."
