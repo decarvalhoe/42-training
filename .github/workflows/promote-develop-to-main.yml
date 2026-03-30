@@ -17,6 +17,9 @@ permissions:
 jobs:
   promote:
     runs-on: ubuntu-latest
+    env:
+      PROMOTION_TOKEN: ${{ secrets.PROMOTION_PR_TOKEN != '' && secrets.PROMOTION_PR_TOKEN || github.token }}
+      HAS_PROMOTION_TOKEN: ${{ secrets.PROMOTION_PR_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,18 +31,30 @@ jobs:
           git fetch origin develop main
           develop_sha="$(git rev-parse origin/develop)"
           main_sha="$(git rev-parse origin/main)"
+          read -r main_ahead develop_ahead < <(git rev-list --left-right --count origin/main...origin/develop)
 
           echo "develop_sha=${develop_sha}" >> "${GITHUB_OUTPUT}"
           echo "main_sha=${main_sha}" >> "${GITHUB_OUTPUT}"
+          echo "main_ahead=${main_ahead}" >> "${GITHUB_OUTPUT}"
+          echo "develop_ahead=${develop_ahead}" >> "${GITHUB_OUTPUT}"
 
           if [[ "${develop_sha}" = "${main_sha}" ]]; then
+            echo "sync_state=aligned" >> "${GITHUB_OUTPUT}"
+            echo "sync_needed=false" >> "${GITHUB_OUTPUT}"
+          elif [[ "${develop_ahead}" -gt 0 && "${main_ahead}" -eq 0 ]]; then
+            echo "sync_state=develop_ahead" >> "${GITHUB_OUTPUT}"
+            echo "sync_needed=true" >> "${GITHUB_OUTPUT}"
+          elif [[ "${main_ahead}" -gt 0 && "${develop_ahead}" -eq 0 ]]; then
+            echo "sync_state=main_ahead" >> "${GITHUB_OUTPUT}"
             echo "sync_needed=false" >> "${GITHUB_OUTPUT}"
           else
+            echo "sync_state=diverged" >> "${GITHUB_OUTPUT}"
             echo "sync_needed=true" >> "${GITHUB_OUTPUT}"
           fi
 
       - name: Check latest develop CI status
         id: ci
+        if: steps.compare.outputs.sync_state == 'develop_ahead'
         uses: actions/github-script@v7
         env:
           DEVELOP_SHA: ${{ steps.compare.outputs.develop_sha }}
@@ -76,15 +91,25 @@ jobs:
             core.setOutput("run_url", matchingRun.html_url);
             core.setOutput("run_id", String(matchingRun.id));
 
+      - name: Fail on branch divergence
+        if: steps.compare.outputs.sync_state == 'diverged'
+        run: |
+          echo "::error::develop and main have diverged. Manual reconciliation is required before any automated promotion."
+          echo "main-only commits: ${{ steps.compare.outputs.main_ahead }}"
+          echo "develop-only commits: ${{ steps.compare.outputs.develop_ahead }}"
+          exit 1
+
       - name: Create or reuse promotion PR
         id: pr
-        if: steps.compare.outputs.sync_needed == 'true' && inputs.dry_run == false
+        if: steps.compare.outputs.sync_state == 'develop_ahead' && inputs.dry_run == false
         uses: actions/github-script@v7
         env:
           DEVELOP_SHA: ${{ steps.compare.outputs.develop_sha }}
           MAIN_SHA: ${{ steps.compare.outputs.main_sha }}
           CI_RUN_URL: ${{ steps.ci.outputs.run_url }}
+          HAS_PROMOTION_TOKEN: ${{ env.HAS_PROMOTION_TOKEN }}
         with:
+          github-token: ${{ env.PROMOTION_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
             const head = "develop";
@@ -122,24 +147,44 @@ jobs:
               "- merge only after the promotion PR checks are green",
             ].join("\n");
 
-            const pr = await github.rest.pulls.create({
-              owner,
-              repo,
-              head,
-              base,
-              title,
-              body,
-            });
+            try {
+              const pr = await github.rest.pulls.create({
+                owner,
+                repo,
+                head,
+                base,
+                title,
+                body,
+              });
 
-            core.setOutput("pr_url", pr.data.html_url);
-            core.setOutput("pr_number", String(pr.data.number));
+              core.setOutput("pr_url", pr.data.html_url);
+              core.setOutput("pr_number", String(pr.data.number));
+            } catch (error) {
+              const message = error && error.message ? String(error.message) : "unknown error";
+              const usingDedicatedToken = process.env.HAS_PROMOTION_TOKEN === "true";
+
+              if (!usingDedicatedToken && message.includes("not permitted to create or approve pull requests")) {
+                core.setFailed(
+                  "GitHub Actions cannot create the promotion PR with the default GITHUB_TOKEN. " +
+                  "Either enable the repository setting that allows Actions to create pull requests, " +
+                  "or configure a repository secret named PROMOTION_PR_TOKEN with PR creation rights."
+                );
+                return;
+              }
+
+              throw error;
+            }
 
       - name: Write workflow summary
+        if: always()
         env:
           DRY_RUN: ${{ inputs.dry_run }}
           SYNC_NEEDED: ${{ steps.compare.outputs.sync_needed }}
+          SYNC_STATE: ${{ steps.compare.outputs.sync_state }}
           DEVELOP_SHA: ${{ steps.compare.outputs.develop_sha }}
           MAIN_SHA: ${{ steps.compare.outputs.main_sha }}
+          MAIN_AHEAD: ${{ steps.compare.outputs.main_ahead }}
+          DEVELOP_AHEAD: ${{ steps.compare.outputs.develop_ahead }}
           CI_RUN_URL: ${{ steps.ci.outputs.run_url }}
           PR_URL: ${{ steps.pr.outputs.pr_url }}
         run: |
@@ -147,11 +192,19 @@ jobs:
             echo "# Develop -> Main Promotion"
             echo
             echo "- dry run: ${DRY_RUN}"
+            echo "- sync state: ${SYNC_STATE}"
             echo "- sync needed: ${SYNC_NEEDED}"
             echo "- develop head: \`${DEVELOP_SHA}\`"
             echo "- main head: \`${MAIN_SHA}\`"
-            echo "- develop CI: ${CI_RUN_URL}"
+            echo "- main-only commits: ${MAIN_AHEAD}"
+            echo "- develop-only commits: ${DEVELOP_AHEAD}"
+            if [[ -n "${CI_RUN_URL}" ]]; then
+              echo "- develop CI: ${CI_RUN_URL}"
+            fi
             if [[ -n "${PR_URL}" ]]; then
               echo "- promotion PR: ${PR_URL}"
+            fi
+            if [[ "${SYNC_STATE}" = "main_ahead" ]]; then
+              echo "- note: no promotion PR needed because main already contains all develop commits"
             fi
           } >> "${GITHUB_STEP_SUMMARY}"
