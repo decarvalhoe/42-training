@@ -1,11 +1,14 @@
 {
   "name": "42-training-desktop",
   "version": "1.0.0",
-  "description": "42-training — native macOS desktop application",
+  "description": "42-training desktop application",
   "main": "main.js",
+  "private": true,
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --mac",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
     "dist:dmg": "electron-builder --mac dmg",
     "dist:dir": "electron-builder --mac dir"
   },
@@ -19,13 +22,27 @@
     "files": [
       "main.js",
       "preload.js",
-      "backend/**/*",
-      "frontend/**/*",
-      "data/**/*"
+      "scripts/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "frontend",
+        "to": "frontend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "data",
+        "to": "data",
+        "filter": ["**/*"]
+      }
     ],
     "mac": {
       "category": "public.app-category.education",
-      "icon": "build/icon.icns",
       "target": [
         {
           "target": "dmg",
@@ -44,19 +61,28 @@
         { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
       ]
     },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "portable": {
+      "artifactName": "42-Training-${version}-portable.exe"
+    },
     "afterSign": "scripts/notarize.js",
-    "extraResources": [
-      {
-        "from": "backend",
-        "to": "backend",
-        "filter": ["**/*"]
-      },
-      {
-        "from": "data",
-        "to": "data",
-        "filter": ["**/*"]
-      }
-    ]
+    "publish": null
   },
   "devDependencies": {
     "electron": "^33.0.0",
