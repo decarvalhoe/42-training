@@ -51,6 +51,18 @@ function formatDateLabel(value: string) {
   }).format(new Date(value));
 }
 
+function normalizeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  if (value === "/profiles") {
+    return "/dashboard";
+  }
+
+  return value;
+}
+
 export default function ProfilesPage() {
   const { refreshSession, session } = useAuth();
   const [tracks, setTracks] = useState<TrackItem[]>([]);
@@ -62,6 +74,11 @@ export default function ProfilesPage() {
   const [feedbackTone, setFeedbackTone] = useState<"success" | "error">("success");
   const [isCreating, setIsCreating] = useState(false);
   const [switchingId, setSwitchingId] = useState<string | null>(null);
+  const [searchState, setSearchState] = useState({
+    onboarding: false,
+    source: null as string | null,
+    next: "/dashboard",
+  });
 
   const loadPage = useCallback(async (cancelledRef?: { current: boolean }) => {
     setLoadingState("loading");
@@ -94,8 +111,27 @@ export default function ProfilesPage() {
       cancelledRef.current = true;
     };
   }, [loadPage]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    setSearchState({
+      onboarding: params.get("onboarding") === "1",
+      source: params.get("source"),
+      next: normalizeNextPath(params.get("next")),
+    });
+  }, []);
+
   const activeProfile = profilesState?.activeProfile ?? null;
   const sessionEmail = session?.user.email ?? "Authenticated learner";
+  const continueHref = searchState.next;
+  const isOnboarding = searchState.onboarding || activeProfile === null;
+  const onboardingSource = searchState.source;
+  const onboardingComplete = isOnboarding && activeProfile !== null;
+  const hasProfiles = (profilesState?.profiles.length ?? 0) > 0;
 
   function updateField(field: keyof ProfileFormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -124,7 +160,11 @@ export default function ProfilesPage() {
       await refreshSession().catch(() => undefined);
       setForm((current) => ({ ...current, login: "" }));
       setFeedbackTone("success");
-      setFeedback(`Profile for ${formatTrackTitle(form.track, tracks)} is ready and now active.`);
+      setFeedback(
+        isOnboarding
+          ? `Profile for ${formatTrackTitle(form.track, tracks)} is ready and now active. Continue into the workspace when you are ready.`
+          : `Profile for ${formatTrackTitle(form.track, tracks)} is ready and now active.`,
+      );
     } catch (error) {
       setFeedbackTone("error");
       setFeedback(error instanceof Error ? error.message : "Unable to create a new profile.");
@@ -141,7 +181,11 @@ export default function ProfilesPage() {
       setProfilesState(nextState);
       await refreshSession().catch(() => undefined);
       setFeedbackTone("success");
-      setFeedback(`${formatTrackTitle(profile.track, tracks)} is now the active profile.`);
+      setFeedback(
+        isOnboarding
+          ? `${formatTrackTitle(profile.track, tracks)} is now the active profile. Continue into the workspace when you are ready.`
+          : `${formatTrackTitle(profile.track, tracks)} is now the active profile.`,
+      );
     } catch (error) {
       setFeedbackTone("error");
       setFeedback(error instanceof Error ? error.message : "Unable to switch the active profile.");
@@ -152,11 +196,17 @@ export default function ProfilesPage() {
 
   if (loadingState === "loading") {
     return (
-      <main className="page-shell profiles-page">
-        <section className="panel profiles-hero">
-          <p className="eyebrow">Profiles</p>
-          <h1>Loading profile workspace...</h1>
-          <p className="lead">Preparing the available tracks and the current active learner context.</p>
+      <main className="grid gap-6">
+        <section className="border border-[var(--shell-border)] bg-[var(--shell-panel)] p-6 lg:p-8">
+          <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
+            {isOnboarding ? "First-run onboarding" : "Profiles"}
+          </p>
+          <h1 className="mt-3 font-mono text-3xl uppercase tracking-[0.08em] text-[var(--shell-ink)]">
+            Loading profile workspace...
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--shell-muted)]">
+            Preparing the available tracks and the current active learner context.
+          </p>
         </section>
       </main>
     );
@@ -164,18 +214,27 @@ export default function ProfilesPage() {
 
   if (loadingState === "error" || profilesState === null) {
     return (
-      <main className="page-shell profiles-page">
-        <section className="panel profiles-hero">
-          <p className="eyebrow">Profiles</p>
-          <h1>Profile management is temporarily unavailable.</h1>
-          <p className="lead">
+      <main className="grid gap-6">
+        <section className="border border-[var(--shell-border)] bg-[var(--shell-panel)] p-6 lg:p-8">
+          <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[var(--shell-success)]">Profiles</p>
+          <h1 className="mt-3 font-mono text-3xl uppercase tracking-[0.08em] text-[var(--shell-ink)]">
+            Profile management is temporarily unavailable.
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--shell-muted)]">
             The UI could not load the profile catalog. Refresh the page or return to the dashboard.
           </p>
-          <div className="stack-list">
-            <button type="button" className="action-btn" onClick={() => void loadPage()}>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="inline-flex items-center border border-[var(--shell-success)] bg-[var(--shell-success)] px-4 py-3 font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--shell-canvas)]"
+              onClick={() => void loadPage()}
+            >
               Retry
             </button>
-            <Link href="/" className="action-btn">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center border border-[var(--shell-border-strong)] px-4 py-3 font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--shell-ink)]"
+            >
               Back to dashboard
             </Link>
           </div>
@@ -184,97 +243,213 @@ export default function ProfilesPage() {
     );
   }
 
+  const heroTitle = onboardingComplete
+    ? `${formatTrackTitle(activeProfile.track, tracks)} is now active.`
+    : isOnboarding
+      ? "Choose your first learning track."
+      : "Manage learner profiles and active context.";
+
+  const heroLead = onboardingComplete
+    ? "The learner context is ready. Continue to the workspace and start the next module with a clear active profile."
+    : isOnboarding
+      ? "A fresh account needs one active learner profile before the guided learning flow can begin. Create or activate a track now."
+      : "Use separate profiles to isolate progression across Shell, C and Python + AI while keeping a single authenticated account.";
+
   return (
-    <main className="page-shell profiles-page">
-      <section className="panel profiles-hero">
-        <div className="profiles-hero-copy">
-          <p className="eyebrow">Profiles</p>
-          <h1>One account, several learner profiles, one active track at a time.</h1>
-          <p className="lead">
-            Use separate profiles to isolate progression across Shell, C and Python + AI while keeping a single
-            authenticated account. The selected active profile becomes the learner context for the next steps.
+    <main className="grid gap-6">
+      <section className="grid gap-6 border border-[var(--shell-border)] bg-[var(--shell-panel)] p-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)] lg:p-8">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
+            {onboardingComplete ? "Onboarding complete" : isOnboarding ? "First-run onboarding" : "Profiles"}
           </p>
+          <h1 className="mt-3 font-mono text-3xl uppercase tracking-[0.08em] text-[var(--shell-ink)]">
+            {heroTitle}
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--shell-muted)]">{heroLead}</p>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">Connected user</p>
+              <p className="mt-2 break-all font-mono text-xs uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+                {sessionEmail}
+              </p>
+            </div>
+            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">Active profile</p>
+              <p className="mt-2 font-mono text-xs uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+                {activeProfile ? formatTrackTitle(activeProfile.track, tracks) : "Not selected yet"}
+              </p>
+            </div>
+            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">Profiles linked</p>
+              <p className="mt-2 font-mono text-xs uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+                {profilesState.profiles.length}
+              </p>
+            </div>
+            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">Data source</p>
+              <p className="mt-2 font-mono text-xs uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+                {profilesState.mocked ? "Demo mode" : "API live state"}
+              </p>
+            </div>
+          </div>
+
+          {feedback ? (
+            <div
+              className={[
+                "mt-6 border px-4 py-4 font-mono text-[11px] leading-6",
+                feedbackTone === "success"
+                  ? "border-[var(--shell-success)]/35 bg-[var(--shell-success)]/10 text-[var(--shell-ink)]"
+                  : "border-[#ff7a7a]/35 bg-[#ff7a7a]/10 text-[#ffd0d0]",
+              ].join(" ")}
+              aria-live="polite"
+            >
+              {feedback}
+            </div>
+          ) : null}
         </div>
 
-        <div className="hero-grid profiles-metrics">
-          <div className="metric-card">
-            <span>Connected user</span>
-            <strong>{sessionEmail}</strong>
+        <aside className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] p-5">
+          <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--shell-success)]">
+            {isOnboarding ? "Next steps" : "Profile guide"}
+          </p>
+          <div className="mt-4 space-y-4 text-sm leading-7 text-[var(--shell-muted)]">
+            <div className="border border-[var(--shell-border)] px-4 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-ink)]">
+                1. Create or pick a track
+              </p>
+              <p className="mt-2">
+                {hasProfiles
+                  ? "You can activate an existing profile or create a new one for another track."
+                  : "Start by creating the first learner profile attached to this account."}
+              </p>
+            </div>
+            <div className="border border-[var(--shell-border)] px-4 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-ink)]">
+                2. Confirm the active context
+              </p>
+              <p className="mt-2">
+                The active profile becomes the learner scope used by modules, review, mentor and defense.
+              </p>
+            </div>
+            <div className="border border-[var(--shell-border)] px-4 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-ink)]">
+                3. Continue into the workspace
+              </p>
+              <p className="mt-2">
+                {onboardingSource === "register"
+                  ? "This account was just created, so the next action is to activate the first track."
+                  : "Once the active profile is set, continue to the dashboard or the requested page."}
+              </p>
+            </div>
+
+            {onboardingComplete ? (
+              <Link
+                href={continueHref}
+                className="inline-flex w-full items-center justify-center border border-[var(--shell-success)] bg-[var(--shell-success)] px-4 py-3 font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--shell-canvas)]"
+              >
+                Continue to workspace
+              </Link>
+            ) : null}
           </div>
-          <div className="metric-card">
-            <span>Active profile</span>
-            <strong>{activeProfile ? formatTrackTitle(activeProfile.track, tracks) : "None"}</strong>
-          </div>
-          <div className="metric-card">
-            <span>Profiles linked</span>
-            <strong>{profilesState.profiles.length}</strong>
-          </div>
-          <div className="metric-card">
-            <span>Data source</span>
-            <strong>{profilesState.mocked ? "Demo mode" : "API live state"}</strong>
-          </div>
-        </div>
+        </aside>
       </section>
 
-      <section className="profiles-body">
-        <article className="panel profiles-list-panel">
-          <div className="section-heading">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_420px]">
+        <article className="border border-[var(--shell-border)] bg-[var(--shell-panel)] p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="eyebrow">Selection</p>
-              <h2>Active learner context</h2>
+              <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
+                {isOnboarding ? "Step 2" : "Selection"}
+              </p>
+              <h2 className="mt-2 font-mono text-2xl uppercase tracking-[0.08em] text-[var(--shell-ink)]">
+                Active learner context
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--shell-muted)]">
+                Switch between existing profiles when you want to move from one track to another without mixing progression.
+              </p>
             </div>
-            <Link href="/" className="profiles-inline-link">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center border border-[var(--shell-border-strong)] px-4 py-3 font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--shell-ink)]"
+            >
               Back to dashboard
             </Link>
           </div>
 
-          <div className="profiles-card-grid">
-            {profilesState.profiles.map((profile) => {
-              const isActive = profile.id === profilesState.activeProfileId;
+          {profilesState.profiles.length === 0 ? (
+            <div className="mt-6 border border-dashed border-[var(--shell-border)] px-5 py-6 text-sm leading-7 text-[var(--shell-muted)]">
+              No learner profile exists yet. Create one in the right panel to unlock the guided learning flow.
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {profilesState.profiles.map((profile) => {
+                const isActive = profile.id === profilesState.activeProfileId;
 
-              return (
-                <article
-                  key={profile.id}
-                  className={`profiles-card ${isActive ? "profiles-card--active" : ""}`}
-                >
-                  <div className="card-topline">
-                    <span>{profile.track}</span>
-                    <span>{isActive ? "Active" : "Inactive"}</span>
-                  </div>
-                  <h3>{formatTrackTitle(profile.track, tracks)}</h3>
-                  <p className="muted">Login handle: {profile.login}</p>
-                  <div className="profiles-meta">
-                    <span>Started {formatDateLabel(profile.startedAt)}</span>
-                    <span>{profile.currentModule ? `Current module: ${profile.currentModule}` : "No module selected yet"}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`profiles-switch-btn ${isActive ? "profiles-switch-btn--active" : ""}`}
-                    onClick={() => void handleSwitchProfile(profile)}
-                    disabled={isActive || switchingId === profile.id}
+                return (
+                  <article
+                    key={profile.id}
+                    className={[
+                      "border px-5 py-5 transition-colors",
+                      isActive
+                        ? "border-[var(--shell-success)] bg-[var(--shell-success)]/5"
+                        : "border-[var(--shell-border)] bg-[var(--shell-canvas)]",
+                    ].join(" ")}
                   >
-                    {isActive ? "Active profile" : switchingId === profile.id ? "Switching..." : "Set active"}
-                  </button>
-                </article>
-              );
-            })}
-          </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--shell-muted)]">
+                        {profile.track}
+                      </p>
+                      <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-ink)]">
+                        {isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                    <h3 className="mt-3 font-mono text-lg uppercase tracking-[0.08em] text-[var(--shell-ink)]">
+                      {formatTrackTitle(profile.track, tracks)}
+                    </h3>
+                    <p className="mt-3 text-sm text-[var(--shell-muted)]">Login handle: {profile.login}</p>
+                    <div className="mt-4 space-y-2 text-sm text-[var(--shell-muted)]">
+                      <p>Started {formatDateLabel(profile.startedAt)}</p>
+                      <p>{profile.currentModule ? `Current module: ${profile.currentModule}` : "No module selected yet"}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className={[
+                        "mt-5 inline-flex w-full items-center justify-center border px-4 py-3 font-mono text-[11px] uppercase tracking-[0.28em]",
+                        isActive
+                          ? "border-[var(--shell-border)] text-[var(--shell-muted)]"
+                          : "border-[var(--shell-success)] bg-[var(--shell-success)] text-[var(--shell-canvas)]",
+                      ].join(" ")}
+                      onClick={() => void handleSwitchProfile(profile)}
+                      disabled={isActive || switchingId === profile.id}
+                    >
+                      {isActive ? "Active profile" : switchingId === profile.id ? "Switching..." : "Set active"}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </article>
 
-        <aside className="panel profiles-create-panel">
-          <div className="profiles-create-header">
-            <p className="eyebrow">Creation</p>
-            <h2>Add a track profile</h2>
-            <p className="muted">
-              One profile per track. Use the optional login field if you want a custom handle instead of the generated
-              one.
+        <aside className="border border-[var(--shell-border)] bg-[var(--shell-panel)] p-6">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
+              {isOnboarding ? "Step 1" : "Creation"}
+            </p>
+            <h2 className="mt-2 font-mono text-2xl uppercase tracking-[0.08em] text-[var(--shell-ink)]">
+              Add a track profile
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-[var(--shell-muted)]">
+              One profile per track. Use the optional login field if you want a custom handle instead of the generated one.
             </p>
           </div>
 
-          <form className="profiles-form" noValidate onSubmit={handleCreateProfile}>
-            <label className="login-field">
-              <span>Track</span>
+          <form className="profiles-form mt-6 flex flex-col gap-5" noValidate onSubmit={handleCreateProfile}>
+            <label className="flex flex-col gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--shell-muted)]">Track</span>
               <select
+                className="h-12 rounded-none border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 font-mono text-[12px] uppercase tracking-[0.16em] text-[var(--shell-ink)] outline-none focus:border-[var(--shell-success)]"
                 value={form.track}
                 onChange={(event) => updateField("track", event.target.value)}
                 aria-invalid={Boolean(errors.track)}
@@ -286,12 +461,15 @@ export default function ProfilesPage() {
                   </option>
                 ))}
               </select>
-              {errors.track && <small className="login-error">{errors.track}</small>}
+              {errors.track ? <small className="font-mono text-[11px] text-[#ff7a7a]">{errors.track}</small> : null}
             </label>
 
-            <label className="login-field">
-              <span>Custom login handle (optional)</span>
+            <label className="flex flex-col gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--shell-muted)]">
+                Custom login handle (optional)
+              </span>
               <input
+                className="h-12 rounded-none border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 font-mono text-[13px] text-[var(--shell-ink)] outline-none placeholder:text-[var(--shell-muted)] focus:border-[var(--shell-success)]"
                 type="text"
                 name="login"
                 placeholder="learner-shell"
@@ -299,29 +477,24 @@ export default function ProfilesPage() {
                 onChange={(event) => updateField("login", event.target.value)}
                 aria-invalid={Boolean(errors.login)}
               />
-              {errors.login && <small className="login-error">{errors.login}</small>}
+              {errors.login ? <small className="font-mono text-[11px] text-[#ff7a7a]">{errors.login}</small> : null}
             </label>
 
-            <button type="submit" className="action-btn" disabled={isCreating}>
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center border border-[var(--shell-success)] bg-[var(--shell-success)] px-4 py-3 font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--shell-canvas)] disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isCreating}
+            >
               {isCreating ? "Creating profile..." : "Create profile"}
             </button>
           </form>
 
-          {feedback && (
-            <div
-              className={`login-feedback ${
-                feedbackTone === "success" ? "login-feedback--success" : "login-feedback--error"
-              }`}
-              aria-live="polite"
-            >
-              {feedback}
-            </div>
-          )}
-
-          <div className="profiles-note">
-            <strong>Current integration state</strong>
-            <p className="muted">
-              This page uses the authenticated session cookie and calls the real `/api/v1/profiles` endpoints.
+          <div className="mt-6 border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4 text-sm leading-7 text-[var(--shell-muted)]">
+            <strong className="block font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--shell-ink)]">
+              Current integration state
+            </strong>
+            <p className="mt-2">
+              This page uses the authenticated session cookie and the live <code>/api/v1/profiles</code> endpoints.
               Browser-backed mock data is available only when explicit demo mode is enabled.
             </p>
           </div>

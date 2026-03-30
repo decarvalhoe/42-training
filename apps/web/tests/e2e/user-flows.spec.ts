@@ -32,11 +32,10 @@ test("registers, creates a profile, visits a module, and submits a review", asyn
   await loginForm.getByLabel("Password").fill("supersecret");
   await loginForm.getByRole("button", { name: "Create account", exact: true }).click();
 
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { name: /One learning system/i })).toBeVisible();
+  await expect(page).toHaveURL(/\/profiles/);
+  await expect(page.getByRole("heading", { name: /Choose your first learning track/i })).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
 
-  await page.goto("/profiles");
   await expect(page.getByRole("heading", { name: "Add a track profile" })).toBeVisible();
 
   const profilesForm = page.locator("form.profiles-form");
