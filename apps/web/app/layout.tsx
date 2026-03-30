@@ -5,7 +5,7 @@ import type { Viewport } from "next";
 
 import { AuthGuard } from "@/app/components/AuthGuard";
 import { AuthProvider } from "@/app/components/AuthProvider";
-import { NavHeader } from "@/app/components/NavHeader";
+import { UiPreferencesProvider } from "@/app/components/UiPreferencesProvider";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -19,16 +19,22 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      data-theme="hacker-hud"
+      data-contrast="default"
+      data-density="comfortable"
+      data-motion="system"
+    >
       <body>
-        <AuthProvider>
-          <a href="#main-content" className="skip-link">
-            Skip to main content
-          </a>
-          <AuthGuard header={<NavHeader />}>
-            <div id="main-content" className="app-content">{children}</div>
-          </AuthGuard>
-        </AuthProvider>
+        <UiPreferencesProvider>
+          <AuthProvider>
+            <a href="#main-content" className="skip-link">
+              Skip to main content
+            </a>
+            <AuthGuard>{children}</AuthGuard>
+          </AuthProvider>
+        </UiPreferencesProvider>
       </body>
     </html>
   );
