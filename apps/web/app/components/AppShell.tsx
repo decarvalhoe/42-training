@@ -106,7 +106,8 @@ function getModuleContext(pathname: string) {
 }
 
 function buildRouteLabel(pathname: string) {
-  if (pathname === "/" || pathname.startsWith("/dashboard")) return "skill graph // learner state";
+  if (pathname === "/") return "mission control // learner home";
+  if (pathname.startsWith("/dashboard")) return "skill graph // learner state";
   if (pathname.startsWith("/tracks")) return "track explorer // curriculum";
   if (pathname.startsWith("/modules")) {
     const moduleId = getModuleContext(pathname);
@@ -304,17 +305,23 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex items-center justify-between gap-2">
               {isExpanded ? (
                 <div className="min-w-0">
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--shell-success)]">
+                  <Link
+                    href="/"
+                    className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--shell-success)]"
+                  >
                     42:training
-                  </p>
+                  </Link>
                   <p className="mt-1 truncate font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">
                     {routeLabel}
                   </p>
                 </div>
               ) : (
-                <span className="inline-flex w-full justify-center font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--shell-success)]">
+                <Link
+                  href="/"
+                  className="inline-flex w-full justify-center font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--shell-success)]"
+                >
                   42
-                </span>
+                </Link>
               )}
 
               <button

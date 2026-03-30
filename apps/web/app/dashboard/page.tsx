@@ -1,272 +1,291 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
-import { getDashboardData, getTmuxSessions } from "@/lib/api";
-import type { ModuleItem, TrackItem } from "@/lib/api";
 import { DataSourceBadge } from "@/app/components/DataSourceBadge";
-import { TmuxSessions } from "@/app/components/TmuxSessions";
+import { getAnalyticsData, getDashboardData, getTmuxSessions } from "@/lib/api";
+import { countSkills, deriveModuleState, getLearningContext, getTrackTheme, summarizeSessions } from "@/lib/learner-progress";
 
-/* ------------------------------------------------------------------ */
-/*  Prerequisite map (same as module detail page)                      */
-/* ------------------------------------------------------------------ */
-
-const PREREQUISITE_MAP: Record<string, string[]> = {
-  "shell-basics": [],
-  "shell-streams": ["shell-basics"],
-  "shell-permissions": ["shell-basics"],
-  "shell-tooling": ["shell-streams", "shell-permissions"],
-  "c-basics": ["shell-basics"],
-  "c-memory": ["c-basics"],
-  "c-build-debug": ["c-basics", "shell-streams"],
-  "c-libft-pushswap-bridge": ["c-memory", "c-build-debug"],
-  "python-basics": ["shell-basics"],
-  "python-oop-scripting": ["python-basics"],
-  "ai-rag-agents": ["python-oop-scripting"],
-};
-
-/* ------------------------------------------------------------------ */
-/*  Skill state derivation                                             */
-/* ------------------------------------------------------------------ */
-
-type SkillState = "done" | "in_progress" | "todo";
-type ModuleState = "done" | "in_progress" | "todo";
-
-function deriveModuleState(
-  moduleId: string,
-  trackId: string,
-  activeTrack: string,
-  activeModule: string,
-  modules: ModuleItem[],
-): ModuleState {
-  if (trackId !== activeTrack) return "todo";
-  if (moduleId === activeModule) return "in_progress";
-  const activeIndex = modules.findIndex((m) => m.id === activeModule);
-  const currentIndex = modules.findIndex((m) => m.id === moduleId);
-  if (activeIndex === -1) return "todo";
-  return currentIndex < activeIndex ? "done" : "todo";
-}
-
-function deriveSkillState(
-  skill: string,
-  completedItems: string[],
-  inProgressItems: string[],
-): SkillState {
-  const lower = skill.toLowerCase();
-  if (completedItems.some((c) => c.toLowerCase().includes(lower))) return "done";
-  if (inProgressItems.some((c) => c.toLowerCase().includes(lower))) return "in_progress";
-  return "todo";
-}
-
-function stateLabel(state: ModuleState): string {
-  switch (state) {
-    case "done": return "Completed";
-    case "in_progress": return "In progress";
-    case "todo": return "Not started";
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/*  Stat helpers                                                       */
-/* ------------------------------------------------------------------ */
-
-type TrackStats = {
-  total: number;
-  done: number;
-  inProgress: number;
-};
-
-function computeTrackStats(
-  track: TrackItem,
-  activeTrack: string,
-  activeModule: string,
-): TrackStats {
-  let done = 0;
-  let inProgress = 0;
-  for (const mod of track.modules) {
-    const state = deriveModuleState(mod.id, track.id, activeTrack, activeModule, track.modules);
-    if (state === "done") done++;
-    else if (state === "in_progress") inProgress++;
-  }
-  return { total: track.modules.length, done, inProgress };
-}
-
-/* ------------------------------------------------------------------ */
-/*  Page                                                               */
-/* ------------------------------------------------------------------ */
-
-export default async function DashboardPage() {
-  const [data, tmuxData] = await Promise.all([getDashboardData(), getTmuxSessions()]);
-  const { curriculum, progression } = data;
-
-  const activeTrack = progression.learning_plan?.active_course ?? "shell";
-  const activeModule = progression.learning_plan?.active_module ?? "";
-  const completedItems = progression.progress?.completed ?? [];
-  const inProgressItems = progression.progress?.in_progress ?? [];
-
-  const totalSkills = curriculum.tracks.reduce(
-    (sum, t) => sum + t.modules.reduce((s, m) => s + m.skills.length, 0),
-    0,
+function Panel({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`border border-[var(--shell-border)] bg-[var(--shell-panel)] ${className}`}>
+      {children}
+    </section>
   );
-  const totalModules = curriculum.tracks.reduce((sum, t) => sum + t.modules.length, 0);
+}
+
+function StatBlock({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="border-b border-[var(--shell-border)] px-4 py-4 last:border-b-0">
+      <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">{label}</p>
+      <p className="mt-3 font-mono text-2xl font-semibold text-[var(--shell-ink)]">{value}</p>
+      <p className="mt-2 font-mono text-[10px] leading-5 text-[var(--shell-muted)]">{detail}</p>
+    </div>
+  );
+}
+
+function ModuleNode({
+  href,
+  title,
+  phase,
+  skillCount,
+  state,
+  accent,
+  surface,
+}: {
+  href: string;
+  title: string;
+  phase: string;
+  skillCount: number;
+  state: "done" | "in_progress" | "todo";
+  accent: string;
+  surface: string;
+}) {
+  const visual =
+    state === "done"
+      ? {
+          borderColor: accent,
+          backgroundColor: surface,
+          textColor: accent,
+        }
+      : state === "in_progress"
+        ? {
+            borderColor: "var(--shell-warning)",
+            backgroundColor: "rgba(247, 190, 22, 0.08)",
+            textColor: "var(--shell-warning)",
+          }
+        : {
+            borderColor: "var(--shell-border)",
+            backgroundColor: "rgba(45, 47, 54, 0.15)",
+            textColor: "var(--shell-dim)",
+          };
+
+  const connectorColor = state === "todo" ? "var(--shell-border)" : accent;
+  const phaseLabel = state === "in_progress" ? "active" : state === "done" ? "done" : phase;
 
   return (
-    <main className="page-shell dashboard-page">
-      {/* Hero */}
-      <section className="dashboard-hero panel">
-        <div className="dashboard-hero-copy">
-          <p className="eyebrow">Skill Dashboard</p>
-          <h1>Competency map across all tracks</h1>
-          <p className="lead">
-            Visual overview of every skill in the curriculum, organized by track and module.
-            Each node reflects your current progression state.
-          </p>
-          <div className="stack-list">
-            <DataSourceBadge sourceMode={data.sourceMode} />
-          </div>
+    <div className="flex min-w-[240px] items-center gap-3">
+      <Link
+        href={href}
+        className="flex min-h-[120px] min-w-[180px] flex-col justify-between border px-4 py-4 transition-colors hover:border-[var(--shell-success)]"
+        style={{ borderColor: visual.borderColor, backgroundColor: visual.backgroundColor }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.24em]" style={{ color: visual.textColor }}>
+            {phaseLabel}
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">
+            {skillCount} skills
+          </span>
         </div>
-        <div className="dashboard-hero-stats">
-          <div className="metric-card">
-            <span>Tracks</span>
-            <strong>{curriculum.tracks.length}</strong>
-          </div>
-          <div className="metric-card">
-            <span>Modules</span>
-            <strong>{totalModules}</strong>
-          </div>
-          <div className="metric-card">
-            <span>Skills</span>
-            <strong>{totalSkills}</strong>
-          </div>
-          <div className="metric-card">
-            <span>Active</span>
-            <strong>{activeTrack}</strong>
-          </div>
-        </div>
-      </section>
+        <h3 className="mt-6 font-mono text-sm font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+          {title}
+        </h3>
+      </Link>
+      <div className="h-px min-w-8 flex-1 border-t border-dashed" style={{ borderColor: connectorColor }} />
+    </div>
+  );
+}
 
-      {/* Main body: skill graph + sidebar */}
-      <section className="section split dashboard-body">
-        <div className="dashboard-main">
-          {curriculum.tracks.map((track) => {
-            const stats = computeTrackStats(track, activeTrack, activeModule);
-            const pct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+export default async function DashboardPage() {
+  const [data, analytics, tmuxData] = await Promise.all([
+    getDashboardData(),
+    getAnalyticsData(),
+    getTmuxSessions(),
+  ]);
 
-            return (
-              <article key={track.id} className="panel dashboard-track">
-                <div className="dashboard-track-header">
-                  <div>
-                    <p className="eyebrow">{track.id} track</p>
-                    <h2>{track.title}</h2>
-                    <p className="muted">{track.summary}</p>
-                  </div>
-                  <div className="dashboard-track-progress">
-                    <span className="dashboard-track-pct">{pct}%</span>
-                    <div className="progress-bar">
-                      <div
-                        className="progress-bar-fill"
-                        style={{ "--bar-width": `${pct}%`, "--bar-color": `var(--${track.id === "python_ai" ? "python" : track.id})` } as React.CSSProperties}
-                      />
-                    </div>
-                    <span className="muted">
-                      {stats.done}/{stats.total} modules
-                    </span>
-                  </div>
-                </div>
+  const { curriculum, progression } = data;
+  const { activeTrack, activeModule, modules, trackStats } = getLearningContext(data);
+  const orderedTracks = [...curriculum.tracks].sort((left, right) => {
+    if (left.id === activeTrack) {
+      return -1;
+    }
+    if (right.id === activeTrack) {
+      return 1;
+    }
+    return 0;
+  });
 
-                <div className="skill-graph">
-                  {track.modules.map((mod) => {
-                    const modState = deriveModuleState(
-                      mod.id, track.id, activeTrack, activeModule, track.modules,
-                    );
-                    const prereqs = mod.prerequisites ?? PREREQUISITE_MAP[mod.id] ?? [];
+  const completedModules = modules.filter((entry) => entry.state === "done").length;
+  const totalModules = modules.length;
+  const totalSkills = countSkills(curriculum.tracks);
+  const tmuxSummary = summarizeSessions(tmuxData.sessions);
 
-                    return (
-                      <div key={mod.id} className="skill-graph-node-group">
-                        {/* Module header node */}
-                        <Link
-                          href={`/modules/${mod.id}`}
-                          className={`skill-graph-module skill-graph-module--${modState}`}
-                        >
-                          <div className="skill-graph-module-header">
-                            <span className={`skill-graph-dot skill-graph-dot--${modState}`} />
-                            <strong>{mod.title}</strong>
-                            <span className="skill-graph-state">{stateLabel(modState)}</span>
-                          </div>
-                          {prereqs.length > 0 && (
-                            <div className="skill-graph-prereqs">
-                              {prereqs.map((p) => (
-                                <span key={p} className="skill-graph-prereq-tag">{p}</span>
-                              ))}
-                            </div>
-                          )}
-                        </Link>
+  return (
+    <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid gap-4">
+        <Panel>
+          <StatBlock
+            label="Modules"
+            value={`${completedModules}/${totalModules}`}
+            detail={`${analytics.summary.module_completions} completion events recorded in analytics`}
+          />
+          <StatBlock
+            label="Success rate"
+            value={`${analytics.summary.checkpoint_success_rate}%`}
+            detail="Checkpoint reliability across evaluated learner attempts"
+          />
+          <StatBlock
+            label="Defense"
+            value={`${analytics.summary.defenses_started}`}
+            detail="Defense sessions started from the guided learner workflow"
+          />
+          <StatBlock
+            label="Mentor queries"
+            value={`${analytics.summary.mentor_queries}`}
+            detail="AI mentor interactions preserved in the pedagogical event stream"
+          />
+          <StatBlock
+            label="Skill coverage"
+            value={`${totalSkills}`}
+            detail={`${curriculum.tracks.length} tracks visible in the competency map`}
+          />
+        </Panel>
 
-                        {/* Skill nodes under this module */}
-                        <div className="skill-graph-skills">
-                          {mod.skills.map((skill) => {
-                            const ss = modState === "todo"
-                              ? "todo"
-                              : deriveSkillState(skill, completedItems, inProgressItems);
-                            return (
-                              <div
-                                key={skill}
-                                className={`skill-graph-skill skill-graph-skill--${ss}`}
-                              >
-                                <span className={`skill-graph-skill-dot skill-graph-skill-dot--${ss}`} />
-                                <span>{skill}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-
-        {/* Sidebar: tmux sessions + legend */}
-        <aside className="dashboard-sidebar">
-          <article className="panel">
-            <p className="eyebrow">Agent Sessions</p>
-            <h2>Tmux workspace</h2>
-            <TmuxSessions sessions={tmuxData.sessions} />
-          </article>
-
-          <article className="panel">
-            <p className="eyebrow">Legend</p>
-            <h2>Skill states</h2>
-            <div className="dashboard-legend">
-              <div className="dashboard-legend-item">
-                <span className="skill-graph-dot skill-graph-dot--done" />
-                <span>Completed</span>
-              </div>
-              <div className="dashboard-legend-item">
-                <span className="skill-graph-dot skill-graph-dot--in_progress" />
-                <span>In progress</span>
-              </div>
-              <div className="dashboard-legend-item">
-                <span className="skill-graph-dot skill-graph-dot--todo" />
-                <span>Not started</span>
-              </div>
+        <Panel className="px-5 py-5">
+          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Session health</p>
+          <div className="mt-4 grid gap-3">
+            <div className="flex items-center justify-between border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.24em]">
+              <span className="text-[var(--shell-muted)]">Live panes</span>
+              <span className="text-[var(--shell-success)]">{tmuxSummary.active}</span>
             </div>
-          </article>
+            <div className="flex items-center justify-between border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.24em]">
+              <span className="text-[var(--shell-muted)]">Idle panes</span>
+              <span className="text-[var(--shell-ink)]">{tmuxSummary.idle}</span>
+            </div>
+            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+              <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Current focus</p>
+              <p className="mt-3 font-mono text-sm text-[var(--shell-ink)]">
+                {progression.progress?.current_exercise ?? "No active exercise"}
+              </p>
+              <p className="mt-2 font-mono text-[10px] leading-5 text-[var(--shell-muted)]">
+                {progression.progress?.current_step ?? progression.next_command ?? "No current step visible in the learner session."}
+              </p>
+            </div>
+          </div>
+        </Panel>
+      </div>
 
-          <article className="panel">
-            <p className="eyebrow">Current focus</p>
-            <h2>Active session</h2>
-            <p>{progression.progress?.current_exercise ?? "No active exercise"}</p>
-            <p className="muted">{progression.progress?.current_step ?? "No current step"}</p>
-            {progression.next_command && (
-              <div className="dashboard-next-cmd">
-                <span className="muted">Next command</span>
-                <code className="prog-code">{progression.next_command}</code>
-              </div>
-            )}
-          </article>
-        </aside>
-      </section>
-    </main>
+      <div className="grid gap-4">
+        <Panel className="px-6 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Dashboard</p>
+              <h1 className="mt-3 font-mono text-2xl font-semibold uppercase tracking-[0.1em] text-[var(--shell-ink)]">
+                Skill graph // learner state
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--shell-muted)]">
+                This surface is now dedicated to the competency map. It keeps the cross-track graph readable and pushes curriculum detail back into track and module views.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <DataSourceBadge sourceMode={data.sourceMode} />
+              <Link
+                href="/progression"
+                className="inline-flex min-h-10 items-center justify-center border border-[var(--shell-border-strong)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--shell-ink)] transition-colors hover:border-[var(--shell-success)] hover:text-[var(--shell-success)]"
+              >
+                Open progression
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-6 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">
+            <span className="flex items-center gap-2">
+              <span className="inline-flex size-2 rounded-full bg-[var(--shell-success)]" />
+              done
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="inline-flex size-2 rounded-full bg-[var(--shell-warning)]" />
+              active
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="inline-flex size-2 rounded-full bg-[var(--shell-border-strong)]" />
+              locked
+            </span>
+          </div>
+        </Panel>
+
+        <Panel className="px-6 py-6">
+          <div className="grid gap-6">
+            {orderedTracks.map((track) => {
+              const stats = trackStats.find((entry) => entry.id === track.id);
+              const theme = getTrackTheme(track.id);
+
+              return (
+                <section key={track.id} className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-5 py-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="font-mono text-[9px] uppercase tracking-[0.28em]" style={{ color: theme.accent }}>
+                        {theme.label} track
+                      </p>
+                      <h2 className="mt-3 font-mono text-lg font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+                        {track.title}
+                      </h2>
+                      <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--shell-muted)]">{track.summary}</p>
+                    </div>
+                    <div className="min-w-[180px]">
+                      <p className="font-mono text-right text-xl font-semibold" style={{ color: theme.accent }}>
+                        {stats?.percentComplete ?? 0}%
+                      </p>
+                      <div className="mt-3 h-2 overflow-hidden border border-[var(--shell-border)] bg-[var(--shell-panel)]">
+                        <div
+                          className="h-full"
+                          style={{ width: `${stats?.percentComplete ?? 0}%`, backgroundColor: theme.accent }}
+                        />
+                      </div>
+                      <p className="mt-3 text-right font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">
+                        {stats?.completedModules ?? 0}/{stats?.totalModules ?? track.modules.length} modules
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 overflow-x-auto pb-2">
+                    <div className="flex min-w-max items-center">
+                      {track.modules.map((module, index) => {
+                        const state = deriveModuleState(module.id, track.id, activeTrack, activeModule, track.modules);
+                        const isLast = index === track.modules.length - 1;
+
+                        return (
+                          <div key={module.id} className="flex items-center">
+                            <ModuleNode
+                              href={`/modules/${module.id}`}
+                              title={module.title}
+                              phase={module.phase}
+                              skillCount={module.skills.length}
+                              state={state}
+                              accent={theme.accent}
+                              surface={theme.surface}
+                            />
+                            {isLast ? null : (
+                              <div
+                                className="h-px min-w-12 border-t border-dashed"
+                                style={{ borderColor: state === "todo" ? "var(--shell-border)" : theme.accent }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </Panel>
+      </div>
+    </div>
   );
 }
