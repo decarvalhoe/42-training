@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { getDashboardData } from "@/lib/api";
 
 import EvidenceClient from "./EvidenceClient";
@@ -21,23 +19,6 @@ export default async function EvidencePage() {
   );
 
   return (
-    <main className="page-shell evidence-page">
-      <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link href="/">Dashboard</Link>
-        <span className="breadcrumb-sep">/</span>
-        <span>Evidence</span>
-      </nav>
-
-      <section className="evidence-hero panel">
-        <p className="eyebrow">Evidence</p>
-        <h1>Keep the artifacts that prove how you reason, not just what you answer.</h1>
-        <p className="lead">
-          Reviews and oral defenses generate traces: notes, command outputs, summaries and reviewer prompts. This page
-          consolidates them in one place so you can revisit weak spots before the next project or evaluation.
-        </p>
-      </section>
-
-      <EvidenceClient modules={modules} />
-    </main>
+    <EvidenceClient modules={modules} />
   );
 }

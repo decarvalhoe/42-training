@@ -8,6 +8,16 @@ import {
   type EvidenceArtifact,
   type ReviewAttemptRecord,
 } from "@/services/reviewEvidence";
+import {
+  GuidedActionButton,
+  GuidedBadge,
+  GuidedEmptyState,
+  GuidedField,
+  GuidedPanel,
+  GuidedSelect,
+  GuidedSidebarSection,
+  GuidedTextarea,
+} from "@/app/components/GuidedSurface";
 
 type ModuleOption = {
   id: string;
@@ -66,7 +76,10 @@ function validateForm(values: FormState): FormErrors {
   if (values.feedback.trim().length < 12) {
     errors.feedback = "Add review notes with a minimum level of detail.";
   }
-  if (values.score && (Number.isNaN(Number(values.score)) || Number(values.score) < 0 || Number(values.score) > 100)) {
+  if (
+    values.score &&
+    (Number.isNaN(Number(values.score)) || Number(values.score) < 0 || Number(values.score) > 100)
+  ) {
     errors.score = "Score must stay between 0 and 100.";
   }
 
@@ -168,7 +181,7 @@ export default function ReviewClient({ modules }: Props) {
         }
         return "How would you defend these choices orally without showing the solution?";
       }),
-    [selectedLenses]
+    [selectedLenses],
   );
 
   function updateField(field: keyof FormState, value: string) {
@@ -179,7 +192,7 @@ export default function ReviewClient({ modules }: Props) {
 
   function toggleLens(value: string) {
     setSelectedLenses((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
     );
     setFeedback(null);
   }
@@ -227,166 +240,228 @@ export default function ReviewClient({ modules }: Props) {
   }
 
   if (loadingState === "loading") {
-    return (
-      <section className="panel review-shell">
-        <h2>Loading review workspace...</h2>
-      </section>
-    );
+    return <GuidedEmptyState title="Loading review workspace..." body="The guided review workspace is bootstrapping recent attempts and evidence prompts." />;
   }
 
   if (loadingState === "error") {
     return (
-      <section className="panel review-shell">
-        <h2>Review workspace unavailable</h2>
-        <p className="muted">The page could not load recent review attempts.</p>
-        <button type="button" className="action-btn" onClick={() => void loadItems()}>
-          Retry
-        </button>
-      </section>
+      <GuidedEmptyState
+        title="Review workspace unavailable"
+        body="The page could not load recent review attempts. Retry once the review endpoints are reachable again."
+        action={
+          <GuidedActionButton onClick={() => void loadItems()}>
+            Retry
+          </GuidedActionButton>
+        }
+      />
     );
   }
 
   return (
-    <section className="review-shell">
-      <article className="panel review-form-panel">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Submission</p>
-            <h2>Submit a guided review</h2>
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_340px]">
+      <div className="grid gap-4">
+        <GuidedPanel className="px-6 py-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-3xl">
+              <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
+                guided review // peer preparation
+              </p>
+              <h1 className="mt-4 font-mono text-3xl font-semibold uppercase tracking-[0.08em] text-[var(--shell-ink)]">
+                Submit a guided review
+              </h1>
+              <p className="mt-4 text-sm leading-7 text-[var(--shell-muted)]">
+                Prepare a peer-style evaluation before the real defense pressure hits. Frame the review lenses, attach evidence
+                and leave a trace of the exact questions another learner should challenge.
+              </p>
+            </div>
+            <GuidedBadge tone={sourceMode === "live" ? "success" : "warning"}>
+              {sourceMode === "live" ? "API live" : "demo mode"}
+            </GuidedBadge>
           </div>
-          <span className="pill">{sourceMode === "live" ? "API live" : "Demo mode"}</span>
-        </div>
+        </GuidedPanel>
 
-        <form className="review-form" noValidate onSubmit={handleSubmit}>
-          <div className="review-grid">
-            <label className="defense-field">
-              <span>Module</span>
-              <select value={form.moduleId} onChange={(event) => updateField("moduleId", event.target.value)}>
-                {modules.map((module) => (
-                  <option key={module.id} value={module.id}>
-                    {module.trackTitle} — {module.title}
-                  </option>
-                ))}
-              </select>
-              {errors.moduleId && <small className="login-error">{errors.moduleId}</small>}
-            </label>
+        <GuidedPanel className="px-6 py-6">
+          <form className="review-form grid gap-6" noValidate onSubmit={handleSubmit}>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <GuidedField label="Module">
+                <GuidedSelect value={form.moduleId} onChange={(event) => updateField("moduleId", event.target.value)}>
+                  {modules.map((module) => (
+                    <option key={module.id} value={module.id}>
+                      {module.trackTitle} — {module.title}
+                    </option>
+                  ))}
+                </GuidedSelect>
+                {errors.moduleId ? (
+                  <small className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-danger)]">
+                    {errors.moduleId}
+                  </small>
+                ) : null}
+              </GuidedField>
 
-            <label className="defense-field">
-              <span>Reviewer ID</span>
-              <input value={form.reviewerId} onChange={(event) => updateField("reviewerId", event.target.value)} />
-              {errors.reviewerId && <small className="login-error">{errors.reviewerId}</small>}
-            </label>
-
-            <label className="defense-field">
-              <span>Learner ID</span>
-              <input value={form.learnerId} onChange={(event) => updateField("learnerId", event.target.value)} />
-            </label>
-
-            <label className="defense-field">
-              <span>Score (optional)</span>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={form.score}
-                onChange={(event) => updateField("score", event.target.value)}
-              />
-              {errors.score && <small className="login-error">{errors.score}</small>}
-            </label>
-          </div>
-
-          <div className="review-lens-list">
-            {REVIEW_LENSES.map((lens) => (
-              <label key={lens} className={`review-lens ${selectedLenses.includes(lens) ? "review-lens--active" : ""}`}>
+              <GuidedField label="Reviewer ID">
                 <input
-                  type="checkbox"
-                  checked={selectedLenses.includes(lens)}
-                  onChange={() => toggleLens(lens)}
+                  className="min-h-11 border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-2 font-mono text-sm text-[var(--shell-ink)] outline-none transition-colors focus:border-[var(--shell-success)]"
+                  value={form.reviewerId}
+                  onChange={(event) => updateField("reviewerId", event.target.value)}
                 />
-                <span>{lens}</span>
-              </label>
-            ))}
-          </div>
+                {errors.reviewerId ? (
+                  <small className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-danger)]">
+                    {errors.reviewerId}
+                  </small>
+                ) : null}
+              </GuidedField>
 
-          <label className="defense-field">
-            <span>Code or command snippet</span>
-            <textarea
-              className="defense-textarea"
-              value={form.codeSnippet}
-              onChange={(event) => updateField("codeSnippet", event.target.value)}
-              placeholder="Paste the function, command sequence or excerpt you want reviewed."
-            />
-            {errors.codeSnippet && <small className="login-error">{errors.codeSnippet}</small>}
-          </label>
+              <GuidedField label="Learner ID">
+                <input
+                  className="min-h-11 border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-2 font-mono text-sm text-[var(--shell-ink)] outline-none transition-colors focus:border-[var(--shell-success)]"
+                  value={form.learnerId}
+                  onChange={(event) => updateField("learnerId", event.target.value)}
+                />
+              </GuidedField>
 
-          <label className="defense-field">
-            <span>Review notes</span>
-            <textarea
-              className="defense-textarea"
-              value={form.feedback}
-              onChange={(event) => updateField("feedback", event.target.value)}
-              placeholder="Describe what a peer should challenge, confirm or re-explain."
-            />
-            {errors.feedback && <small className="login-error">{errors.feedback}</small>}
-          </label>
+              <GuidedField label="Score (optional)">
+                <input
+                  className="min-h-11 border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-2 font-mono text-sm text-[var(--shell-ink)] outline-none transition-colors focus:border-[var(--shell-success)]"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={form.score}
+                  onChange={(event) => updateField("score", event.target.value)}
+                />
+                {errors.score ? (
+                  <small className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-danger)]">
+                    {errors.score}
+                  </small>
+                ) : null}
+              </GuidedField>
+            </div>
 
-          <label className="defense-field">
-            <span>Evidence notes</span>
-            <textarea
-              className="defense-textarea"
-              value={form.evidenceNotes}
-              onChange={(event) => updateField("evidenceNotes", event.target.value)}
-              placeholder="One line per artifact: command output, self-note, checklist item, warning..."
-            />
-          </label>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {REVIEW_LENSES.map((lens) => {
+                const active = selectedLenses.includes(lens);
+                return (
+                  <label
+                    key={lens}
+                    className={`flex cursor-pointer items-start gap-3 border px-4 py-3 transition-colors ${
+                      active
+                        ? "border-[var(--shell-success)] bg-[rgba(0,224,110,0.08)]"
+                        : "border-[var(--shell-border)] bg-[var(--shell-canvas)]"
+                    }`}
+                  >
+                    <input type="checkbox" checked={active} onChange={() => toggleLens(lens)} className="mt-1" />
+                    <span className="text-sm leading-6 text-[var(--shell-ink)]">{lens}</span>
+                  </label>
+                );
+              })}
+            </div>
 
-          <div className="review-guidance panel">
-            <p className="eyebrow">Generated reviewer prompts</p>
-            <div className="stack-list">
+            <GuidedField label="Code or command snippet">
+              <GuidedTextarea
+                value={form.codeSnippet}
+                onChange={(event) => updateField("codeSnippet", event.target.value)}
+                placeholder="Paste the function, command sequence or excerpt you want reviewed."
+              />
+              {errors.codeSnippet ? (
+                <small className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-danger)]">
+                  {errors.codeSnippet}
+                </small>
+              ) : null}
+            </GuidedField>
+
+            <GuidedField label="Review notes">
+              <GuidedTextarea
+                value={form.feedback}
+                onChange={(event) => updateField("feedback", event.target.value)}
+                placeholder="Describe what a peer should challenge, confirm or re-explain."
+              />
+              {errors.feedback ? (
+                <small className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-danger)]">
+                  {errors.feedback}
+                </small>
+              ) : null}
+            </GuidedField>
+
+            <GuidedField label="Evidence notes">
+              <GuidedTextarea
+                value={form.evidenceNotes}
+                onChange={(event) => updateField("evidenceNotes", event.target.value)}
+                placeholder="One line per artifact: command output, self-note, checklist item, warning..."
+              />
+            </GuidedField>
+
+            <div className="flex flex-wrap gap-3">
+              <GuidedActionButton type="submit" disabled={submitState === "submitting"}>
+                {submitState === "submitting" ? "Submitting..." : "Submit review"}
+              </GuidedActionButton>
+            </div>
+
+            {feedback ? (
+              <div
+                className={`border px-4 py-3 font-mono text-[10px] uppercase tracking-[0.24em] ${
+                  feedbackTone === "success"
+                    ? "border-[rgba(0,224,110,0.35)] text-[var(--shell-success)]"
+                    : "border-[rgba(255,65,65,0.35)] text-[var(--shell-danger)]"
+                }`}
+              >
+                {feedback}
+              </div>
+            ) : null}
+          </form>
+        </GuidedPanel>
+      </div>
+
+      <div className="grid gap-4">
+        <GuidedPanel className="px-5 py-5">
+          <GuidedSidebarSection label="Generated reviewer prompts">
+            <div className="flex flex-wrap gap-2">
               {reviewQuestions.map((question) => (
-                <span key={question} className="pill">
-                  {question}
-                </span>
+                <GuidedBadge key={question}>{question}</GuidedBadge>
               ))}
             </div>
-          </div>
+          </GuidedSidebarSection>
+        </GuidedPanel>
 
-          <button type="submit" className="action-btn" disabled={submitState === "submitting"}>
-            {submitState === "submitting" ? "Submitting..." : "Submit review"}
-          </button>
-        </form>
+        <GuidedPanel className="px-5 py-5">
+          <GuidedSidebarSection label="Review lenses">
+            <div className="space-y-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+              {selectedLenses.map((lens) => (
+                <p key={lens}>{lens}</p>
+              ))}
+            </div>
+          </GuidedSidebarSection>
+        </GuidedPanel>
 
-        {feedback && (
-          <div
-            className={`login-feedback ${
-              feedbackTone === "success" ? "login-feedback--success" : "login-feedback--error"
-            }`}
-          >
-            {feedback}
-          </div>
-        )}
-      </article>
-
-      <aside className="panel review-history-panel">
-        <p className="eyebrow">Recent attempts</p>
-        <h2>Review history</h2>
-        <div className="review-history-list">
-          {items.map((item) => (
-            <article key={item.id} className="review-history-card">
-              <div className="card-topline">
-                <span>{moduleLabel(item.moduleId, modules)}</span>
-                <span>{formatTimestamp(item.createdAt)}</span>
-              </div>
-              <strong>{item.reviewerId}</strong>
-              <p className="muted">{item.feedback}</p>
-              <div className="review-history-meta">
-                <span>{item.score !== null ? `${item.score}/100` : "No score"}</span>
-                <span>{item.evidenceArtifacts.length} artifacts</span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </aside>
-    </section>
+        <GuidedPanel className="px-5 py-5">
+          <GuidedSidebarSection label="Recent attempts">
+            <div className="space-y-3">
+              {items.length === 0 ? (
+                <p className="text-sm leading-6 text-[var(--shell-muted)]">
+                  No review has been captured yet. The first submission will appear here.
+                </p>
+              ) : (
+                items.map((item) => (
+                  <article key={item.id} className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+                    <div className="flex items-start justify-between gap-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-dim)]">
+                      <span>{formatTimestamp(item.createdAt)}</span>
+                      <span>{item.score !== null ? `${item.score}/100` : "no score"}</span>
+                    </div>
+                    <p className="mt-3 font-mono text-sm font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
+                      {item.reviewerId}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[var(--shell-muted)]">
+                      {moduleLabel(item.moduleId, modules)}
+                    </p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--shell-muted)]">{item.feedback}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <GuidedBadge>{item.evidenceArtifacts.length} artifacts</GuidedBadge>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </GuidedSidebarSection>
+        </GuidedPanel>
+      </div>
+    </div>
   );
 }
