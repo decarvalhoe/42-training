@@ -19,6 +19,7 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"]],
   use: {
     baseURL,
+    viewport: { width: 1440, height: 1024 },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",

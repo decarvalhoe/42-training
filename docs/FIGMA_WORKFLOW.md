@@ -40,6 +40,7 @@ Approved product direction:
 - the authenticated app shell is defined in Figma before page implementation
 - frontend governance is moving toward **Tailwind + centralized tokens + themes/skins + accessibility controls**
 - implementation work must distinguish between the current code state and the target governance state
+- post-implementation parity is enforced through `docs/FIGMA_SIGNOFF_AND_VISUAL_REGRESSION.md`
 
 ## Canonical references
 
