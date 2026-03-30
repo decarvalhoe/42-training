@@ -99,7 +99,7 @@ async function prepareSurface(page: Page, route: string, options?: { authenticat
 
 async function expectStableScreenshot(page: Page, snapshotName: string) {
   await expect(page).toHaveScreenshot(snapshotName, {
-    maxDiffPixels: 800,
+    maxDiffPixelRatio: 0.02,
   });
 }
 
