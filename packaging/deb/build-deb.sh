@@ -219,7 +219,12 @@ cp -r "$REPO_ROOT/apps/web/services" "$BUILD_DIR/opt/42-training/apps/web/"
 cp "$REPO_ROOT/apps/web/package.json" "$BUILD_DIR/opt/42-training/apps/web/"
 cp "$REPO_ROOT/apps/web/package-lock.json" "$BUILD_DIR/opt/42-training/apps/web/" 2>/dev/null || true
 cp "$REPO_ROOT/apps/web/tsconfig.json" "$BUILD_DIR/opt/42-training/apps/web/"
-cp "$REPO_ROOT/apps/web/next.config.ts" "$BUILD_DIR/opt/42-training/apps/web/"
+for next_config in next.config.mjs next.config.js next.config.ts; do
+    if [ -f "$REPO_ROOT/apps/web/$next_config" ]; then
+        cp "$REPO_ROOT/apps/web/$next_config" "$BUILD_DIR/opt/42-training/apps/web/"
+        break
+    fi
+done
 
 # Curriculum data
 cp "$REPO_ROOT/packages/curriculum/data/"*.json "$BUILD_DIR/opt/42-training/packages/curriculum/data/"

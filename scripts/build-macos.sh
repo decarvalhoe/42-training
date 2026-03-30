@@ -20,6 +20,11 @@ DESKTOP_DIR="${ROOT_DIR}/desktop"
 STAGE_DIR="${DESKTOP_DIR}/staging"
 PYTHON="${PYTHON:-python3}"
 SIGN=false
+RELEASE_VERSION="${RELEASE_VERSION:-}"
+
+if [ -z "${RELEASE_VERSION}" ] && [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
+  RELEASE_VERSION="${GITHUB_REF#refs/tags/v}"
+fi
 
 for arg in "$@"; do
   case "$arg" in
@@ -121,6 +126,11 @@ rm -rf "${STAGE_DIR}"
 
 # Install Electron dependencies
 (cd "${DESKTOP_DIR}" && npm ci)
+
+if [ -n "${RELEASE_VERSION}" ]; then
+  echo "  Applying desktop version: ${RELEASE_VERSION}"
+  (cd "${DESKTOP_DIR}" && npm version --no-git-tag-version "${RELEASE_VERSION}")
+fi
 
 # ------------------------------------------------------------------
 # 6. Build .dmg with electron-builder
