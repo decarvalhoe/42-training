@@ -21,6 +21,12 @@ class HealthResponse(BaseModel):
     service: str
 
 
+class ErrorResponse(BaseModel):
+    detail: str
+    code: str
+    status: int
+
+
 class MetaResponse(BaseModel):
     app: str
     campus: str
@@ -304,6 +310,7 @@ PedagogicalEventType = Literal[
     "checkpoint_submitted",
     "mentor_query",
     "defense_started",
+    "watch_mentor_checkin",
 ]
 
 
@@ -329,6 +336,7 @@ class AnalyticsSummary(BaseModel):
     checkpoint_success_rate: float
     mentor_queries: int
     defenses_started: int
+    watch_mentor_checkins: int
 
 
 class AnalyticsChartRow(BaseModel):
@@ -346,3 +354,59 @@ class AnalyticsDashboardResponse(BaseModel):
     modules_completed: list[AnalyticsChartRow]
     average_time: list[AnalyticsChartRow]
     success_rate: list[AnalyticsChartRow]
+
+
+# --- Tmux terminal pane (Issue #179) ---
+
+
+class TmuxPaneResponse(BaseModel):
+    session: str
+    content: str
+    rows: int
+    cols: int
+    timestamp: str
+
+
+# --- Tmux session schemas (Issue #178) ---
+
+TmuxSessionStatus = Literal["active", "idle"]
+
+
+class TmuxSession(BaseModel):
+    name: str
+    status: TmuxSessionStatus
+    created_at: str
+    last_activity: str
+    windows: int
+    attached: bool
+
+
+class TmuxSessionsResponse(BaseModel):
+    sessions: list[TmuxSession]
+    total: int
+
+
+# --- Tmux session lifecycle schemas (Issue #181) ---
+
+
+class TmuxStartRequest(BaseModel):
+    """Request to start or attach to a tmux session."""
+
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+
+
+class TmuxStartResponse(BaseModel):
+    name: str
+    status: str
+
+
+class TmuxAttachResponse(BaseModel):
+    name: str
+    command: str
+
+
+class TmuxSessionInfo(BaseModel):
+    name: str
+    created_at: int
+    windows: int
+    attached: bool

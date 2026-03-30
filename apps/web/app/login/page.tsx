@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { loginWithPassword } from "@/services/auth";
+import { useAuth } from "@/app/components/AuthProvider";
+import { BootSequence } from "@/app/components/BootSequence";
+import { isAuthApiError } from "@/services/auth";
 
 type FormState = {
   email: string;
@@ -16,6 +19,14 @@ const INITIAL_STATE: FormState = {
   email: "",
   password: "",
 };
+
+function normalizeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
+
+  return value;
+}
 
 function validateLoginForm(values: FormState): FormErrors {
   const errors: FormErrors = {};
@@ -36,7 +47,10 @@ function validateLoginForm(values: FormState): FormErrors {
 }
 
 export default function LoginPage() {
+  const { login, register } = useAuth();
+  const router = useRouter();
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [errors, setErrors] = useState<FormErrors>({});
   const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [submitState, setSubmitState] = useState<"idle" | "success" | "error">("idle");
@@ -64,11 +78,23 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await loginWithPassword(form);
-      setServerMessage(result.message);
-      setSubmitState(result.ok ? "success" : "error");
-    } catch {
-      setServerMessage("The mocked login flow failed unexpectedly.");
+      const session = mode === "login" ? await login(form) : await register(form);
+      const nextTarget =
+        typeof window === "undefined" ? "/" : normalizeNextPath(new URLSearchParams(window.location.search).get("next"));
+      setServerMessage(
+        mode === "login"
+          ? `Signed in as ${session.user.email}.`
+          : `Account created for ${session.user.email}. Redirecting to your workspace...`,
+      );
+      setSubmitState("success");
+      router.replace(nextTarget);
+      router.refresh();
+    } catch (error) {
+      setServerMessage(
+        isAuthApiError(error)
+          ? error.message
+          : `The ${mode === "login" ? "login" : "registration"} flow failed unexpectedly.`,
+      );
       setSubmitState("error");
     } finally {
       setIsSubmitting(false);
@@ -78,38 +104,46 @@ export default function LoginPage() {
   return (
     <main className="page-shell login-page">
       <section className="login-shell">
-        <article className="login-copy panel">
-          <p className="eyebrow">Authentication</p>
-          <h1>Sign in with your learner account.</h1>
-          <p className="lead">
-            The backend authentication flow is still in progress. This page validates client-side inputs
-            and uses a mocked password login so the web flow can be integrated now.
-          </p>
-          <div className="login-highlights">
-            <div className="login-highlight">
-              <strong>Email + password</strong>
-              <span className="muted">No API key exposed in the browser.</span>
+        {/* Boot sequence panel (replaces static copy) */}
+        <article className="login-boot panel">
+          <div className="login-boot-header">
+            <div className="login-boot-dots">
+              <span className="login-boot-dot login-boot-dot--red" />
+              <span className="login-boot-dot login-boot-dot--yellow" />
+              <span className="login-boot-dot login-boot-dot--green" />
             </div>
-            <div className="login-highlight">
-              <strong>Client validation</strong>
-              <span className="muted">Checks email format and a minimal password length.</span>
-            </div>
-            <div className="login-highlight">
-              <strong>Mocked backend call</strong>
-              <span className="muted">Ready to swap with the real API when auth endpoints exist.</span>
-            </div>
+            <span className="login-boot-title">42-training — boot</span>
           </div>
-          <p className="muted">
-            Demo note: use any valid email and a password of at least 8 characters. The address
-            <span className="prog-code"> blocked@42lausanne.ch </span>
-            returns a mocked failure state.
-          </p>
+          <BootSequence />
         </article>
 
+        {/* Login form */}
         <section className="login-card panel" aria-labelledby="login-form-title">
           <div className="login-card-header">
-            <p className="eyebrow">Web Login</p>
-            <h2 id="login-form-title">Access 42-training</h2>
+            <p className="eyebrow">Learner Authentication</p>
+            <h2 id="login-form-title">{mode === "login" ? "Access 42-training" : "Create your account"}</h2>
+            <p className="muted">
+              The workspace agents are ready. Authenticate to start your learning session.
+            </p>
+          </div>
+
+          <div className="login-mode-toggle" aria-label="Authentication mode">
+            <button
+              type="button"
+              className={`login-mode-btn ${mode === "login" ? "login-mode-btn--active" : ""}`}
+              onClick={() => setMode("login")}
+              aria-pressed={mode === "login"}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              className={`login-mode-btn ${mode === "register" ? "login-mode-btn--active" : ""}`}
+              onClick={() => setMode("register")}
+              aria-pressed={mode === "register"}
+            >
+              Create account
+            </button>
           </div>
 
           <form className="login-form" noValidate onSubmit={handleSubmit}>
@@ -137,7 +171,7 @@ export default function LoginPage() {
               <input
                 type="password"
                 name="password"
-                autoComplete="current-password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
                 placeholder="Minimum 8 characters"
                 value={form.password}
                 onChange={(event) => updateField("password", event.target.value)}
@@ -153,7 +187,13 @@ export default function LoginPage() {
 
             <div className="login-actions">
               <button type="submit" className="action-btn login-submit" disabled={isSubmitting}>
-                {isSubmitting ? "Signing in..." : "Sign in"}
+                {isSubmitting
+                  ? mode === "login"
+                    ? "Signing in..."
+                    : "Creating account..."
+                  : mode === "login"
+                    ? "Sign in"
+                    : "Create account"}
               </button>
               <Link href="/" className="login-secondary-link">
                 Back to dashboard

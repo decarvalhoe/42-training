@@ -192,6 +192,7 @@ class TestAnalyticsDashboard:
                             "checkpoint_success_rate": 66.7,
                             "mentor_queries": 1,
                             "defenses_started": 1,
+                            "watch_mentor_checkins": 0,
                         },
                         "modules_completed": [],
                         "average_time": [],
@@ -271,7 +272,11 @@ class TestCurriculumTrackDetail:
         with p_cur, p_load, p_write:
             r = client.get("/api/v1/curriculum/tracks/nonexistent")
         assert r.status_code == 404
-        assert "not found" in r.json()["detail"].lower()
+        data = r.json()
+        assert set(data.keys()) == {"detail", "code", "status"}
+        assert data["code"] == "not_found"
+        assert data["status"] == 404
+        assert "not found" in data["detail"].lower()
 
     def test_track_detail_includes_modules(self) -> None:
         p_cur, p_load, p_write, _p, _w = _patch_repo()
@@ -566,3 +571,24 @@ class TestLegacyRedirects:
             r = client.get("/api/v1/tracks/shell", follow_redirects=True)
         assert r.status_code == 200
         assert r.json()["id"] == "shell"
+
+
+class TestErrorContracts:
+    def test_request_validation_errors_use_uniform_contract(self) -> None:
+        response = client.post(
+            "/api/v1/checkpoints/submit",
+            json={
+                "module_id": "shell-basics",
+                "checkpoint_index": 0,
+                "type": "exit_criteria",
+                "evidence": "",
+                "self_evaluation": "pass",
+            },
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert set(data.keys()) == {"detail", "code", "status"}
+        assert data["code"] == "validation_error"
+        assert data["status"] == 422
+        assert "String should have at least 1 character" in data["detail"]

@@ -1,4 +1,4 @@
-import { getMockSessionEmail, getStoredAccessToken } from "@/services/auth";
+import { getStoredSessionEmail } from "@/services/auth";
 
 export type ProfileItem = {
   id: string;
@@ -38,6 +38,7 @@ type ApiProfilesResponse = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const FALLBACK_SESSION_EMAIL = "demo@42lausanne.ch";
+const DEMO_MODE_ENABLED = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
 
 function nowIso() {
   return new Date().toISOString();
@@ -82,7 +83,7 @@ function mapApiProfilesState(data: ApiProfilesResponse, mocked: boolean): Profil
 }
 
 function getSessionEmail() {
-  return getMockSessionEmail() ?? FALLBACK_SESSION_EMAIL;
+  return getStoredSessionEmail() ?? FALLBACK_SESSION_EMAIL;
 }
 
 function seedMockProfiles(email: string): ProfilesState {
@@ -139,31 +140,36 @@ function writeMockProfiles(state: ProfilesState, email = getSessionEmail()) {
 }
 
 async function apiRequest(path: string, init?: RequestInit) {
-  const token = getStoredAccessToken();
-  if (!token) {
-    throw new Error("No bearer token available");
+  const headers = new Headers(init?.headers);
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
   }
 
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
+    headers,
+    credentials: "include",
+    cache: "no-store",
   });
 
+  const payload = (await response.json().catch(() => null)) as unknown;
   if (!response.ok) {
+    if (payload && typeof payload === "object" && "detail" in payload && typeof payload.detail === "string") {
+      throw new Error(payload.detail);
+    }
     throw new Error(`Profiles API returned ${response.status}`);
   }
 
-  return response.json() as Promise<ApiProfilesResponse>;
+  return payload as ApiProfilesResponse;
 }
 
 export async function listProfiles(): Promise<ProfilesState> {
   try {
     return mapApiProfilesState(await apiRequest("/api/v1/profiles"), false);
-  } catch {
+  } catch (error) {
+    if (!DEMO_MODE_ENABLED) {
+      throw error;
+    }
     return readMockProfiles();
   }
 }
@@ -175,10 +181,13 @@ export async function createProfile(payload: CreateProfilePayload): Promise<Prof
       body: JSON.stringify({ track: payload.track, login: payload.login || undefined }),
     });
     return mapApiProfilesState(data, false);
-  } catch {
+  } catch (error) {
+    if (!DEMO_MODE_ENABLED) {
+      throw error;
+    }
     const current = readMockProfiles();
     if (current.profiles.some((profile) => profile.track === payload.track)) {
-      throw new Error(`A profile for track "${payload.track}" already exists.`);
+      throw new Error(`A profile for track "${payload.track}" already exists.`, { cause: error });
     }
 
     const timestamp = nowIso();
@@ -189,7 +198,7 @@ export async function createProfile(payload: CreateProfilePayload): Promise<Prof
       : normalizeLoginCandidate(`${loginBase}-${payload.track.replace(/_/g, "-")}`);
 
     if (!login) {
-      throw new Error("Profile login is required.");
+      throw new Error("Profile login is required.", { cause: error });
     }
 
     const profile: ProfileItem = {
@@ -215,11 +224,14 @@ export async function switchActiveProfile(profileId: string): Promise<ProfilesSt
   try {
     const data = await apiRequest(`/api/v1/profiles/${profileId}/switch`, { method: "POST" });
     return mapApiProfilesState(data, false);
-  } catch {
+  } catch (error) {
+    if (!DEMO_MODE_ENABLED) {
+      throw error;
+    }
     const current = readMockProfiles();
     const activeProfile = current.profiles.find((profile) => profile.id === profileId);
     if (!activeProfile) {
-      throw new Error("Profile not found.");
+      throw new Error("Profile not found.", { cause: error });
     }
 
     const next = {

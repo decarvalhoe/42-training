@@ -5,7 +5,9 @@ import logging
 import os
 from typing import Any
 
+from .mentor_memory import MentorTurn
 from .schemas import MentorRequest
+from .tmux_reader import capture_pane, format_terminal_context
 
 logger = logging.getLogger(__name__)
 REQUIRED_RESPONSE_FIELDS = ("observation", "question", "hint", "next_action")
@@ -50,9 +52,72 @@ Reponds UNIQUEMENT en JSON valide avec cette structure exacte:
 Pas de texte avant ou apres le JSON. Pas de markdown autour du JSON.
 """
 
+DEFENSE_SYSTEM_PROMPT = """\
+Tu es un examinateur de defense orale pour la preparation a 42 Lausanne.
 
-def _build_user_message(request: MentorRequest, track_title: str, module_title: str | None, active_course: str) -> str:
-    parts = [
+Ta mission:
+- evaluer la qualite d'une reponse de l'apprenant a une question de defense
+- attribuer un score entre 0.0 et 1.0
+- donner un feedback pedagogique court
+
+Regles absolues:
+- N'ecris JAMAIS la reponse correcte complete.
+- N'indique jamais "la bonne reponse est".
+- Explique ce qui est compris, ce qui manque, et comment approfondir.
+- Sois strict mais juste, dans l'esprit d'une evaluation 42.
+- Le score 1.0 signifie une comprehension solide, precise et bien expliquee.
+- Le score 0.0 signifie aucune comprehension exploitable.
+
+Format de reponse:
+Retourne UNIQUEMENT un JSON valide avec cette structure exacte:
+{
+  "score": 0.0,
+  "feedback": "..."
+}
+
+Pas de texte avant ou apres le JSON. Pas de markdown autour du JSON.
+"""
+
+
+def _build_history_block(conversation_history: list[MentorTurn]) -> list[str]:
+    if not conversation_history:
+        return []
+
+    lines = ["Historique recent de la session:"]
+    for index, turn in enumerate(conversation_history, start=1):
+        lines.extend(
+            [
+                f"Echange {index} - apprenant: {turn['user_question']}",
+                f"Echange {index} - mentor observation: {turn['mentor_observation']}",
+                f"Echange {index} - mentor question: {turn['mentor_question']}",
+                f"Echange {index} - mentor hint: {turn['mentor_hint']}",
+                f"Echange {index} - mentor next_action: {turn['mentor_next_action']}",
+            ]
+        )
+    lines.append(
+        "Utilise cet historique pour eviter de repeter les memes indices et pour construire sur les essais deja faits."
+    )
+    return lines
+
+
+def _build_user_message(
+    request: MentorRequest,
+    track_title: str,
+    module_title: str | None,
+    active_course: str,
+    conversation_history: list[MentorTurn] | None = None,
+    *,
+    terminal_context: str | None = None,
+) -> str:
+    parts: list[str] = []
+
+    # Inject tmux terminal context when available
+    if terminal_context:
+        parts.append(terminal_context)
+        parts.append("")
+
+    parts += [
+        f"Learner: {request.learner_id}",
         f"Track: {request.track_id} ({track_title})",
         f"Module: {module_title or 'aucun specifie'}",
         f"Phase: {request.phase}",
@@ -60,6 +125,7 @@ def _build_user_message(request: MentorRequest, track_title: str, module_title: 
         f"Cours actif du profil: {active_course}",
         f"Question de l'apprenant: {request.question}",
     ]
+    parts.extend(_build_history_block(conversation_history or []))
     if request.phase == "advanced":
         parts.append(
             "NOTE: Phase advanced — une solution complete est permise UNIQUEMENT si "
@@ -104,6 +170,32 @@ def _parse_response_payload(raw_text: str) -> dict[str, str]:
     return normalized
 
 
+def _parse_defense_payload(raw_text: str) -> dict[str, Any]:
+    payload_text = raw_text.strip()
+    start = payload_text.find("{")
+    end = payload_text.rfind("}")
+    if start != -1 and end != -1 and start < end:
+        payload_text = payload_text[start : end + 1]
+
+    parsed = json.loads(payload_text)
+    if not isinstance(parsed, dict):
+        raise ValueError("Claude defense response must be a JSON object")
+
+    score = parsed.get("score")
+    feedback = parsed.get("feedback")
+    if not isinstance(score, (int, float)):
+        raise ValueError("Claude defense response missing valid 'score' field")
+    if not 0.0 <= float(score) <= 1.0:
+        raise ValueError("Claude defense response score must be between 0.0 and 1.0")
+    if not isinstance(feedback, str) or not feedback.strip():
+        raise ValueError("Claude defense response missing valid 'feedback' field")
+
+    return {
+        "score": round(float(score), 2),
+        "feedback": feedback.strip(),
+    }
+
+
 def _build_anthropic_client(api_key: str) -> Any:
     import anthropic
 
@@ -115,6 +207,7 @@ def get_mentor_response(
     track_title: str,
     module_title: str | None,
     active_course: str,
+    conversation_history: list[MentorTurn] | None = None,
 ) -> dict[str, str]:
     """Call Claude API and return structured mentor response.
 
@@ -125,7 +218,21 @@ def get_mentor_response(
         raise RuntimeError("ANTHROPIC_API_KEY not set")
 
     client = _build_anthropic_client(api_key)
-    user_message = _build_user_message(request, track_title, module_title, active_course)
+
+    # Best-effort tmux pane capture — None when unavailable
+    terminal_context: str | None = None
+    pane_content = capture_pane()
+    if pane_content:
+        terminal_context = format_terminal_context(pane_content)
+
+    user_message = _build_user_message(
+        request,
+        track_title,
+        module_title,
+        active_course,
+        conversation_history=conversation_history,
+        terminal_context=terminal_context,
+    )
 
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -137,3 +244,47 @@ def get_mentor_response(
 
     raw = _extract_text_content(message)
     return _parse_response_payload(raw)
+
+
+def get_defense_evaluation(
+    *,
+    track_id: str,
+    module_id: str,
+    phase: str,
+    question_text: str,
+    skill: str,
+    expected_keywords: list[str],
+    answer: str,
+) -> dict[str, Any]:
+    """Call Claude API to evaluate a defense answer.
+
+    Raises on API errors or malformed JSON so the caller can fall back.
+    """
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY not set")
+
+    client = _build_anthropic_client(api_key)
+    user_message = "\n".join(
+        [
+            f"Track: {track_id}",
+            f"Module: {module_id}",
+            f"Phase: {phase}",
+            f"Skill cible: {skill}",
+            f"Mots-cles attendus: {', '.join(expected_keywords) if expected_keywords else 'aucun'}",
+            f"Question de defense: {question_text}",
+            f"Reponse de l'apprenant: {answer}",
+            "IMPORTANT: evalue la comprehension sans reveler la solution et retourne uniquement le JSON demande.",
+        ]
+    )
+
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=512,
+        temperature=0,
+        system=DEFENSE_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": [{"type": "text", "text": user_message}]}],
+    )
+
+    raw = _extract_text_content(message)
+    return _parse_defense_payload(raw)

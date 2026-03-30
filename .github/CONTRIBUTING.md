@@ -58,8 +58,21 @@ Si tu touches le frontend:
 ```bash
 cd apps/web
 npm install
+npm run lint        # inclut eslint-plugin-jsx-a11y
+npm run typecheck
 npm run build
 ```
+
+### Checklist qualite composant (frontend)
+
+Avant de soumettre un composant ou une page:
+
+- [ ] Pas d'erreur `npm run lint` (inclut les regles d'accessibilite jsx-a11y)
+- [ ] Pas d'erreur `npm run typecheck`
+- [ ] Les images ont un attribut `alt`
+- [ ] Les elements interactifs sont accessibles au clavier
+- [ ] Les classes semantiques `.track-*` et `.status-*` sont utilisees (pas de couleurs inline)
+- [ ] Les labels ARIA sont presents quand le contexte visuel ne suffit pas
 
 Si tu touches le comportement transverse de l'app:
 
@@ -166,8 +179,21 @@ If you touched the web app:
 ```bash
 cd apps/web
 npm install
+npm run lint        # includes eslint-plugin-jsx-a11y
+npm run typecheck
 npm run build
 ```
+
+### Component quality checklist (frontend)
+
+Before submitting a component or page:
+
+- [ ] No errors from `npm run lint` (includes jsx-a11y accessibility rules)
+- [ ] No errors from `npm run typecheck`
+- [ ] Images have an `alt` attribute
+- [ ] Interactive elements are keyboard-accessible
+- [ ] Semantic classes `.track-*` and `.status-*` are used (no inline colors)
+- [ ] ARIA labels are present when visual context is insufficient
 
 If you touched shared app behavior:
 

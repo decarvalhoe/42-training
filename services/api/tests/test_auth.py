@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from http.cookies import SimpleCookie
 from pathlib import Path
 
 import jwt
@@ -15,7 +16,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.auth import JWT_ALGORITHM, get_jwt_secret
+from app.auth import AUTH_COOKIE_NAME, JWT_ALGORITHM, get_jwt_secret
 from app.db import get_db_session
 from app.main import app
 from app.models import Base, LearnerProfile, UserAccount
@@ -91,6 +92,16 @@ async def _create_profile_for_user(
         return profile
 
 
+def _extract_access_token(response) -> str:
+    cookie_header = response.headers.get("set-cookie")
+    assert cookie_header is not None
+    cookie = SimpleCookie()
+    cookie.load(cookie_header)
+    morsel = cookie.get(AUTH_COOKIE_NAME)
+    assert morsel is not None
+    return morsel.value
+
+
 def test_register_creates_user_with_bcrypt_hash(
     auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]],
 ) -> None:
@@ -103,12 +114,15 @@ def test_register_creates_user_with_bcrypt_hash(
 
     assert response.status_code == 201
     data = response.json()
-    assert data["token_type"] == "bearer"
-    assert data["expires_in"] == 900
     assert data["user"]["email"] == "student@example.com"
     assert data["profiles"] == []
+    assert "access_token" not in data
+    cookie_header = response.headers.get("set-cookie")
+    assert cookie_header is not None
+    assert f"{AUTH_COOKIE_NAME}=" in cookie_header
+    assert "httponly" in cookie_header.lower()
 
-    token_payload = jwt.decode(data["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    token_payload = jwt.decode(_extract_access_token(response), get_jwt_secret(), algorithms=[JWT_ALGORITHM])
     assert token_payload["email"] == "student@example.com"
     assert token_payload["sub"] == data["user"]["id"]
 
@@ -126,7 +140,11 @@ def test_register_rejects_duplicate_email(auth_client: tuple[TestClient, async_s
 
     assert first.status_code == 201
     assert duplicate.status_code == 409
-    assert duplicate.json()["detail"] == "Email already registered"
+    assert duplicate.json() == {
+        "detail": "Email already registered",
+        "code": "conflict",
+        "status": 409,
+    }
 
 
 def test_login_returns_jwt_and_updates_last_login(
@@ -140,7 +158,8 @@ def test_login_returns_jwt_and_updates_last_login(
     assert response.status_code == 200
     data = response.json()
     assert data["user"]["email"] == "student@example.com"
-    assert data["access_token"]
+    assert "access_token" not in data
+    assert _extract_access_token(response)
 
     user = asyncio.run(_get_user_by_email(session_factory, "student@example.com"))
     assert user.last_login_at is not None
@@ -153,7 +172,11 @@ def test_login_rejects_invalid_password(auth_client: tuple[TestClient, async_ses
     response = client.post("/api/v1/auth/login", json={"email": "student@example.com", "password": "wrongpass"})
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid email or password"
+    assert response.json() == {
+        "detail": "Invalid email or password",
+        "code": "unauthorized",
+        "status": 401,
+    }
 
 
 def test_me_returns_current_user_from_bearer_token(
@@ -164,7 +187,7 @@ def test_me_returns_current_user_from_bearer_token(
         "/api/v1/auth/register",
         json={"email": "student@example.com", "password": "supersecret"},
     )
-    token = register_response.json()["access_token"]
+    token = _extract_access_token(register_response)
 
     response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
 
@@ -180,13 +203,31 @@ def test_me_returns_current_user_from_bearer_token(
     }
 
 
+def test_me_accepts_session_cookie(auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]]) -> None:
+    client, _session_factory = auth_client
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "cookie@example.com", "password": "supersecret"},
+    )
+
+    response = client.get("/api/v1/auth/me")
+
+    assert register_response.status_code == 201
+    assert response.status_code == 200
+    assert response.json()["user"]["email"] == "cookie@example.com"
+
+
 def test_me_requires_bearer_token(auth_client: tuple[TestClient, async_sessionmaker[AsyncSession]]) -> None:
     client, _session_factory = auth_client
 
     response = client.get("/api/v1/auth/me")
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid authentication credentials"
+    assert response.json() == {
+        "detail": "Invalid authentication credentials",
+        "code": "unauthorized",
+        "status": 401,
+    }
 
 
 def test_alembic_upgrade_head_creates_user_accounts_table(tmp_path: Path) -> None:
@@ -223,7 +264,7 @@ def test_profiles_list_returns_active_profile_and_all_profiles(
         "/api/v1/auth/register",
         json={"email": "student@example.com", "password": "supersecret"},
     )
-    token = register_response.json()["access_token"]
+    token = _extract_access_token(register_response)
     user_id = register_response.json()["user"]["id"]
 
     active_profile = asyncio.run(
@@ -262,7 +303,7 @@ def test_profiles_create_links_profile_to_current_user_and_activates_it(
         "/api/v1/auth/register",
         json={"email": "student@example.com", "password": "supersecret"},
     )
-    token = register_response.json()["access_token"]
+    token = _extract_access_token(register_response)
 
     response = client.post(
         "/api/v1/profiles",
@@ -275,6 +316,8 @@ def test_profiles_create_links_profile_to_current_user_and_activates_it(
     assert data["active_profile_id"] is not None
     assert data["active_profile"]["track"] == "python_ai"
     assert data["profiles"][0]["login"].startswith("student-python-ai")
+    token_payload = jwt.decode(_extract_access_token(response), get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    assert token_payload["profile_id"] == data["active_profile_id"]
 
 
 def test_profiles_create_rejects_duplicate_track_for_same_user(
@@ -285,7 +328,7 @@ def test_profiles_create_rejects_duplicate_track_for_same_user(
         "/api/v1/auth/register",
         json={"email": "student@example.com", "password": "supersecret"},
     )
-    token = register_response.json()["access_token"]
+    token = _extract_access_token(register_response)
     user_id = register_response.json()["user"]["id"]
 
     asyncio.run(
@@ -314,7 +357,7 @@ def test_profiles_switch_changes_active_profile_only_within_user_scope(
     client, session_factory = auth_client
 
     first_user = client.post("/api/v1/auth/register", json={"email": "first@example.com", "password": "supersecret"})
-    first_token = first_user.json()["access_token"]
+    first_token = _extract_access_token(first_user)
     first_user_id = first_user.json()["user"]["id"]
 
     shell_profile = asyncio.run(
@@ -357,6 +400,8 @@ def test_profiles_switch_changes_active_profile_only_within_user_scope(
     assert switched["active_profile_id"] == c_profile.id
     assert switched["active_profile"]["track"] == "c"
     assert shell_profile.id != switched["active_profile_id"]
+    token_payload = jwt.decode(_extract_access_token(switch_response), get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    assert token_payload["profile_id"] == c_profile.id
 
     forbidden_response = client.post(
         f"/api/v1/profiles/{foreign_profile.id}/switch",
@@ -385,7 +430,7 @@ def test_jwt_contains_active_profile_id_after_login(
 
     login_resp = client.post("/api/v1/auth/login", json={"email": "jwt@example.com", "password": "supersecret"})
     assert login_resp.status_code == 200
-    token_payload = jwt.decode(login_resp.json()["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    token_payload = jwt.decode(_extract_access_token(login_resp), get_jwt_secret(), algorithms=[JWT_ALGORITHM])
     assert "profile_id" in token_payload
 
 
@@ -395,7 +440,7 @@ def test_jwt_omits_profile_id_when_none_active(
     """Register JWT (no profiles yet) should not contain profile_id."""
     client, _session_factory = auth_client
     reg = client.post("/api/v1/auth/register", json={"email": "noprofile@example.com", "password": "supersecret"})
-    token_payload = jwt.decode(reg.json()["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    token_payload = jwt.decode(_extract_access_token(reg), get_jwt_secret(), algorithms=[JWT_ALGORITHM])
     assert "profile_id" not in token_payload
 
 
@@ -405,7 +450,7 @@ def test_auth_switch_profile_returns_new_jwt_with_profile_id(
     """POST /auth/switch-profile should return a new JWT bound to the target profile."""
     client, session_factory = auth_client
     reg = client.post("/api/v1/auth/register", json={"email": "switch@example.com", "password": "supersecret"})
-    token = reg.json()["access_token"]
+    token = _extract_access_token(reg)
     user_id = reg.json()["user"]["id"]
 
     asyncio.run(
@@ -422,7 +467,7 @@ def test_auth_switch_profile_returns_new_jwt_with_profile_id(
     data = resp.json()
     assert data["user"]["id"] == user_id
 
-    new_payload = jwt.decode(data["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    new_payload = jwt.decode(_extract_access_token(resp), get_jwt_secret(), algorithms=[JWT_ALGORITHM])
     assert new_payload["profile_id"] == c_profile.id
 
 
@@ -432,7 +477,7 @@ def test_auth_switch_profile_rejects_foreign_profile(
     """Switching to another user's profile should return 404."""
     client, session_factory = auth_client
     first = client.post("/api/v1/auth/register", json={"email": "a@example.com", "password": "supersecret"})
-    first_token = first.json()["access_token"]
+    first_token = _extract_access_token(first)
 
     second = client.post("/api/v1/auth/register", json={"email": "b@example.com", "password": "supersecret"})
     second_user_id = second.json()["user"]["id"]
@@ -464,12 +509,12 @@ def test_auth_refresh_preserves_profile_id(
 
     # Login to get a token with profile_id
     login_resp = client.post("/api/v1/auth/login", json={"email": "refresh@example.com", "password": "supersecret"})
-    token = login_resp.json()["access_token"]
+    token = _extract_access_token(login_resp)
 
     resp = client.post("/api/v1/auth/refresh", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
 
-    new_payload = jwt.decode(resp.json()["access_token"], get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    new_payload = jwt.decode(_extract_access_token(resp), get_jwt_secret(), algorithms=[JWT_ALGORITHM])
     assert new_payload["profile_id"] == profile.id
 
 
@@ -488,14 +533,14 @@ def test_me_reflects_jwt_bound_profile(
 
     # Switch to C profile via auth endpoint (gets new JWT)
     login_resp = client.post("/api/v1/auth/login", json={"email": "me-jwt@example.com", "password": "supersecret"})
-    token = login_resp.json()["access_token"]
+    token = _extract_access_token(login_resp)
 
     switch_resp = client.post(
         "/api/v1/auth/switch-profile",
         headers={"Authorization": f"Bearer {token}"},
         json={"profile_id": c_profile.id},
     )
-    new_token = switch_resp.json()["access_token"]
+    new_token = _extract_access_token(switch_resp)
 
     me_resp = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {new_token}"})
     assert me_resp.status_code == 200

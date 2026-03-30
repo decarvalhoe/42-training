@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { useAuth } from "@/app/components/AuthProvider";
 import { getDashboardData, type TrackItem } from "@/lib/api";
-import { getMockSessionEmail } from "@/services/auth";
 import {
   createProfile,
   listProfiles,
@@ -52,10 +52,10 @@ function formatDateLabel(value: string) {
 }
 
 export default function ProfilesPage() {
+  const { refreshSession, session } = useAuth();
   const [tracks, setTracks] = useState<TrackItem[]>([]);
   const [profilesState, setProfilesState] = useState<ProfilesState | null>(null);
   const [form, setForm] = useState<ProfileFormState>(INITIAL_FORM);
-  const [sessionEmail, setSessionEmail] = useState("demo@42lausanne.ch");
   const [errors, setErrors] = useState<FormErrors>({});
   const [loadingState, setLoadingState] = useState<"loading" | "ready" | "error">("loading");
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -63,38 +63,39 @@ export default function ProfilesPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [switchingId, setSwitchingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadPage = useCallback(async (cancelledRef?: { current: boolean }) => {
+    setLoadingState("loading");
 
-    async function loadPage() {
-      try {
-        const [dashboard, profiles] = await Promise.all([getDashboardData(), listProfiles()]);
-        if (cancelled) {
-          return;
-        }
+    try {
+      const [dashboard, profiles] = await Promise.all([getDashboardData(), listProfiles()]);
+      if (cancelledRef?.current) {
+        return;
+      }
 
-        setSessionEmail(getMockSessionEmail() ?? "demo@42lausanne.ch");
-        setTracks(dashboard.curriculum.tracks);
-        setProfilesState(profiles);
-        setForm((current) => ({
-          ...current,
-          track: current.track || dashboard.curriculum.tracks[0]?.id || "",
-        }));
-        setLoadingState("ready");
-      } catch {
-        if (!cancelled) {
-          setLoadingState("error");
-        }
+      setTracks(dashboard.curriculum.tracks);
+      setProfilesState(profiles);
+      setForm((current) => ({
+        ...current,
+        track: current.track || dashboard.curriculum.tracks[0]?.id || "",
+      }));
+      setLoadingState("ready");
+    } catch {
+      if (!cancelledRef?.current) {
+        setLoadingState("error");
       }
     }
+  }, []);
 
-    void loadPage();
+  useEffect(() => {
+    const cancelledRef = { current: false };
+    void loadPage(cancelledRef);
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, []);
+  }, [loadPage]);
   const activeProfile = profilesState?.activeProfile ?? null;
+  const sessionEmail = session?.user.email ?? "Authenticated learner";
 
   function updateField(field: keyof ProfileFormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -120,6 +121,7 @@ export default function ProfilesPage() {
         login: form.login.trim() || undefined,
       });
       setProfilesState(nextState);
+      await refreshSession().catch(() => undefined);
       setForm((current) => ({ ...current, login: "" }));
       setFeedbackTone("success");
       setFeedback(`Profile for ${formatTrackTitle(form.track, tracks)} is ready and now active.`);
@@ -137,6 +139,7 @@ export default function ProfilesPage() {
     try {
       const nextState = await switchActiveProfile(profile.id);
       setProfilesState(nextState);
+      await refreshSession().catch(() => undefined);
       setFeedbackTone("success");
       setFeedback(`${formatTrackTitle(profile.track, tracks)} is now the active profile.`);
     } catch (error) {
@@ -168,9 +171,14 @@ export default function ProfilesPage() {
           <p className="lead">
             The UI could not load the profile catalog. Refresh the page or return to the dashboard.
           </p>
-          <Link href="/" className="action-btn">
-            Back to dashboard
-          </Link>
+          <div className="stack-list">
+            <button type="button" className="action-btn" onClick={() => void loadPage()}>
+              Retry
+            </button>
+            <Link href="/" className="action-btn">
+              Back to dashboard
+            </Link>
+          </div>
         </section>
       </main>
     );
@@ -203,7 +211,7 @@ export default function ProfilesPage() {
           </div>
           <div className="metric-card">
             <span>Data source</span>
-            <strong>{profilesState.mocked ? "Mocked web state" : "API live state"}</strong>
+            <strong>{profilesState.mocked ? "Demo mode" : "API live state"}</strong>
           </div>
         </div>
       </section>
@@ -313,8 +321,8 @@ export default function ProfilesPage() {
           <div className="profiles-note">
             <strong>Current integration state</strong>
             <p className="muted">
-              The page calls the real `/api/v1/profiles` endpoints when a bearer token is available. Otherwise it keeps
-              the same UX using mocked browser state so frontend work can progress independently.
+              This page uses the authenticated session cookie and calls the real `/api/v1/profiles` endpoints.
+              Browser-backed mock data is available only when explicit demo mode is enabled.
             </p>
           </div>
         </aside>

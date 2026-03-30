@@ -108,7 +108,7 @@ export default async function TrackDetailPage({
                   ))}
                 </div>
                 {index > 0 && (
-                  <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
+                  <p className="muted prereq-note">
                     Prerequisites: {prereqOk ? "satisfied" : "not yet satisfied"}
                   </p>
                 )}

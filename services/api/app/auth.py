@@ -6,7 +6,7 @@ from typing import Literal
 
 import bcrypt
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
@@ -22,6 +22,8 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 ACCESS_TOKEN_TTL_MINUTES = 15
 JWT_ALGORITHM = "HS256"
+AUTH_COOKIE_NAME = "training_session"
+AUTH_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
 
 
 class AuthCredentials(BaseModel):
@@ -50,16 +52,7 @@ class AuthLearnerProfileResponse(BaseModel):
     current_module: str | None = None
 
 
-class AuthTokenResponse(BaseModel):
-    access_token: str
-    token_type: Literal["bearer"] = "bearer"
-    expires_in: int
-    user: AuthUserResponse
-    learner_profile: AuthLearnerProfileResponse | None = None
-    profiles: list[AuthLearnerProfileResponse] = Field(default_factory=list)
-
-
-class AuthMeResponse(BaseModel):
+class AuthSessionResponse(BaseModel):
     user: AuthUserResponse
     learner_profile: AuthLearnerProfileResponse | None = None
     profiles: list[AuthLearnerProfileResponse] = Field(default_factory=list)
@@ -93,6 +86,10 @@ def create_access_token(user: UserAccount, *, profile_id: str | None = None) -> 
     if active_pid is not None:
         payload["profile_id"] = active_pid
     return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)  # type: ignore[no-any-return]
+
+
+def use_secure_auth_cookie() -> bool:
+    return os.getenv("AUTH_COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def serialize_user(user: UserAccount) -> AuthUserResponse:
@@ -133,15 +130,43 @@ def get_jwt_active_profile_id(user: UserAccount) -> str | None:
     return getattr(user, "_jwt_active_profile_id", None) or user.active_profile_id  # type: ignore[no-any-return]
 
 
-def build_token_response(user: UserAccount, *, profile_id: str | None = None) -> AuthTokenResponse:
+def build_session_response(user: UserAccount, *, profile_id: str | None = None) -> AuthSessionResponse:
     effective_profile_id = profile_id or user.active_profile_id
-    return AuthTokenResponse(
-        access_token=create_access_token(user, profile_id=effective_profile_id),
-        expires_in=ACCESS_TOKEN_TTL_MINUTES * 60,
+    profiles_by_id = {profile.id: profile for profile in user.profiles}
+    effective_profile = profiles_by_id.get(effective_profile_id) if effective_profile_id is not None else None
+    return AuthSessionResponse(
         user=serialize_user(user),
-        learner_profile=serialize_learner_profile(user.active_profile),  # type: ignore[arg-type]
+        learner_profile=serialize_learner_profile(effective_profile or user.active_profile),  # type: ignore[arg-type]
         profiles=serialize_profiles(user.profiles),
     )
+
+
+def set_auth_cookie(response: Response, user: UserAccount, *, profile_id: str | None = None) -> None:
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=create_access_token(user, profile_id=profile_id),
+        max_age=ACCESS_TOKEN_TTL_MINUTES * 60,
+        httponly=True,
+        secure=use_secure_auth_cookie(),
+        samesite=AUTH_COOKIE_SAMESITE,
+        path="/",
+    )
+
+
+def clear_auth_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=AUTH_COOKIE_NAME,
+        httponly=True,
+        secure=use_secure_auth_cookie(),
+        samesite=AUTH_COOKIE_SAMESITE,
+        path="/",
+    )
+
+
+def bind_auth_session(response: Response, user: UserAccount, *, profile_id: str | None = None) -> AuthSessionResponse:
+    effective_profile_id = profile_id or user.active_profile_id
+    set_auth_cookie(response, user, profile_id=effective_profile_id)
+    return build_session_response(user, profile_id=effective_profile_id)
 
 
 def unauthorized(detail: str = "Invalid authentication credentials") -> HTTPException:
@@ -169,13 +194,22 @@ async def load_user_with_profiles(
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    session_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
     db: AsyncSession = Depends(get_db_session),
 ) -> UserAccount:
-    if credentials is None or credentials.scheme.lower() != "bearer":
+    token: str | None = None
+    if credentials is not None:
+        if credentials.scheme.lower() != "bearer":
+            raise unauthorized()
+        token = credentials.credentials
+    elif session_cookie:
+        token = session_cookie
+
+    if token is None:
         raise unauthorized()
 
     try:
-        payload = jwt.decode(credentials.credentials, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
     except jwt.InvalidTokenError as exc:
         raise unauthorized() from exc
 
@@ -200,11 +234,12 @@ async def get_current_user(
     return user
 
 
-@router.post("/register", response_model=AuthTokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=AuthSessionResponse, status_code=status.HTTP_201_CREATED)
 async def register(
+    response: Response,
     payload: AuthCredentials,
     db: AsyncSession = Depends(get_db_session),
-) -> AuthTokenResponse:
+) -> AuthSessionResponse:
     result = await db.execute(select(UserAccount).where(UserAccount.email == payload.email))
     existing_user = result.scalar_one_or_none()
     if existing_user is not None:
@@ -222,42 +257,40 @@ async def register(
     await db.refresh(user)
     hydrated_user = await load_user_with_profiles(db, user_id=user.id)
     assert hydrated_user is not None
-    return build_token_response(hydrated_user)
+    return bind_auth_session(response, hydrated_user)
 
 
-@router.post("/login", response_model=AuthTokenResponse)
+@router.post("/login", response_model=AuthSessionResponse)
 async def login(
+    response: Response,
     payload: AuthCredentials,
     db: AsyncSession = Depends(get_db_session),
-) -> AuthTokenResponse:
+) -> AuthSessionResponse:
     user = await load_user_with_profiles(db, email=payload.email)
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     user.last_login_at = datetime.now(UTC)
     await db.commit()
-    return build_token_response(user)
+    return bind_auth_session(response, user)
 
 
-@router.get("/me", response_model=AuthMeResponse)
-async def me(current_user: UserAccount = Depends(get_current_user)) -> AuthMeResponse:
-    return AuthMeResponse(
-        user=serialize_user(current_user),
-        learner_profile=serialize_learner_profile(get_jwt_active_profile(current_user)),
-        profiles=serialize_profiles(current_user.profiles),
-    )
+@router.get("/me", response_model=AuthSessionResponse)
+async def me(current_user: UserAccount = Depends(get_current_user)) -> AuthSessionResponse:
+    return build_session_response(current_user, profile_id=get_jwt_active_profile_id(current_user))
 
 
 class SwitchProfileRequest(BaseModel):
     profile_id: str = Field(min_length=1, max_length=64)
 
 
-@router.post("/switch-profile", response_model=AuthTokenResponse)
+@router.post("/switch-profile", response_model=AuthSessionResponse)
 async def switch_profile(
+    response: Response,
     payload: SwitchProfileRequest,
     current_user: UserAccount = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
-) -> AuthTokenResponse:
+) -> AuthSessionResponse:
     """Switch active profile and return a new JWT bound to that profile."""
     profiles_by_id = {p.id: p for p in current_user.profiles}
     target_profile = profiles_by_id.get(payload.profile_id)
@@ -269,12 +302,20 @@ async def switch_profile(
 
     user = await load_user_with_profiles(db, user_id=current_user.id)
     assert user is not None
-    return build_token_response(user, profile_id=target_profile.id)
+    return bind_auth_session(response, user, profile_id=target_profile.id)
 
 
-@router.post("/refresh", response_model=AuthTokenResponse)
+@router.post("/refresh", response_model=AuthSessionResponse)
 async def refresh(
+    response: Response,
     current_user: UserAccount = Depends(get_current_user),
-) -> AuthTokenResponse:
+) -> AuthSessionResponse:
     """Return a fresh JWT preserving the current active profile."""
-    return build_token_response(current_user, profile_id=get_jwt_active_profile_id(current_user))
+    return bind_auth_session(response, current_user, profile_id=get_jwt_active_profile_id(current_user))
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response) -> Response:
+    clear_auth_cookie(response)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response

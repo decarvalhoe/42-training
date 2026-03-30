@@ -90,6 +90,7 @@ def test_cleanup_expired_events_deletes_only_records_past_ttl(tmp_path: Path) ->
 
         summary = await cleanup_expired_events(now=now, session_factory=session_factory)
         assert summary.deleted_mentor_queries == 1
+        assert summary.deleted_watch_checkins == 0
         assert summary.deleted_checkpoints == 1
         assert summary.deleted_modules == 1
         assert summary.total_deleted == 3

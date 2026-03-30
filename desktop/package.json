@@ -1,0 +1,66 @@
+{
+  "name": "42-training-desktop",
+  "version": "1.0.0",
+  "description": "42-training — native macOS desktop application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac",
+    "dist:dmg": "electron-builder --mac dmg",
+    "dist:dir": "electron-builder --mac dir"
+  },
+  "build": {
+    "appId": "com.42training.desktop",
+    "productName": "42-Training",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "backend/**/*",
+      "frontend/**/*",
+      "data/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "42-Training",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "afterSign": "scripts/notarize.js",
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "data",
+        "to": "data",
+        "filter": ["**/*"]
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0"
+  },
+  "dependencies": {}
+}

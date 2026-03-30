@@ -67,7 +67,9 @@ export type QualityEquivalent = {
   human_review_focus: string[];
 };
 
-export type DashboardData = {
+export type DataSourceMode = "live" | "demo";
+
+type DashboardPayload = {
   curriculum: {
     metadata: {
       campus: string;
@@ -135,6 +137,10 @@ export type DashboardData = {
   };
 };
 
+export type DashboardData = DashboardPayload & {
+  sourceMode: DataSourceMode;
+};
+
 export type AnalyticsSummary = {
   total_events: number;
   module_completions: number;
@@ -142,6 +148,7 @@ export type AnalyticsSummary = {
   checkpoint_success_rate: number;
   mentor_queries: number;
   defenses_started: number;
+  watch_mentor_checkins: number;
 };
 
 export type AnalyticsChartRow = {
@@ -154,14 +161,24 @@ export type AnalyticsChartRow = {
   suffix: string;
 };
 
-export type AnalyticsData = {
+type AnalyticsPayload = {
   summary: AnalyticsSummary;
   modules_completed: AnalyticsChartRow[];
   average_time: AnalyticsChartRow[];
   success_rate: AnalyticsChartRow[];
 };
 
-const fallbackData: DashboardData = {
+export type AnalyticsData = AnalyticsPayload & {
+  sourceMode: DataSourceMode;
+};
+
+const DEMO_MODE_ENABLED = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
+const E2E_OVERRIDE_ENABLED = process.env.NEXT_PUBLIC_ENABLE_E2E_API_OVERRIDE === "true";
+const API_OVERRIDE_COOKIE_KEY = "training_api_base_override";
+const DEMO_MODE_COOKIE_KEY = "training_demo_mode";
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+const fallbackData: DashboardPayload = {
   curriculum: {
     metadata: {
       campus: "42 Lausanne",
@@ -415,7 +432,7 @@ const fallbackData: DashboardData = {
   }
 };
 
-const fallbackAnalyticsData: AnalyticsData = {
+const fallbackAnalyticsData: AnalyticsPayload = {
   summary: {
     total_events: 24,
     module_completions: 7,
@@ -423,6 +440,7 @@ const fallbackAnalyticsData: AnalyticsData = {
     checkpoint_success_rate: 71.4,
     mentor_queries: 11,
     defenses_started: 2,
+    watch_mentor_checkins: 4,
   },
   modules_completed: [
     {
@@ -513,30 +531,125 @@ const fallbackAnalyticsData: AnalyticsData = {
   ]
 };
 
+// --- Tmux session types (Issue #178) ---
+
+export type TmuxSession = {
+  name: string;
+  status: "active" | "idle";
+  created_at: string;
+  last_activity: string;
+  windows: number;
+  attached: boolean;
+};
+
+export type TmuxSessionsData = {
+  sessions: TmuxSession[];
+  total: number;
+};
+
+function readClientCookie(name: string): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const match = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${name}=`));
+
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+}
+
+async function readServerCookie(name: string): Promise<string | null> {
+  if (!E2E_OVERRIDE_ENABLED || typeof window !== "undefined") {
+    return null;
+  }
+
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+  return cookieStore.get(name)?.value ?? null;
+}
+
+async function readOverrideCookie(name: string): Promise<string | null> {
+  if (!E2E_OVERRIDE_ENABLED) {
+    return null;
+  }
+
+  if (typeof window !== "undefined") {
+    return readClientCookie(name);
+  }
+
+  return readServerCookie(name);
+}
+
+async function resolveApiUrl(): Promise<string> {
+  const override = await readOverrideCookie(API_OVERRIDE_COOKIE_KEY);
+  if (!override) {
+    return DEFAULT_API_URL;
+  }
+
+  try {
+    return new URL(override).toString().replace(/\/$/, "");
+  } catch {
+    return DEFAULT_API_URL;
+  }
+}
+
+async function resolveDemoModeEnabled(): Promise<boolean> {
+  if (DEMO_MODE_ENABLED) {
+    return true;
+  }
+
+  return (await readOverrideCookie(DEMO_MODE_COOKIE_KEY)) === "true";
+}
+
+export async function getTmuxSessions(): Promise<TmuxSessionsData> {
+  const apiUrl = await resolveApiUrl();
+
+  try {
+    const response = await fetch(`${apiUrl}/api/v1/tmux/sessions`, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+    return (await response.json()) as TmuxSessionsData;
+  } catch {
+    return { sessions: [], total: 0 };
+  }
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const apiUrl = await resolveApiUrl();
+  const demoModeEnabled = await resolveDemoModeEnabled();
 
   try {
     const response = await fetch(`${apiUrl}/api/v1/dashboard`, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`API returned ${response.status}`);
     }
-    return (await response.json()) as DashboardData;
-  } catch {
-    return fallbackData;
+    const payload = (await response.json()) as DashboardPayload;
+    return { ...payload, sourceMode: "live" };
+  } catch (error) {
+    if (demoModeEnabled) {
+      return { ...fallbackData, sourceMode: "demo" };
+    }
+    throw error;
   }
 }
 
 export async function getAnalyticsData(): Promise<AnalyticsData> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const apiUrl = await resolveApiUrl();
+  const demoModeEnabled = await resolveDemoModeEnabled();
 
   try {
     const response = await fetch(`${apiUrl}/api/v1/analytics/dashboard`, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`API returned ${response.status}`);
     }
-    return (await response.json()) as AnalyticsData;
-  } catch {
-    return fallbackAnalyticsData;
+    const payload = (await response.json()) as AnalyticsPayload;
+    return { ...payload, sourceMode: "live" };
+  } catch (error) {
+    if (demoModeEnabled) {
+      return { ...fallbackAnalyticsData, sourceMode: "demo" };
+    }
+    throw error;
   }
 }

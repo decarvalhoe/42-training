@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { getDashboardData } from "@/lib/api";
+import { getDashboardData, getTmuxSessions } from "@/lib/api";
+import { DataSourceBadge } from "@/app/components/DataSourceBadge";
 
 import DefenseClient from "./DefenseClient";
 
@@ -25,9 +26,17 @@ export default async function DefensePage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+  /* Fetch available tmux sessions so the learner can attach terminal context */
+  const tmuxData = await getTmuxSessions();
+  const tmuxSessions = tmuxData.sessions.map((s) => ({
+    name: s.name,
+    status: s.status,
+    attached: s.attached,
+  }));
+
   return (
     <main className="page-shell defense-page">
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Defense</span>
@@ -42,9 +51,12 @@ export default async function DefensePage() {
           simulates the 42-style oral defense where you must demonstrate genuine
           understanding.
         </p>
+        <div className="stack-list">
+          <DataSourceBadge sourceMode={data.sourceMode} />
+        </div>
       </section>
 
-      <DefenseClient modules={modules} apiUrl={apiUrl} />
+      <DefenseClient modules={modules} apiUrl={apiUrl} tmuxSessions={tmuxSessions} />
     </main>
   );
 }

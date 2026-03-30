@@ -3,6 +3,8 @@ import "./globals.css";
 
 import type { Viewport } from "next";
 
+import { AuthGuard } from "@/app/components/AuthGuard";
+import { AuthProvider } from "@/app/components/AuthProvider";
 import { NavHeader } from "@/app/components/NavHeader";
 
 export const viewport: Viewport = {
@@ -19,8 +21,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <NavHeader />
-        <div className="app-content">{children}</div>
+        <AuthProvider>
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
+          <AuthGuard header={<NavHeader />}>
+            <div id="main-content" className="app-content">{children}</div>
+          </AuthGuard>
+        </AuthProvider>
       </body>
     </html>
   );

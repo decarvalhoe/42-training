@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { loadAssessmentFeed, type DefenseSessionRecord, type ReviewAttemptRecord } from "@/services/reviewEvidence";
 
@@ -77,32 +77,33 @@ export default function EvidenceClient({ modules }: Props) {
   const [loadingState, setLoadingState] = useState<"loading" | "ready" | "error">("loading");
   const [mocked, setMocked] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadFeed = useCallback(async (cancelledRef?: { current: boolean }) => {
+    setLoadingState("loading");
 
-    async function loadFeed() {
-      try {
-        const data = await loadAssessmentFeed();
-        if (cancelled) {
-          return;
-        }
-        setReviewAttempts(data.reviewAttempts);
-        setDefenseSessions(data.defenseSessions);
-        setMocked(data.mocked);
-        setLoadingState("ready");
-      } catch {
-        if (!cancelled) {
-          setLoadingState("error");
-        }
+    try {
+      const data = await loadAssessmentFeed();
+      if (cancelledRef?.current) {
+        return;
+      }
+      setReviewAttempts(data.reviewAttempts);
+      setDefenseSessions(data.defenseSessions);
+      setMocked(data.mocked);
+      setLoadingState("ready");
+    } catch {
+      if (!cancelledRef?.current) {
+        setLoadingState("error");
       }
     }
+  }, []);
 
-    void loadFeed();
+  useEffect(() => {
+    const cancelledRef = { current: false };
+    void loadFeed(cancelledRef);
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, []);
+  }, [loadFeed]);
 
   const artifacts = useMemo(() => {
     const combined = [...flattenReviewArtifacts(reviewAttempts), ...flattenDefenseArtifacts(defenseSessions)].sort((a, b) =>
@@ -129,6 +130,9 @@ export default function EvidenceClient({ modules }: Props) {
       <section className="panel evidence-shell">
         <h2>Evidence feed unavailable</h2>
         <p className="muted">The page could not load review or defense artifacts.</p>
+        <button type="button" className="action-btn" onClick={() => void loadFeed()}>
+          Retry
+        </button>
       </section>
     );
   }
@@ -141,7 +145,7 @@ export default function EvidenceClient({ modules }: Props) {
             <p className="eyebrow">Consolidated feed</p>
             <h2>Artifact overview</h2>
           </div>
-          <span className="pill">{mocked ? "Mocked fallback" : "API live"}</span>
+          <span className="pill">{mocked ? "Demo mode" : "API live"}</span>
         </div>
 
         <div className="hero-grid">

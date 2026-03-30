@@ -11,10 +11,17 @@ replace this once the database is available.
 
 from __future__ import annotations
 
+import logging
+import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
+from .llm_client import get_defense_evaluation
+from .terminal_context import TerminalContext
+
+logger = logging.getLogger(__name__)
 
 
 def _utc_now() -> datetime:
@@ -49,6 +56,7 @@ class DefenseSession:
     current_question_started_at: datetime = field(default_factory=_utc_now)
     completed: bool = False
     review_attempt_persisted: bool = False
+    terminal_context: TerminalContext | None = None
 
 
 # In-memory session store (MVP)
@@ -67,11 +75,12 @@ def create_session(
     reviewer_id: str | None = None,
     num_questions: int = 3,
     question_time_limit_seconds: int = 60,
+    terminal_context: TerminalContext | None = None,
 ) -> DefenseSession:
     """Create a new defense session with generated questions."""
     now = _utc_now()
     session_id = uuid.uuid4().hex[:12]
-    questions = _generate_questions(track, module, phase, num_questions)
+    questions = _generate_questions(track, module, phase, num_questions, terminal_context)
     session = DefenseSession(
         session_id=session_id,
         track_id=track["id"],
@@ -83,20 +92,14 @@ def create_session(
         question_time_limit_seconds=question_time_limit_seconds,
         started_at=now,
         current_question_started_at=now,
+        terminal_context=terminal_context,
     )
     _sessions[session_id] = session
     return session
 
 
-def score_answer(question: DefenseQuestion, answer: str) -> tuple[float, str]:
-    """Score a learner's answer and produce pedagogical feedback.
-
-    Scoring is rule-based (MVP). A future version will use LLM evaluation.
-    The scorer never reveals the correct answer — it only assesses whether
-    the learner demonstrated understanding.
-
-    Returns (score, feedback) where score is 0.0 to 1.0.
-    """
+def _score_answer_rule_based(question: DefenseQuestion, answer: str) -> tuple[float, str]:
+    """Fallback defense scorer used when LLM evaluation is unavailable."""
     answer_lower = answer.lower().strip()
 
     if len(answer_lower) < 10:
@@ -139,6 +142,34 @@ def score_answer(question: DefenseQuestion, answer: str) -> tuple[float, str]:
         feedback = f"Your explanation of '{question.skill}' needs more depth. Think about what this concept does, why it exists, and how you would demonstrate it."
 
     return round(score, 2), feedback
+
+
+def score_answer(
+    question: DefenseQuestion,
+    answer: str,
+    *,
+    track_id: str = "shell",
+    module_id: str = "unknown-module",
+    phase: str = "foundation",
+) -> tuple[float, str]:
+    """Score a learner's answer with Claude, then fall back to rules."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return _score_answer_rule_based(question, answer)
+
+    try:
+        evaluation = get_defense_evaluation(
+            track_id=track_id,
+            module_id=module_id,
+            phase=phase,
+            question_text=question.text,
+            skill=question.skill,
+            expected_keywords=question.expected_keywords,
+            answer=answer,
+        )
+        return float(evaluation["score"]), str(evaluation["feedback"])
+    except Exception:
+        logger.warning("Defense LLM scoring failed, using rule-based fallback", exc_info=True)
+        return _score_answer_rule_based(question, answer)
 
 
 def compute_session_result(session: DefenseSession) -> dict[str, Any]:
@@ -232,7 +263,13 @@ def submit_answer(session: DefenseSession, question_id: str, answer: str) -> dic
         )
     else:
         current_question.answer = answer
-        score_val, feedback = score_answer(current_question, answer)
+        score_val, feedback = score_answer(
+            current_question,
+            answer,
+            track_id=session.track_id,
+            module_id=session.module_id,
+            phase=session.phase,
+        )
 
     current_question.score = score_val
     current_question.feedback = feedback
@@ -282,6 +319,24 @@ _QUESTION_TEMPLATES: dict[str, list[str]] = {
     ],
 }
 
+_CONTEXT_QUESTION_TEMPLATES: dict[str, list[str]] = {
+    "shell": [
+        "Looking at your work in `{cwd}`, explain what the command '{skill}' does and why you used it here.",
+        "In your terminal output I can see you working with '{skill}'. What would happen if you ran it with different arguments?",
+        "Your current directory is `{cwd}`. How does '{skill}' help you accomplish your task in this context?",
+    ],
+    "c": [
+        "Looking at your work in `{cwd}`, explain how '{skill}' applies to the code you are writing.",
+        "Based on your build output, explain what '{skill}' means for your program's correctness.",
+        "In the context of your current project at `{cwd}`, describe what could go wrong if '{skill}' is misused.",
+    ],
+    "python_ai": [
+        "Looking at your work in `{cwd}`, explain how '{skill}' is relevant to what you are building.",
+        "Based on your current project, describe how '{skill}' improves your code quality.",
+        "In the context of `{cwd}`, explain when you would choose '{skill}' over an alternative approach.",
+    ],
+}
+
 _OBJECTIVE_TEMPLATE = "In your own words, explain how you would: {objective}"
 _EXIT_CRITERIA_TEMPLATE = "Demonstrate your understanding: {criterion}"
 
@@ -291,15 +346,23 @@ def _generate_questions(
     module: dict[str, Any],
     phase: str,
     num_questions: int,
+    terminal_context: TerminalContext | None = None,
 ) -> list[DefenseQuestion]:
     """Generate defense questions from module data.
 
-    Sources questions from: skills, objectives, exit_criteria.
-    Never generates questions that reveal solutions.
+    When terminal_context is available, questions reference the learner's
+    actual work (cwd, terminal output). Otherwise falls back to generic
+    Socratic templates. Never generates questions that reveal solutions.
     """
     questions: list[DefenseQuestion] = []
     track_id = track["id"]
-    templates = _QUESTION_TEMPLATES.get(track_id, _QUESTION_TEMPLATES["shell"])
+    has_context = terminal_context is not None and not terminal_context.is_empty()
+    cwd = terminal_context.cwd if has_context and terminal_context is not None else ""
+
+    if has_context:
+        templates = _CONTEXT_QUESTION_TEMPLATES.get(track_id, _CONTEXT_QUESTION_TEMPLATES["shell"])
+    else:
+        templates = _QUESTION_TEMPLATES.get(track_id, _QUESTION_TEMPLATES["shell"])
 
     # Questions from skills
     skills = module.get("skills", [])
@@ -307,10 +370,11 @@ def _generate_questions(
         if len(questions) >= num_questions:
             break
         template = templates[i % len(templates)]
+        text = template.format(skill=skill, cwd=cwd) if has_context else template.format(skill=skill)
         questions.append(
             DefenseQuestion(
                 id=f"q-{uuid.uuid4().hex[:8]}",
-                text=template.format(skill=skill),
+                text=text,
                 skill=skill,
                 expected_keywords=_keywords_for_skill(skill, track_id),
             )
@@ -381,6 +445,22 @@ def _keywords_for_skill(skill: str, track_id: str) -> list[str]:
     }
 
     return base + skill_keywords.get(skill.lower(), [])
+
+
+def resume_session(session: DefenseSession) -> DefenseSession:
+    """Resume an interrupted defense session.
+
+    Re-registers the session in the in-memory store and resets the
+    current question timer so the learner gets a fresh deadline.
+    Returns the session unchanged if it is already completed.
+    """
+    if session.completed:
+        _sessions[session.session_id] = session
+        return session
+
+    session.current_question_started_at = _utc_now()
+    _sessions[session.session_id] = session
+    return session
 
 
 def clear_sessions() -> None:

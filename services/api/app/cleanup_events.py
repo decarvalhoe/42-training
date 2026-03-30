@@ -11,6 +11,7 @@ from .db import get_session_factory
 from .models import PedagogicalEvent
 
 MENTOR_QUERY_RETENTION = timedelta(days=90)
+WATCH_CHECKIN_RETENTION = timedelta(days=90)
 CHECKPOINT_RETENTION = timedelta(days=365)
 MODULE_RETENTION = timedelta(days=730)
 MODULE_EVENT_TYPES = ("module_started", "module_completed", "module_skipped")
@@ -19,12 +20,15 @@ MODULE_EVENT_TYPES = ("module_started", "module_completed", "module_skipped")
 @dataclass(slots=True)
 class CleanupSummary:
     deleted_mentor_queries: int
+    deleted_watch_checkins: int
     deleted_checkpoints: int
     deleted_modules: int
 
     @property
     def total_deleted(self) -> int:
-        return self.deleted_mentor_queries + self.deleted_checkpoints + self.deleted_modules
+        return (
+            self.deleted_mentor_queries + self.deleted_watch_checkins + self.deleted_checkpoints + self.deleted_modules
+        )
 
 
 async def _delete_before(
@@ -56,6 +60,11 @@ async def cleanup_expired_events(
             event_types=("mentor_query",),
             cutoff=current_time - MENTOR_QUERY_RETENTION,
         )
+        deleted_watch_checkins = await _delete_before(
+            session,
+            event_types=("watch_mentor_checkin",),
+            cutoff=current_time - WATCH_CHECKIN_RETENTION,
+        )
         deleted_checkpoints = await _delete_before(
             session,
             event_types=("checkpoint_submitted",),
@@ -70,6 +79,7 @@ async def cleanup_expired_events(
 
     return CleanupSummary(
         deleted_mentor_queries=deleted_mentor_queries,
+        deleted_watch_checkins=deleted_watch_checkins,
         deleted_checkpoints=deleted_checkpoints,
         deleted_modules=deleted_modules,
     )
@@ -85,6 +95,7 @@ def main() -> int:
     print(
         "Deleted pedagogical events:",
         f"mentor_query={summary.deleted_mentor_queries}",
+        f"watch_mentor_checkin={summary.deleted_watch_checkins}",
         f"checkpoint_submitted={summary.deleted_checkpoints}",
         f"module_events={summary.deleted_modules}",
         f"total={summary.total_deleted}",

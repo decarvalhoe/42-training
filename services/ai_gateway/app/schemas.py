@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class MentorRequest(BaseModel):
+    learner_id: str = Field(default="default", min_length=1, max_length=64)
     track_id: str = Field(default="shell")
     module_id: str | None = None
     question: str = Field(min_length=3, max_length=1000)
@@ -134,6 +135,15 @@ class ReviewerResponse(BaseModel):
 # --- Defense (oral defense MVP) ---
 
 
+class TerminalContextPayload(BaseModel):
+    """Terminal state snapshot provided by the client or captured server-side."""
+
+    cwd: str = ""
+    git_status: str = ""
+    panes: dict[str, str] = Field(default_factory=dict)
+    git_diff_summary: str = ""
+
+
 class DefenseStartRequest(BaseModel):
     track_id: str
     module_id: str
@@ -142,6 +152,10 @@ class DefenseStartRequest(BaseModel):
     phase: Literal["foundation", "practice", "core", "advanced"] = "foundation"
     num_questions: int = Field(default=3, ge=1, le=10)
     question_time_limit_seconds: int = Field(default=60, ge=10, le=600)
+    terminal_context: TerminalContextPayload | None = Field(
+        default=None,
+        description="Optional terminal state snapshot. If absent, the server attempts to capture from local tmux.",
+    )
 
 
 class DefenseQuestionOut(BaseModel):
@@ -162,6 +176,7 @@ class DefenseStartResponse(BaseModel):
     active_question_id: str | None
     started_at: datetime
     current_question_deadline: datetime | None
+    terminal_snapshot: TerminalContextPayload | None = None
 
 
 class DefenseAnswerRequest(BaseModel):
@@ -191,6 +206,24 @@ class DefenseQuestionResult(BaseModel):
     answered: bool
     timed_out: bool = False
     elapsed_seconds: float = 0.0
+
+
+class DefenseResumeRequest(BaseModel):
+    session_id: str
+
+
+class DefenseResumeResponse(BaseModel):
+    status: str
+    session_id: str
+    track_id: str
+    module_id: str
+    questions: list[DefenseQuestionOut]
+    total_questions: int
+    questions_answered: int
+    question_time_limit_seconds: int
+    active_question_id: str | None
+    current_question_deadline: datetime | None
+    completed: bool
 
 
 class DefenseResultResponse(BaseModel):

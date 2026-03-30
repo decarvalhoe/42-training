@@ -23,7 +23,7 @@ export default async function ReviewPage() {
 
   return (
     <main className="page-shell review-page">
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Review</span>

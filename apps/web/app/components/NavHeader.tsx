@@ -1,16 +1,19 @@
 import Link from "next/link";
 
+import { AuthStatus } from "@/app/components/AuthStatus";
 import { getDashboardData } from "@/lib/api";
 
 const NAV_LINKS = [
-  { href: "/", label: "Dashboard" },
+  { href: "/", label: "Home" },
+  { href: "/dashboard", label: "Skills" },
   { href: "/progression", label: "Progression" },
+  { href: "/mentor", label: "Mentor" },
   { href: "/defense", label: "Defense" },
   { href: "/review", label: "Review" },
   { href: "/evidence", label: "Evidence" },
   { href: "/profiles", label: "Profiles" },
+  { href: "/sessions", label: "Sessions" },
   { href: "/analytics", label: "Analytics" },
-  { href: "/login", label: "Login" },
 ] as const;
 
 export async function NavHeader() {
@@ -23,7 +26,7 @@ export async function NavHeader() {
         <Link href="/" className="nav-logo">42-training</Link>
         <span className="nav-track-indicator">{activeTrack}</span>
       </div>
-      <nav className="nav-links">
+      <nav className="nav-links" aria-label="Main navigation">
         {NAV_LINKS.map((link) => (
           <Link key={link.href} href={link.href} className="nav-link">
             {link.label}
@@ -38,6 +41,7 @@ export async function NavHeader() {
             {track.title}
           </Link>
         ))}
+        <AuthStatus />
       </nav>
     </header>
   );

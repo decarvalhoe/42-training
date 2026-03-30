@@ -2,6 +2,13 @@ import Link from "next/link";
 
 import { getAnalyticsData } from "@/lib/api";
 import type { AnalyticsChartRow } from "@/lib/api";
+import { DataSourceBadge } from "@/app/components/DataSourceBadge";
+
+const TRACK_CLASS: Record<string, string> = {
+  shell: "track-shell",
+  c: "track-c",
+  python_ai: "track-python",
+};
 
 const TRACK_COLORS: Record<string, string> = {
   shell: "var(--shell)",
@@ -64,13 +71,10 @@ function AnalyticsBarChart({
                   </div>
                   <span className="analytics-bar-value">{formatter(row)}</span>
                 </div>
-                <div className="analytics-bar-track">
+                <div className={`analytics-bar-track ${TRACK_CLASS[row.track_id] ?? ""}`}>
                   <div
                     className="analytics-bar-fill"
-                    style={{
-                      width,
-                      backgroundColor: TRACK_COLORS[row.track_id] ?? "var(--accent)",
-                    }}
+                    style={{ "--bar-width": width, "--bar-color": TRACK_COLORS[row.track_id] ?? "var(--accent)" } as React.CSSProperties}
                   />
                 </div>
               </div>
@@ -92,11 +96,12 @@ export default async function AnalyticsPage() {
     { label: "Checkpoint pass rate", value: analytics.summary.checkpoint_success_rate },
     { label: "Mentor queries", value: analytics.summary.mentor_queries },
     { label: "Defenses started", value: analytics.summary.defenses_started },
+    { label: "Watch check-ins", value: analytics.summary.watch_mentor_checkins },
   ];
 
   return (
     <main className="page-shell">
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Analytics</span>
@@ -109,6 +114,9 @@ export default async function AnalyticsPage() {
           A first internal view of pedagogical events, module throughput and checkpoint quality,
           aligned with the KPI definitions from <code>docs/PRODUCT_METRICS.md</code>.
         </p>
+        <div className="stack-list">
+          <DataSourceBadge sourceMode={analytics.sourceMode} />
+        </div>
 
         <div className="analytics-summary-grid">
           {summaryCards.map((card) => (

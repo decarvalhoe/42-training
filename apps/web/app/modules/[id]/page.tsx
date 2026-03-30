@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getDashboardData } from "@/lib/api";
 import type { ModuleItem } from "@/lib/api";
 import { SourcePolicyBadge } from "@/app/components/SourcePolicyBadge";
+import { TabbedTerminalViewer } from "@/app/components/TabbedTerminalViewer";
 import { isDisplayableSourcePolicyTier } from "@/lib/sourcePolicy";
 
 /* ------------------------------------------------------------------ */
@@ -106,10 +107,10 @@ export default async function ModuleDetailPage({
   if (!foundModule) {
     return (
       <main className="page-shell">
-        <section className="panel" style={{ textAlign: "center", padding: 48 }}>
+        <section className="panel not-found-panel">
           <h1>Module not found</h1>
           <p className="muted">No module with id &ldquo;{id}&rdquo; exists in the curriculum.</p>
-          <Link href="/" className="action-btn" style={{ marginTop: 24, display: "inline-block" }}>
+          <Link href="/" className="action-btn not-found-action">
             Back to dashboard
           </Link>
         </section>
@@ -162,7 +163,7 @@ export default async function ModuleDetailPage({
   return (
     <main className="page-shell">
       {/* Breadcrumb */}
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>{foundTrackId}</span>
@@ -195,34 +196,40 @@ export default async function ModuleDetailPage({
       {/* Two-column body */}
       <section className="section split module-detail-body">
         <div className="module-detail-main">
-          {/* Objectives (if enriched data available) */}
+          {/* Objectives checklist */}
           {foundModule.objectives && foundModule.objectives.length > 0 && (
             <article className="panel">
               <p className="eyebrow">Objectives</p>
-              <ul className="objective-list">
-                {foundModule.objectives.map((obj) => (
-                  <li key={obj}>{obj}</li>
-                ))}
+              <ul className="checklist">
+                {foundModule.objectives.map((obj) => {
+                  const done = completedItems.some((c) => c.toLowerCase().includes(obj.toLowerCase().split(" ")[0]));
+                  return (
+                    <li key={obj} className={`checklist-item${done ? " checklist-item--done" : ""}`}>
+                      <span className="checklist-box">{done ? "\u2713" : "\u00A0"}</span>
+                      <span>{obj}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </article>
           )}
 
-          {/* Skills */}
+          {/* Skills checklist */}
           <article className="panel">
             <p className="eyebrow">Skills</p>
             <h2>Competencies to acquire</h2>
-            <div className="skill-grid">
+            <ul className="checklist">
               {foundModule.skills.map((skill) => {
                 const ss = state === "todo" ? "todo" : skillState(skill);
                 return (
-                  <div key={skill} className={`skill-item skill-item--${ss}`}>
-                    <span className="skill-indicator" />
+                  <li key={skill} className={`checklist-item${ss === "done" ? " checklist-item--done" : ""}`}>
+                    <span className="checklist-box">{ss === "done" ? "\u2713" : "\u00A0"}</span>
                     <span>{skill}</span>
-                    <span className="muted skill-state-label">{stateLabel(ss)}</span>
-                  </div>
+                    {ss === "in_progress" && <span className="checklist-badge">in progress</span>}
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </article>
 
           {/* Exit criteria (if enriched data available) */}
@@ -235,6 +242,11 @@ export default async function ModuleDetailPage({
                 ))}
               </ul>
             </article>
+          )}
+
+          {/* Live terminal viewer (visible when module is active) */}
+          {state === "in_progress" && (
+            <TabbedTerminalViewer sessionPrefix="learn42" />
           )}
         </div>
 
@@ -265,8 +277,8 @@ export default async function ModuleDetailPage({
               <p className="muted">No authorized resources available.</p>
             ) : (
               <div className="resource-list">
-                {authorizedResources.map((r) => (
-                  <div key={r.url} className="resource-item">
+                {authorizedResources.map((r, index) => (
+                  <div key={`${r.url}-${index}`} className="resource-item">
                     <a href={r.url} target="_blank" rel="noopener noreferrer">
                       {r.label}
                     </a>
@@ -276,6 +288,27 @@ export default async function ModuleDetailPage({
               </div>
             )}
           </article>
+
+          {/* Actions */}
+          {state === "in_progress" && (
+            <article className="panel module-actions">
+              <p className="eyebrow">Actions</p>
+              <div className="module-actions-list">
+                <Link
+                  href={`/mentor?module_id=${id}&track_id=${foundTrackId}`}
+                  className="action-btn action-btn--secondary"
+                >
+                  Ask Mentor
+                </Link>
+                <Link
+                  href={`/defense?track_id=${foundTrackId}&module_id=${id}`}
+                  className="action-btn action-btn--in_progress"
+                >
+                  Start Defense
+                </Link>
+              </div>
+            </article>
+          )}
         </aside>
       </section>
     </main>

@@ -80,6 +80,7 @@ def build_analytics_dashboard(
                 "checkpoint_success_rate": 0.0,
                 "mentor_queries": 0,
                 "defenses_started": 0,
+                "watch_mentor_checkins": 0,
             },
             modules_completed=[],
             average_time=[],
@@ -91,6 +92,7 @@ def build_analytics_dashboard(
     checkpoint_passes: Counter[str] = Counter()
     mentor_queries = 0
     defenses_started = 0
+    watch_mentor_checkins = 0
 
     durations_by_module: dict[str, list[float]] = defaultdict(list)
     starts_by_key: dict[tuple[str, str], deque[datetime]] = defaultdict(deque)
@@ -134,6 +136,10 @@ def build_analytics_dashboard(
             defenses_started += 1
             continue
 
+        if event_type == "watch_mentor_checkin":
+            watch_mentor_checkins += 1
+            continue
+
     average_time_by_module = {
         module_id: (sum(durations) / len(durations))
         for module_id, durations in durations_by_module.items()
@@ -159,6 +165,7 @@ def build_analytics_dashboard(
             "checkpoint_success_rate": round(overall_success_rate, 1),
             "mentor_queries": mentor_queries,
             "defenses_started": defenses_started,
+            "watch_mentor_checkins": watch_mentor_checkins,
         },
         modules_completed=_chart_rows(completion_counts, curriculum, suffix=" completions"),  # type: ignore[arg-type]
         average_time=_chart_rows(average_time_by_module, curriculum, suffix=" min"),  # type: ignore[arg-type]

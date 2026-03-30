@@ -1,0 +1,131 @@
+# Production-ready Docker Compose — single `docker compose -f docker-compose.prod.yml up` to run everything.
+#
+# Services: PostgreSQL 16, Redis 7, API (FastAPI), AI Gateway (FastAPI), Web (Next.js)
+# All images use multi-stage Dockerfiles targeting the production (runtime/runner) stage.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: training
+      POSTGRES_PASSWORD: training
+      POSTGRES_DB: training
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U training"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+      target: runtime
+    restart: unless-stopped
+    environment:
+      API_PORT: "8000"
+      DATA_ROOT: /
+      DATABASE_URL: postgresql+asyncpg://training:training@postgres:5432/training
+      REDIS_URL: redis://redis:6379/0
+      APP_SECRET_KEY: "${APP_SECRET_KEY:-change-me-in-production}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api_migrate:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  api_migrate:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+      target: runtime
+    restart: "no"
+    environment:
+      DATA_ROOT: /
+      DATABASE_URL: postgresql+asyncpg://training:training@postgres:5432/training
+      APP_SECRET_KEY: "${APP_SECRET_KEY:-change-me-in-production}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+
+  ai_gateway:
+    build:
+      context: .
+      dockerfile: services/ai_gateway/Dockerfile
+      target: runtime
+    restart: unless-stopped
+    environment:
+      AI_GATEWAY_PORT: "8100"
+      AI_GATEWAY_API_BASE_URL: http://api:8000
+      DATA_ROOT: /
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8100:8100"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8100/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      target: runner
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_AI_GATEWAY_URL: http://localhost:8100
+      PORT: "3000"
+    depends_on:
+      api:
+        condition: service_healthy
+      ai_gateway:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  postgres-data:
+  redis-data:

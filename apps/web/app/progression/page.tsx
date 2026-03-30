@@ -59,6 +59,12 @@ function stateLabel(state: ModuleState): string {
   }
 }
 
+const TRACK_CLASS: Record<string, string> = {
+  shell: "track-shell",
+  c: "track-c",
+  python_ai: "track-python",
+};
+
 const TRACK_COLORS: Record<string, string> = {
   shell: "var(--shell)",
   c: "var(--c)",
@@ -142,7 +148,7 @@ export default async function ProgressionPage() {
   return (
     <main className="page-shell">
       {/* Breadcrumb */}
-      <nav className="breadcrumb">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span className="breadcrumb-sep">/</span>
         <span>Progression</span>
@@ -165,16 +171,13 @@ export default async function ProgressionPage() {
             <p className="muted">{totalDone} / {totalModules} modules</p>
           </div>
           {trackStats.map((ts) => (
-            <div key={ts.id} className="metric-card">
+            <div key={ts.id} className={`metric-card ${TRACK_CLASS[ts.id] ?? ""}`}>
               <span>{ts.title}</span>
               <strong>{ts.percent}%</strong>
               <div className="progress-bar">
                 <div
                   className="progress-bar-fill"
-                  style={{
-                    width: `${ts.percent}%`,
-                    backgroundColor: TRACK_COLORS[ts.id] ?? "var(--accent)",
-                  }}
+                  style={{ "--bar-width": `${ts.percent}%`, "--bar-color": TRACK_COLORS[ts.id] ?? "var(--accent)" } as React.CSSProperties}
                 />
               </div>
               <p className="muted">{ts.done} / {ts.total} modules</p>
@@ -235,7 +238,7 @@ export default async function ProgressionPage() {
           {/* Completed checklist */}
           {doneModules.length > 0 && (
             <>
-              <h2 style={{ marginTop: 24 }}>Completed ({doneModules.length})</h2>
+              <h2 className="section-heading-spaced">Completed ({doneModules.length})</h2>
               <div className="prog-checklist">
                 {doneModules.map((m) => (
                   <Link
@@ -300,7 +303,7 @@ export default async function ProgressionPage() {
           <h2>{progression.progress.current_exercise}</h2>
           <p>{progression.progress.current_step ?? ""}</p>
           {progression.next_command && (
-            <p style={{ marginTop: 8 }}>
+            <p className="section-note-spaced">
               Next command: <code className="prog-code">{progression.next_command}</code>
             </p>
           )}

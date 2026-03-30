@@ -11,6 +11,7 @@ from .defense import (
     create_session,
     get_current_question,
     get_current_question_deadline,
+    resume_session,
     submit_answer,
 )
 from .defense_persistence import (
@@ -25,6 +26,7 @@ from .defense_persistence import (
 from .intent import route_intent
 from .librarian import search_librarian
 from .llm_client import get_mentor_response
+from .mentor_memory import append_conversation_turn, clear_conversation_history, load_conversation_history
 from .repository import load_curriculum, load_progression
 from .reviewer import build_review
 from .schemas import (
@@ -33,6 +35,8 @@ from .schemas import (
     DefenseQuestionOut,
     DefenseQuestionResult,
     DefenseResultResponse,
+    DefenseResumeRequest,
+    DefenseResumeResponse,
     DefenseStartRequest,
     DefenseStartResponse,
     IntentRequest,
@@ -44,7 +48,9 @@ from .schemas import (
     ReviewerRequest,
     ReviewerResponse,
     SourceUsed,
+    TerminalContextPayload,
 )
+from .terminal_context import TerminalContext, capture_terminal_context
 
 logger = logging.getLogger(__name__)
 REQUIRED_MENTOR_FIELDS = ("observation", "question", "hint", "next_action")
@@ -186,6 +192,12 @@ def _normalize_mentor_payload(payload: dict[str, str]) -> dict[str, str]:
     return normalized
 
 
+@app.delete("/api/v1/mentor/conversations/{learner_id}")
+def clear_mentor_conversations(learner_id: str) -> dict[str, object]:
+    deleted_keys = clear_conversation_history(learner_id)
+    return {"status": "ok", "learner_id": learner_id, "deleted_keys": deleted_keys}
+
+
 @app.post("/api/v1/mentor/respond", response_model=MentorResponse)
 def mentor_respond(request: MentorRequest) -> MentorResponse:
     curriculum = load_curriculum()
@@ -206,8 +218,17 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
     module_title = module["title"] if module else None
 
     response_source = "llm"
+    conversation_history = load_conversation_history(request.learner_id, request.module_id)
     try:
-        llm_result = _normalize_mentor_payload(get_mentor_response(request, track_title, module_title, active_course))
+        llm_result = _normalize_mentor_payload(
+            get_mentor_response(
+                request,
+                track_title,
+                module_title,
+                active_course,
+                conversation_history=conversation_history,
+            )
+        )
         observation = llm_result["observation"]
         question = llm_result["question"]
         hint = llm_result["hint"]
@@ -228,7 +249,7 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
         response_source,
     )
 
-    return MentorResponse(
+    response = MentorResponse(
         status="ok",
         observation=observation,
         question=question,
@@ -240,6 +261,16 @@ def mentor_respond(request: MentorRequest) -> MentorResponse:
         confidence_level=confidence_level,
         reasoning_trace=reasoning_trace,
     )
+    append_conversation_turn(
+        request.learner_id,
+        request.module_id,
+        user_question=request.question,
+        mentor_observation=observation,
+        mentor_question=question,
+        mentor_hint=hint,
+        mentor_next_action=next_action,
+    )
+    return response
 
 
 @app.post("/api/v1/librarian/search", response_model=LibrarianResponse)
@@ -285,6 +316,30 @@ def reviewer_review(request: ReviewerRequest) -> ReviewerResponse:
 # --- Defense endpoints ---
 
 
+def _resolve_terminal_context(request: DefenseStartRequest) -> TerminalContext | None:
+    """Build a TerminalContext from the request payload or local tmux capture."""
+    if request.terminal_context is not None:
+        payload = request.terminal_context
+        return TerminalContext(
+            cwd=payload.cwd,
+            git_status=payload.git_status,
+            panes=dict(payload.panes),
+            git_diff_summary=payload.git_diff_summary,
+        )
+    return capture_terminal_context()
+
+
+def _terminal_snapshot(ctx: TerminalContext | None) -> TerminalContextPayload | None:
+    if ctx is None:
+        return None
+    return TerminalContextPayload(
+        cwd=ctx.cwd,
+        git_status=ctx.git_status,
+        panes=ctx.panes,
+        git_diff_summary=ctx.git_diff_summary,
+    )
+
+
 @app.post("/api/v1/defense/start", response_model=DefenseStartResponse)
 def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
     curriculum = load_curriculum()
@@ -296,6 +351,8 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
     if module is None:
         raise HTTPException(status_code=404, detail="Module not found")
 
+    terminal_ctx = _resolve_terminal_context(request)
+
     session = create_session(
         track,
         module,
@@ -304,6 +361,7 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
         request.reviewer_id,
         request.num_questions,
         request.question_time_limit_seconds,
+        terminal_context=terminal_ctx,
     )
     try:
         persist_defense_session(session)
@@ -330,6 +388,7 @@ def defense_start(request: DefenseStartRequest) -> DefenseStartResponse:
         active_question_id=session.questions[0].id if session.questions else None,
         started_at=session.started_at,
         current_question_deadline=get_current_question_deadline(session),
+        terminal_snapshot=_terminal_snapshot(terminal_ctx),
     )
 
 
@@ -371,6 +430,50 @@ def defense_answer(request: DefenseAnswerRequest) -> DefenseAnswerResponse:
         elapsed_seconds=result["elapsed_seconds"],
         next_question_id=result["next_question_id"],
         next_question_deadline=result["next_question_deadline"],
+    )
+
+
+@app.post("/api/v1/defense/resume", response_model=DefenseResumeResponse)
+def defense_resume(request: DefenseResumeRequest) -> DefenseResumeResponse:
+    """Resume an interrupted defense session from persisted state."""
+    try:
+        session = load_defense_session(request.session_id)
+    except DefensePersistenceError as exc:
+        logger.warning("Defense session load failed during resume", exc_info=True)
+        raise HTTPException(status_code=503, detail="Defense persistence unavailable") from exc
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session = resume_session(session)
+    try:
+        sync_defense_session(session)
+    except DefensePersistenceError as exc:
+        logger.warning("Defense session sync failed during resume", exc_info=True)
+        raise HTTPException(status_code=503, detail="Defense persistence unavailable") from exc
+
+    current_question = get_current_question(session)
+    questions_answered = sum(1 for q in session.questions if q.answered)
+
+    return DefenseResumeResponse(
+        status="ok",
+        session_id=session.session_id,
+        track_id=session.track_id,
+        module_id=session.module_id,
+        questions=[
+            DefenseQuestionOut(
+                question_id=q.id,
+                text=q.text,
+                skill=q.skill,
+                time_limit_seconds=session.question_time_limit_seconds,
+            )
+            for q in session.questions
+        ],
+        total_questions=len(session.questions),
+        questions_answered=questions_answered,
+        question_time_limit_seconds=session.question_time_limit_seconds,
+        active_question_id=current_question.id if current_question else None,
+        current_question_deadline=get_current_question_deadline(session),
+        completed=session.completed,
     )
 
 
