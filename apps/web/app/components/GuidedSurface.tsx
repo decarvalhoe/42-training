@@ -137,7 +137,7 @@ export function GuidedActionButton({
     variant === "primary"
       ? "border-[var(--shell-success)] bg-[var(--shell-success)] text-[var(--shell-canvas)] hover:bg-[var(--shell-success-strong)]"
       : variant === "danger"
-        ? "border-[var(--shell-danger)] bg-[var(--shell-danger)] text-[var(--shell-canvas)] hover:bg-[#ff6161]"
+        ? "border-[var(--shell-danger)] bg-[var(--shell-danger)] text-[var(--shell-canvas)] hover:brightness-125"
         : "border-[var(--shell-border-strong)] bg-transparent text-[var(--shell-ink)] hover:border-[var(--shell-success)] hover:text-[var(--shell-success)]";
 
   return (
@@ -193,11 +193,11 @@ export function GuidedBadge({
 }) {
   const className =
     tone === "success"
-      ? "border-[rgba(0,224,110,0.4)] text-[var(--shell-success)]"
+      ? "border-[var(--shell-success)]/40 text-[var(--shell-success)]"
       : tone === "warning"
-        ? "border-[rgba(255,175,0,0.35)] text-[var(--shell-warning)]"
+        ? "border-[var(--shell-warning)]/35 text-[var(--shell-warning)]"
         : tone === "danger"
-          ? "border-[rgba(255,65,65,0.35)] text-[var(--shell-danger)]"
+          ? "border-[var(--shell-danger)]/35 text-[var(--shell-danger)]"
           : "border-[var(--shell-border-strong)] text-[var(--shell-muted)]";
 
   return (

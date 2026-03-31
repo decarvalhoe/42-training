@@ -153,9 +153,13 @@ export default function DefenseClient({
 
   const [results, setResults] = useState<DefenseResultResponse | null>(null);
 
-  const currentModule = modules.find((module) => module.id === selectedModule) ?? modules[0] ?? null;
+  const currentModule =
+    modules.find((module) => module.id === selectedModule) ??
+    modules[0] ??
+    null;
   const currentQuestion = questions[activeQuestionIndex] ?? null;
-  const currentTmux = tmuxSessions.find((session) => session.name === selectedTmux) ?? null;
+  const currentTmux =
+    tmuxSessions.find((session) => session.name === selectedTmux) ?? null;
 
   useEffect(() => {
     if (phase !== "active" || deadline === null) {
@@ -163,7 +167,10 @@ export default function DefenseClient({
     }
 
     const tick = () => {
-      const remaining = Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 1000));
+      const remaining = Math.max(
+        0,
+        Math.ceil((deadline.getTime() - Date.now()) / 1000),
+      );
       setSecondsLeft(remaining);
     };
 
@@ -177,13 +184,16 @@ export default function DefenseClient({
       return null;
     }
 
-    const average = history.reduce((total, item) => total + item.score, 0) / history.length;
+    const average =
+      history.reduce((total, item) => total + item.score, 0) / history.length;
     return average;
   }, [history]);
 
   const breakdown = useMemo(() => {
     return questions.map((question) => {
-      const entry = history.find((item) => item.questionId === question.question_id) ?? null;
+      const entry =
+        history.find((item) => item.questionId === question.question_id) ??
+        null;
       return {
         id: question.question_id,
         label: `Q${questions.findIndex((candidate) => candidate.question_id === question.question_id) + 1}`,
@@ -220,7 +230,9 @@ export default function DefenseClient({
     let terminalContext: Record<string, unknown> | undefined;
     if (selectedTmux) {
       try {
-        const paneResponse = await fetch(`${apiUrl}/api/v1/tmux/pane/${encodeURIComponent(selectedTmux)}`);
+        const paneResponse = await fetch(
+          `${apiUrl}/api/v1/tmux/pane/${encodeURIComponent(selectedTmux)}`,
+        );
         if (paneResponse.ok) {
           const pane = await paneResponse.json();
           terminalContext = { panes: { [selectedTmux]: pane.content } };
@@ -245,7 +257,9 @@ export default function DefenseClient({
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({ detail: response.statusText }));
+        const body = await response
+          .json()
+          .catch(() => ({ detail: response.statusText }));
         throw new Error(body.detail ?? `API error ${response.status}`);
       }
 
@@ -257,17 +271,27 @@ export default function DefenseClient({
       setLastFeedback(null);
       setResults(null);
       setHistory([]);
-      setDeadline(data.current_question_deadline ? new Date(data.current_question_deadline) : null);
+      setDeadline(
+        data.current_question_deadline
+          ? new Date(data.current_question_deadline)
+          : null,
+      );
       setPhase("active");
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Failed to start defense");
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to start defense",
+      );
     } finally {
       setLoading(false);
     }
   }
 
   async function fetchResults(currentSessionId: string) {
-    const response = await fetch(`${apiUrl}/api/v1/defense/${currentSessionId}/result`);
+    const response = await fetch(
+      `${apiUrl}/api/v1/defense/${currentSessionId}/result`,
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch results: ${response.status}`);
     }
@@ -297,7 +321,9 @@ export default function DefenseClient({
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({ detail: response.statusText }));
+        const body = await response
+          .json()
+          .catch(() => ({ detail: response.statusText }));
         throw new Error(body.detail ?? `API error ${response.status}`);
       }
 
@@ -330,11 +356,19 @@ export default function DefenseClient({
           setActiveQuestionIndex((value) => value + 1);
           setAnswer("");
           setLastFeedback(null);
-          setDeadline(data.next_question_deadline ? new Date(data.next_question_deadline) : null);
+          setDeadline(
+            data.next_question_deadline
+              ? new Date(data.next_question_deadline)
+              : null,
+          );
         }, 1800);
       }
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Failed to submit answer");
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to submit answer",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -362,7 +396,9 @@ export default function DefenseClient({
       <GuidedSidebarSection label="Running score">
         <div className="space-y-1">
           <p className="font-mono text-4xl font-bold text-[var(--shell-warning)]">
-            {runningScore === null ? "__ / 5" : `${formatFiveScale(runningScore)} / 5`}
+            {runningScore === null
+              ? "__ / 5"
+              : `${formatFiveScale(runningScore)} / 5`}
           </p>
           <GuidedBadge tone={sourceMode === "live" ? "success" : "warning"}>
             {sourceMode === "live" ? "API live" : "demo mode"}
@@ -377,7 +413,10 @@ export default function DefenseClient({
           ) : (
             breakdown.map((entry) => (
               <p key={entry.id}>
-                {entry.label} {scoreBars(entry.score)} {entry.score === null ? "___" : `${Math.round(entry.score * 5)}/5`}
+                {entry.label} {scoreBars(entry.score)}{" "}
+                {entry.score === null
+                  ? "___"
+                  : `${Math.round(entry.score * 5)}/5`}
               </p>
             ))
           )}
@@ -420,7 +459,7 @@ export default function DefenseClient({
           {sidebar}
 
           <div className="grid gap-4">
-            <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[rgba(255,65,65,0.3)] bg-[rgba(255,65,65,0.05)] px-6 py-3">
+            <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[var(--shell-danger)]/30 bg-[var(--shell-danger)]/5 px-6 py-3">
               <div>
                 <p className="font-mono text-[13px] font-bold uppercase tracking-[0.22em] text-[var(--shell-danger)]">
                   Defense // {currentModule?.id ?? "no-module"}
@@ -447,19 +486,27 @@ export default function DefenseClient({
                 Start a defense session
               </h2>
               <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--shell-muted)]">
-                Configure the oral defense exactly once, attach terminal context if needed, then answer timed questions in your own words.
-                This flow stays strict on reasoning quality and never falls back to solution-style hints.
+                Configure the oral defense exactly once, attach terminal context
+                if needed, then answer timed questions in your own words. This
+                flow stays strict on reasoning quality and never falls back to
+                solution-style hints.
               </p>
 
               {error ? (
-                <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]" role="alert">
+                <p
+                  className="mt-5 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]"
+                  role="alert"
+                >
                   {error}
                 </p>
               ) : null}
 
               <div className="mt-8 grid gap-4 lg:grid-cols-2">
                 <GuidedField label="Module">
-                  <GuidedSelect value={selectedModule} onChange={(event) => setSelectedModule(event.target.value)}>
+                  <GuidedSelect
+                    value={selectedModule}
+                    onChange={(event) => setSelectedModule(event.target.value)}
+                  >
                     {modules.map((module) => (
                       <option key={module.id} value={module.id}>
                         {module.trackTitle} — {module.title} ({module.phase})
@@ -469,7 +516,10 @@ export default function DefenseClient({
                 </GuidedField>
 
                 <GuidedField label="Terminal session">
-                  <GuidedSelect value={selectedTmux} onChange={(event) => setSelectedTmux(event.target.value)}>
+                  <GuidedSelect
+                    value={selectedTmux}
+                    onChange={(event) => setSelectedTmux(event.target.value)}
+                  >
                     <option value="">None — no terminal context</option>
                     {tmuxSessions.map((session) => (
                       <option key={session.name} value={session.name}>
@@ -481,7 +531,12 @@ export default function DefenseClient({
                 </GuidedField>
 
                 <GuidedField label="Questions">
-                  <GuidedSelect value={numQuestions} onChange={(event) => setNumQuestions(Number(event.target.value))}>
+                  <GuidedSelect
+                    value={numQuestions}
+                    onChange={(event) =>
+                      setNumQuestions(Number(event.target.value))
+                    }
+                  >
                     {[1, 2, 3, 4, 5].map((value) => (
                       <option key={value} value={value}>
                         {value}
@@ -491,7 +546,12 @@ export default function DefenseClient({
                 </GuidedField>
 
                 <GuidedField label="Time per question">
-                  <GuidedSelect value={timeLimit} onChange={(event) => setTimeLimit(Number(event.target.value))}>
+                  <GuidedSelect
+                    value={timeLimit}
+                    onChange={(event) =>
+                      setTimeLimit(Number(event.target.value))
+                    }
+                  >
                     {[30, 45, 60, 90, 120, 180].map((value) => (
                       <option key={value} value={value}>
                         {value}s
@@ -502,7 +562,10 @@ export default function DefenseClient({
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <GuidedActionButton onClick={handleStart} disabled={loading || !selectedModule}>
+                <GuidedActionButton
+                  onClick={handleStart}
+                  disabled={loading || !selectedModule}
+                >
                   {loading ? "Starting..." : "Begin defense"}
                 </GuidedActionButton>
               </div>
@@ -519,7 +582,8 @@ export default function DefenseClient({
   }
 
   if (phase === "active" && currentQuestion !== null) {
-    const timerTone = secondsLeft <= 5 ? "danger" : secondsLeft <= 15 ? "warning" : "default";
+    const timerTone =
+      secondsLeft <= 5 ? "danger" : secondsLeft <= 15 ? "warning" : "default";
 
     return (
       <div className="grid gap-4">
@@ -527,7 +591,7 @@ export default function DefenseClient({
           {sidebar}
 
           <div className="grid gap-4">
-            <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[rgba(255,65,65,0.3)] bg-[rgba(255,65,65,0.05)] px-6 py-3">
+            <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[var(--shell-danger)]/30 bg-[var(--shell-danger)]/5 px-6 py-3">
               <p className="font-mono text-[13px] font-bold uppercase tracking-[0.22em] text-[var(--shell-danger)]">
                 Defense // {currentModule?.id ?? "no-module"}
               </p>
@@ -570,24 +634,39 @@ export default function DefenseClient({
                 <GuidedPanel
                   className={`px-4 py-4 ${
                     lastFeedback.score >= 0.7
-                      ? "border-[rgba(0,224,110,0.35)]"
+                      ? "border-[var(--shell-success)]/35"
                       : lastFeedback.score >= 0.4
-                        ? "border-[rgba(255,175,0,0.35)]"
-                        : "border-[rgba(255,65,65,0.35)]"
+                        ? "border-[var(--shell-warning)]/35"
+                        : "border-[var(--shell-danger)]/35"
                   }`}
                 >
                   <div className="flex flex-wrap items-center gap-3">
-                    <GuidedBadge tone={lastFeedback.score >= 0.7 ? "success" : lastFeedback.score >= 0.4 ? "warning" : "danger"}>
+                    <GuidedBadge
+                      tone={
+                        lastFeedback.score >= 0.7
+                          ? "success"
+                          : lastFeedback.score >= 0.4
+                            ? "warning"
+                            : "danger"
+                      }
+                    >
                       score: {Math.round(lastFeedback.score * 100)}%
                     </GuidedBadge>
-                    {lastFeedback.timed_out ? <GuidedBadge tone="danger">timed out</GuidedBadge> : null}
+                    {lastFeedback.timed_out ? (
+                      <GuidedBadge tone="danger">timed out</GuidedBadge>
+                    ) : null}
                   </div>
-                  <p className="mt-4 text-sm leading-7 text-[var(--shell-muted)]">{lastFeedback.feedback}</p>
+                  <p className="mt-4 text-sm leading-7 text-[var(--shell-muted)]">
+                    {lastFeedback.feedback}
+                  </p>
                 </GuidedPanel>
               ) : null}
 
               {error ? (
-                <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]" role="alert">
+                <p
+                  className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]"
+                  role="alert"
+                >
                   {error}
                 </p>
               ) : null}
@@ -595,13 +674,19 @@ export default function DefenseClient({
               <div className="flex flex-wrap gap-3">
                 <GuidedActionButton
                   onClick={() => void handleSubmitAnswer(answer.trim())}
-                  disabled={submitting || answer.trim().length === 0 || lastFeedback !== null}
+                  disabled={
+                    submitting ||
+                    answer.trim().length === 0 ||
+                    lastFeedback !== null
+                  }
                 >
                   {submitting ? "Submitting..." : "Submit"}
                 </GuidedActionButton>
                 <GuidedActionButton
                   variant="secondary"
-                  onClick={() => void handleSubmitAnswer("[skipped by learner]")}
+                  onClick={() =>
+                    void handleSubmitAnswer("[skipped by learner]")
+                  }
                   disabled={submitting || lastFeedback !== null}
                 >
                   Skip
@@ -632,7 +717,7 @@ export default function DefenseClient({
           {sidebar}
 
           <div className="grid gap-4">
-            <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[rgba(255,65,65,0.3)] bg-[rgba(255,65,65,0.05)] px-6 py-3">
+            <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[var(--shell-danger)]/30 bg-[var(--shell-danger)]/5 px-6 py-3">
               <p className="font-mono text-[13px] font-bold uppercase tracking-[0.22em] text-[var(--shell-danger)]">
                 Defense // {currentModule?.id ?? "no-module"}
               </p>
@@ -651,7 +736,9 @@ export default function DefenseClient({
               <p className="mt-4 font-mono text-4xl font-bold text-[var(--shell-warning)]">
                 {Math.round(results.overall_score * 100)}%
               </p>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--shell-muted)]">{results.summary}</p>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--shell-muted)]">
+                {results.summary}
+              </p>
               {results.timed_out_questions > 0 ? (
                 <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]">
                   {results.timed_out_questions} question(s) timed out
@@ -663,24 +750,44 @@ export default function DefenseClient({
                   <GuidedPanel key={item.question_id} className="px-4 py-4">
                     <div className="flex flex-wrap items-center gap-3">
                       <GuidedBadge>question {index + 1}</GuidedBadge>
-                      <GuidedBadge tone={item.score >= 0.7 ? "success" : item.score >= 0.4 ? "warning" : "danger"}>
+                      <GuidedBadge
+                        tone={
+                          item.score >= 0.7
+                            ? "success"
+                            : item.score >= 0.4
+                              ? "warning"
+                              : "danger"
+                        }
+                      >
                         {Math.round(item.score * 100)}%
                       </GuidedBadge>
                       <GuidedBadge>{item.skill}</GuidedBadge>
                     </div>
-                    <p className="mt-4 font-mono text-sm leading-7 text-[var(--shell-ink)]">{item.question}</p>
-                    <p className="mt-4 text-sm leading-7 text-[var(--shell-muted)]">{item.feedback}</p>
+                    <p className="mt-4 font-mono text-sm leading-7 text-[var(--shell-ink)]">
+                      {item.question}
+                    </p>
+                    <p className="mt-4 text-sm leading-7 text-[var(--shell-muted)]">
+                      {item.feedback}
+                    </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {item.timed_out ? <GuidedBadge tone="danger">timed out</GuidedBadge> : null}
-                      {!item.answered ? <GuidedBadge tone="warning">not answered</GuidedBadge> : null}
-                      <GuidedBadge>{item.elapsed_seconds.toFixed(1)}s</GuidedBadge>
+                      {item.timed_out ? (
+                        <GuidedBadge tone="danger">timed out</GuidedBadge>
+                      ) : null}
+                      {!item.answered ? (
+                        <GuidedBadge tone="warning">not answered</GuidedBadge>
+                      ) : null}
+                      <GuidedBadge>
+                        {item.elapsed_seconds.toFixed(1)}s
+                      </GuidedBadge>
                     </div>
                   </GuidedPanel>
                 ))}
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <GuidedActionButton onClick={handleReset}>New defense</GuidedActionButton>
+                <GuidedActionButton onClick={handleReset}>
+                  New defense
+                </GuidedActionButton>
               </div>
             </GuidedPanel>
           </div>
@@ -698,13 +805,19 @@ export default function DefenseClient({
     <GuidedPanel className="px-6 py-6">
       {error ? (
         <>
-          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]">{error}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-danger)]">
+            {error}
+          </p>
           <div className="mt-4">
-            <GuidedActionButton onClick={handleReset}>Try again</GuidedActionButton>
+            <GuidedActionButton onClick={handleReset}>
+              Try again
+            </GuidedActionButton>
           </div>
         </>
       ) : (
-        <p className="font-mono text-sm text-[var(--shell-muted)]">Loading...</p>
+        <p className="font-mono text-sm text-[var(--shell-muted)]">
+          Loading...
+        </p>
       )}
     </GuidedPanel>
   );
