@@ -38,6 +38,12 @@ function prerequisitesMet(
   return true;
 }
 
+const stateIcon: Record<string, string> = {
+  done: "◆",
+  in_progress: "▶",
+  todo: "◇",
+};
+
 const stateLabel: Record<string, string> = {
   done: "done",
   in_progress: "in progress",
@@ -61,7 +67,7 @@ export default async function TrackDetailPage({
         <section className="section">
           <h1>Track not found</h1>
           <p>No track matches the identifier &ldquo;{id}&rdquo;.</p>
-          <Link href="/">Back to dashboard</Link>
+          <Link href="/tracks">Back to tracks</Link>
         </section>
       </main>
     );
@@ -72,11 +78,17 @@ export default async function TrackDetailPage({
 
   return (
     <main className="page-shell">
-      <section className="section">
-        <div>
-          <p className="eyebrow">Track</p>
-          <h1>{track.title}</h1>
-        </div>
+      <nav className="breadcrumb" aria-label="Breadcrumb">
+        <Link href="/">Dashboard</Link>
+        <span className="breadcrumb-sep">/</span>
+        <Link href="/tracks">Tracks</Link>
+        <span className="breadcrumb-sep">/</span>
+        <span>{track.title}</span>
+      </nav>
+
+      <section className="panel">
+        <p className="eyebrow">Track</p>
+        <h1>{track.title}</h1>
         <p className="lead">{track.summary}</p>
         <p>{track.why_it_matters}</p>
       </section>
@@ -94,6 +106,9 @@ export default async function TrackDetailPage({
               <div key={mod.id} className="module-item">
                 <div className="module-header">
                   <strong>
+                    <span className="talent-legend-icon" style={{ marginRight: 6 }}>
+                      {stateIcon[state]}
+                    </span>
                     <Link href={`/modules/${mod.id}`}>{mod.title}</Link>
                   </strong>
                   <div className="stack-list">
@@ -119,7 +134,7 @@ export default async function TrackDetailPage({
       </section>
 
       <section className="section">
-        <Link href="/">Back to dashboard</Link>
+        <Link href="/tracks">Back to all tracks</Link>
       </section>
     </main>
   );

@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { getDashboardData } from "@/lib/api";
@@ -7,10 +6,6 @@ import type { ModuleItem, TrackItem } from "@/lib/api";
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
-
-function Pill({ children }: { children: ReactNode }) {
-  return <span className="pill">{children}</span>;
-}
 
 type ModuleState = "done" | "in_progress" | "locked" | "available";
 
@@ -38,141 +33,282 @@ const PHASE_ORDER: Record<string, number> = {
   advanced: 3,
 };
 
-const STATE_ICON: Record<ModuleState, string> = {
-  done: "◆",
-  in_progress: "▶",
-  available: "○",
-  locked: "◇",
-};
-
-const TRACK_COLORS: Record<string, string> = {
-  shell: "var(--shell)",
-  c: "var(--c)",
-  python_ai: "var(--python)",
+const TRACK_TAB_COLORS: Record<string, { color: string; label: string }> = {
+  shell: { color: "var(--shell-success)", label: "SHELL" },
+  c: { color: "var(--c)", label: "C" },
+  python_ai: { color: "var(--python)", label: "PYTHON+AI" },
 };
 
 /* ------------------------------------------------------------------ */
-/*  Components                                                         */
+/*  SVG talent tree layout engine                                      */
 /* ------------------------------------------------------------------ */
 
-function TalentNode({
-  mod,
-  state,
-  isLast,
-  trackColor,
-}: {
-  mod: ModuleItem;
+const NODE_W = 130;
+const NODE_H = 29;
+const TIER_GAP_Y = 120;
+const NODE_GAP_X = 40;
+const CANVAS_PAD = 40;
+
+type LayoutNode = {
+  id: string;
+  label: string;
   state: ModuleState;
-  isLast: boolean;
-  trackColor: string;
-}) {
-  const phaseLabel = mod.phase.charAt(0).toUpperCase() + mod.phase.slice(1);
+  phase: string;
+  x: number;
+  y: number;
+  prerequisites: string[];
+};
 
-  return (
-    <div className="talent-node-wrapper">
-      <div className={`talent-node talent-node--${state}`}>
-        <div className="talent-node-icon" style={{ "--track-color": state === "locked" ? "var(--muted)" : trackColor } as React.CSSProperties}>
-          {STATE_ICON[state]}
-        </div>
-        <div className="talent-node-body">
-          <div className="talent-node-header">
-            <Link href={`/modules/${mod.id}`} className="talent-node-title">
-              {mod.title}
-            </Link>
-            <div className="talent-node-badges">
-              <Pill>{phaseLabel}</Pill>
-              {mod.estimated_hours != null && <Pill>{mod.estimated_hours}h</Pill>}
-            </div>
-          </div>
-          <p className="talent-node-deliverable">{mod.deliverable}</p>
-          <div className="stack-list">
-            {mod.skills.slice(0, 5).map((skill) => (
-              <Pill key={skill}>{skill}</Pill>
-            ))}
-            {mod.skills.length > 5 && <Pill>+{mod.skills.length - 5}</Pill>}
-          </div>
-          {(mod.objectives ?? []).length > 0 && (
-            <ul className="talent-node-objectives">
-              {(mod.objectives ?? []).slice(0, 3).map((obj) => (
-                <li key={obj}>{obj}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-      {!isLast && (
-        <div className="talent-edge" style={{ "--track-color": trackColor } as React.CSSProperties} />
-      )}
-    </div>
-  );
-}
-
-function TrackTree({
-  track,
-  activeTrack,
-  activeModule,
-}: {
-  track: TrackItem;
-  activeTrack: string | undefined;
-  activeModule: string | undefined;
-}) {
-  const trackColor = TRACK_COLORS[track.id] ?? "var(--accent)";
-  const phases = [...new Set(track.modules.map((m) => m.phase))].sort(
+function layoutTree(
+  modules: ModuleItem[],
+  trackId: string,
+  activeTrack: string | undefined,
+  activeModule: string | undefined,
+): { nodes: LayoutNode[]; width: number; height: number } {
+  const phases = [...new Set(modules.map((m) => m.phase))].sort(
     (a, b) => (PHASE_ORDER[a] ?? 99) - (PHASE_ORDER[b] ?? 99),
   );
 
-  const doneCount = track.modules.filter(
-    (m) => deriveModuleState(m.id, track.id, activeTrack, activeModule, track.modules) === "done",
-  ).length;
-  const pct = track.modules.length > 0 ? Math.round((doneCount / track.modules.length) * 100) : 0;
+  const nodes: LayoutNode[] = [];
+  let maxX = 0;
+
+  phases.forEach((phase, tierIdx) => {
+    const tierModules = modules.filter((m) => m.phase === phase);
+    const tierWidth = tierModules.length * (NODE_W + NODE_GAP_X) - NODE_GAP_X;
+    const startX = CANVAS_PAD + Math.max(0, (600 - tierWidth) / 2);
+    const y = CANVAS_PAD + tierIdx * TIER_GAP_Y;
+
+    tierModules.forEach((mod, idx) => {
+      const x = startX + idx * (NODE_W + NODE_GAP_X);
+      maxX = Math.max(maxX, x + NODE_W);
+      nodes.push({
+        id: mod.id,
+        label: mod.title,
+        state: deriveModuleState(mod.id, trackId, activeTrack, activeModule, modules),
+        phase,
+        x,
+        y,
+        prerequisites: mod.prerequisites ?? [],
+      });
+    });
+  });
+
+  return {
+    nodes,
+    width: Math.max(maxX + CANVAS_PAD, 700),
+    height: CANVAS_PAD * 2 + (phases.length - 1) * TIER_GAP_Y + NODE_H,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  SVG components                                                     */
+/* ------------------------------------------------------------------ */
+
+function nodeColor(state: ModuleState): { stroke: string; fill: string; text: string } {
+  switch (state) {
+    case "done":
+      return {
+        stroke: "var(--shell-success)",
+        fill: "rgba(0,224,110,0.08)",
+        text: "var(--shell-success)",
+      };
+    case "in_progress":
+      return {
+        stroke: "var(--shell-warning)",
+        fill: "rgba(247,190,22,0.08)",
+        text: "var(--shell-warning)",
+      };
+    case "available":
+      return {
+        stroke: "var(--shell-border-strong)",
+        fill: "rgba(58,61,70,0.15)",
+        text: "var(--shell-ink)",
+      };
+    case "locked":
+      return {
+        stroke: "var(--shell-border)",
+        fill: "rgba(45,47,54,0.15)",
+        text: "var(--shell-dim)",
+      };
+  }
+}
+
+function edgeColor(fromState: ModuleState, toState: ModuleState): string {
+  if (fromState === "done" && toState === "done") return "var(--shell-success)";
+  if (fromState === "done" && toState === "in_progress") return "var(--shell-warning)";
+  return "var(--shell-border)";
+}
+
+function TreeSvg({
+  nodes,
+  width,
+  height,
+}: {
+  nodes: LayoutNode[];
+  width: number;
+  height: number;
+}) {
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+  /* Collect edges from prerequisites */
+  const edges: { from: LayoutNode; to: LayoutNode }[] = [];
+  for (const node of nodes) {
+    for (const prereqId of node.prerequisites) {
+      const parent = nodeMap.get(prereqId);
+      if (parent) edges.push({ from: parent, to: node });
+    }
+  }
 
   return (
-    <article className="talent-track">
-      <div className="talent-track-header" style={{ "--track-color": trackColor } as React.CSSProperties}>
-        <div>
-          <p className="eyebrow">{track.id}</p>
-          <h2>{track.title}</h2>
-          <p className="muted">{track.summary}</p>
-        </div>
-        <div className="talent-track-progress">
-          <div className="talent-track-bar">
-            <div
-              className="talent-track-bar-fill"
-              style={{ "--track-color": trackColor, "--bar-width": `${pct}%` } as React.CSSProperties}
-            />
-          </div>
-          <span className="muted">
-            {doneCount}/{track.modules.length} modules &middot; {pct}%
-          </span>
-        </div>
-      </div>
-
-      {phases.map((phase) => {
-        const phaseModules = track.modules.filter((m) => m.phase === phase);
-        const phaseLabel = phase.charAt(0).toUpperCase() + phase.slice(1);
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="talent-tree-svg"
+      preserveAspectRatio="xMidYMin meet"
+    >
+      {/* Edges */}
+      {edges.map((e) => {
+        const x1 = e.from.x + NODE_W / 2;
+        const y1 = e.from.y + NODE_H;
+        const x2 = e.to.x + NODE_W / 2;
+        const y2 = e.to.y;
+        const color = edgeColor(e.from.state, e.to.state);
         return (
-          <div key={phase} className="talent-phase">
-            <div className="talent-phase-label">{phaseLabel}</div>
-            <div className="talent-phase-nodes">
-              {phaseModules.map((mod, idx) => {
-                const state = deriveModuleState(mod.id, track.id, activeTrack, activeModule, track.modules);
-                const isLastInPhase = idx === phaseModules.length - 1;
-                const isLastPhase = phase === phases[phases.length - 1];
-                return (
-                  <TalentNode
-                    key={mod.id}
-                    mod={mod}
-                    state={state}
-                    isLast={isLastInPhase && isLastPhase}
-                    trackColor={trackColor}
-                  />
-                );
-              })}
-            </div>
-          </div>
+          <line
+            key={`${e.from.id}-${e.to.id}`}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke={color}
+            strokeWidth={1}
+            opacity={0.6}
+          />
         );
       })}
-    </article>
+
+      {/* Nodes */}
+      {nodes.map((node) => {
+        const c = nodeColor(node.state);
+        return (
+          <g key={node.id}>
+            <a href={`/modules/${node.id}`}>
+              <rect
+                x={node.x}
+                y={node.y}
+                width={NODE_W}
+                height={NODE_H}
+                fill={c.fill}
+                stroke={c.stroke}
+                strokeWidth={node.state === "in_progress" ? 2 : 1}
+              />
+              <text
+                x={node.x + NODE_W / 2}
+                y={node.y + NODE_H / 2 + 1}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill={c.text}
+                fontFamily="var(--font-mono)"
+                fontSize={10}
+                fontWeight={node.state === "in_progress" ? 700 : 400}
+              >
+                {node.label.length > 16 ? node.label.slice(0, 15) + "…" : node.label}
+              </text>
+            </a>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Track tab + tree composite                                         */
+/* ------------------------------------------------------------------ */
+
+function TrackTreeSection({
+  tracks,
+  activeTrack,
+  activeModule,
+}: {
+  tracks: TrackItem[];
+  activeTrack: string | undefined;
+  activeModule: string | undefined;
+}) {
+  const layouts = tracks.map((track) => ({
+    track,
+    ...layoutTree(track.modules, track.id, activeTrack, activeModule),
+  }));
+
+  return (
+    <section className="talent-graph-section">
+      {/* Track tabs */}
+      <div className="talent-tabs">
+        {tracks.map((track) => {
+          const cfg = TRACK_TAB_COLORS[track.id];
+          const isActive = track.id === activeTrack;
+          return (
+            <Link
+              key={track.id}
+              href={`/tracks#${track.id}`}
+              className={`talent-tab${isActive ? " talent-tab--active" : ""}`}
+              style={{ "--tab-color": cfg?.color ?? "var(--accent)" } as React.CSSProperties}
+            >
+              [ {cfg?.label ?? track.id.toUpperCase()} ]
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* SVG trees */}
+      {layouts.map(({ track, nodes, width, height }) => {
+        const doneCount = nodes.filter((n) => n.state === "done").length;
+        const pct = nodes.length > 0 ? Math.round((doneCount / nodes.length) * 100) : 0;
+        return (
+          <article key={track.id} id={track.id} className="talent-tree-canvas">
+            <div className="talent-tree-track-header">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--shell-success)]">
+                {track.id}
+              </span>
+              <span className="font-mono text-[10px] text-[var(--shell-muted)]">
+                {doneCount}/{nodes.length} modules &middot; {pct}%
+              </span>
+            </div>
+            <div className="talent-tree-overflow">
+              <TreeSvg nodes={nodes} width={width} height={height} />
+            </div>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Legend                                                              */
+/* ------------------------------------------------------------------ */
+
+function Legend() {
+  const items: { state: ModuleState; icon: string; label: string }[] = [
+    { state: "done", icon: "◆", label: "Done" },
+    { state: "in_progress", icon: "▶", label: "In progress" },
+    { state: "available", icon: "○", label: "Available" },
+    { state: "locked", icon: "◇", label: "Locked" },
+  ];
+
+  return (
+    <div className="talent-legend">
+      {items.map((item) => (
+        <span key={item.state}>
+          <span
+            className="talent-legend-icon"
+            style={{ color: nodeColor(item.state).stroke }}
+          >
+            {item.icon}
+          </span>{" "}
+          {item.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -201,26 +337,17 @@ export default async function TracksPage() {
         <h1>RPG Talent Tree</h1>
         <p className="lead">
           Navigate through {curriculum.tracks.length} tracks and {totalModules} modules.
-          Complete modules to unlock the next tier and progress through foundation, practice, core and advanced phases.
+          Complete modules to unlock the next tier and progress through foundation, practice,
+          core and advanced phases.
         </p>
-        <div className="talent-legend">
-          <span><span className="talent-legend-icon status-completed">◆</span> Done</span>
-          <span><span className="talent-legend-icon status-in-progress">▶</span> In progress</span>
-          <span><span className="talent-legend-icon">○</span> Available</span>
-          <span><span className="talent-legend-icon status-locked">◇</span> Locked</span>
-        </div>
+        <Legend />
       </section>
 
-      <section className="talent-trees">
-        {curriculum.tracks.map((track) => (
-          <TrackTree
-            key={track.id}
-            track={track}
-            activeTrack={activeTrack}
-            activeModule={activeModule}
-          />
-        ))}
-      </section>
+      <TrackTreeSection
+        tracks={curriculum.tracks}
+        activeTrack={activeTrack}
+        activeModule={activeModule}
+      />
     </main>
   );
 }
