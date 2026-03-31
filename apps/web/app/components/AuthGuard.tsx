@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/app/components/AppShell";
 import { useAuth } from "@/app/components/AuthProvider";
+import { SidebarSlotProvider } from "@/app/components/SidebarSlotProvider";
 
 const PUBLIC_PATHS = new Set(["/login"]);
 
@@ -29,7 +30,11 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   }
 
   if (status === "authenticated") {
-    return <AppShell>{children}</AppShell>;
+    return (
+      <SidebarSlotProvider>
+        <AppShell>{children}</AppShell>
+      </SidebarSlotProvider>
+    );
   }
 
   return (
