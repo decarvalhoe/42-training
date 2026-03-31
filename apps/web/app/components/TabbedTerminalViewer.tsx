@@ -26,13 +26,13 @@ export function TabbedTerminalViewer({ sessionPrefix }: { sessionPrefix: string 
     build: null,
     tests: null,
   });
-  const [lastActivity, setLastActivity] = useState<Record<TabName, number>>({
+  const [, setLastActivity] = useState<Record<TabName, number>>({
     work: 0,
     build: 0,
     tests: 0,
   });
   const [paused, setPaused] = useState(false);
-  const preRef = useRef<HTMLPreElement>(null);
+  const codeRef = useRef<HTMLDivElement>(null);
 
   const fetchPane = useCallback(
     async (tab: TabName) => {
@@ -71,54 +71,58 @@ export function TabbedTerminalViewer({ sessionPrefix }: { sessionPrefix: string 
   }, [fetchPane, paused]);
 
   useEffect(() => {
-    if (preRef.current) {
-      preRef.current.scrollTop = preRef.current.scrollHeight;
+    if (codeRef.current) {
+      codeRef.current.scrollTop = codeRef.current.scrollHeight;
     }
   }, [panes, activeTab]);
 
-  const mostRecentTab = TABS.reduce((a, b) => (lastActivity[a] >= lastActivity[b] ? a : b));
-
   const activeData = panes[activeTab];
   const activeError = errors[activeTab];
+  const lines = (activeData?.content ?? "Connecting...").split("\n");
 
   return (
-    <article className="panel terminal-viewer">
-      <div className="terminal-viewer-tabs">
+    <div>
+      {/* Tmux-style tabs (Figma 04 — learn42:work | build | tests) */}
+      <div className="module-terminal-tabs">
         {TABS.map((tab) => (
           <button
             key={tab}
-            className={`terminal-viewer-tab${tab === activeTab ? " terminal-viewer-tab--active" : ""}${tab === mostRecentTab && lastActivity[tab] > 0 ? " terminal-viewer-tab--recent" : ""}`}
+            className={`module-terminal-tab${tab === activeTab ? " module-terminal-tab--active" : ""}`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab}
+            {sessionPrefix}:{tab}
           </button>
         ))}
-        <div className="terminal-viewer-spacer" />
-        <span className="terminal-pane-session">
-          {sessionPrefix}:{activeTab}
-        </span>
+        <div style={{ flex: 1 }} />
         <button
-          className="terminal-pane-toggle"
+          className="module-terminal-tab"
           onClick={() => setPaused((p) => !p)}
           title={paused ? "Resume polling" : "Pause polling"}
         >
-          {paused ? "Resume" : "Pause"}
+          {paused ? "▶ resume" : "⏸ pause"}
         </button>
       </div>
 
+      {/* Code area with line numbers */}
       {activeError ? (
-        <div className="terminal-pane-error">{activeError}</div>
+        <div className="module-terminal-code" style={{ color: "var(--shell-danger)", padding: "16px 24px" }}>
+          {activeError}
+        </div>
       ) : (
-        <pre
-          ref={preRef}
-          className="terminal-pane-content"
-          style={{
-            minHeight: activeData ? `${Math.min(activeData.rows, 24) * 1.3}em` : "12em",
-          }}
-        >
-          {activeData?.content ?? "Connecting..."}
-        </pre>
+        <div className="module-terminal-code" ref={codeRef}>
+          <div className="module-terminal-gutter">
+            {lines.map((_, i) => (
+              <span key={i}>{String(i + 1).padStart(2, "\u00A0")}</span>
+            ))}
+          </div>
+          <div className="module-terminal-separator" />
+          <div className="module-terminal-lines">
+            {lines.map((line, i) => (
+              <div key={i}>{line || "\u00A0"}</div>
+            ))}
+          </div>
+        </div>
       )}
-    </article>
+    </div>
   );
 }

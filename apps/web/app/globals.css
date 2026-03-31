@@ -2970,6 +2970,170 @@ a {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Track Explorer — SVG talent graph                                  */
+/* ------------------------------------------------------------------ */
+
+.talent-graph-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.talent-tabs {
+  display: flex;
+  background: var(--shell-sidebar);
+}
+
+.talent-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  height: 40px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  border: 1px solid var(--shell-border);
+  color: var(--shell-muted);
+  transition: color 0.15s ease;
+}
+
+.talent-tab:hover {
+  color: var(--shell-ink);
+}
+
+.talent-tab--active {
+  border: 2px solid var(--tab-color, var(--shell-success));
+  background: rgba(0, 224, 110, 0.08);
+  color: var(--tab-color, var(--shell-success));
+  font-weight: 700;
+}
+
+.talent-tree-canvas {
+  background: var(--shell-canvas);
+  border: 1px solid var(--shell-border);
+}
+
+.talent-tree-track-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--shell-border);
+}
+
+.talent-tree-overflow {
+  overflow: auto;
+  padding: 0;
+}
+
+.talent-tree-svg {
+  width: 100%;
+  min-height: 300px;
+}
+
+.talent-tree-svg a {
+  cursor: pointer;
+}
+
+.talent-tree-svg a:hover rect {
+  filter: brightness(1.2);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Module detail — terminal viewer (Figma 04)                         */
+/* ------------------------------------------------------------------ */
+
+.module-terminal-breadcrumb {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--shell-border);
+  font-family: var(--font-mono);
+}
+
+.module-terminal-breadcrumb-path {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--shell-warning);
+}
+
+.module-terminal-breadcrumb-info {
+  font-size: 10px;
+  color: var(--shell-muted);
+}
+
+.module-terminal-tabs {
+  display: flex;
+  background: var(--shell-sidebar);
+}
+
+.module-terminal-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  height: 36px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border: 1px solid var(--shell-border);
+  color: var(--shell-muted);
+  cursor: pointer;
+  background: none;
+  transition: color 0.15s ease;
+}
+
+.module-terminal-tab:hover {
+  color: var(--shell-ink);
+}
+
+.module-terminal-tab--active {
+  border-color: var(--shell-success);
+  background: var(--shell-canvas);
+  color: var(--shell-success);
+  font-weight: 700;
+}
+
+.module-terminal-code {
+  display: flex;
+  flex: 1;
+  overflow: auto;
+  background: var(--shell-canvas);
+  padding: 16px 0 16px 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.module-terminal-gutter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-right: 8px;
+  color: var(--shell-dim);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.module-terminal-separator {
+  width: 1px;
+  background: var(--shell-border);
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.module-terminal-lines {
+  flex: 1;
+  padding-left: 8px;
+  white-space: pre;
+  color: var(--shell-ink);
+  overflow-x: auto;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Mentor chat page                                                   */
 /* ------------------------------------------------------------------ */
 

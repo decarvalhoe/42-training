@@ -246,7 +246,20 @@ export default async function ModuleDetailPage({
 
           {/* Live terminal viewer (visible when module is active) */}
           {state === "in_progress" && (
-            <TabbedTerminalViewer sessionPrefix="learn42" />
+            <>
+              {/* Figma 04 — breadcrumb + tmux tabs */}
+              <article className="panel" style={{ padding: 0, overflow: "hidden" }}>
+                <div className="module-terminal-breadcrumb">
+                  <span className="module-terminal-breadcrumb-path">
+                    {foundTrackId} &gt; {id}
+                  </span>
+                  <span className="module-terminal-breadcrumb-info">
+                    TERMINAL: ON
+                  </span>
+                </div>
+                <TabbedTerminalViewer sessionPrefix="learn42" />
+              </article>
+            </>
           )}
         </div>
 
