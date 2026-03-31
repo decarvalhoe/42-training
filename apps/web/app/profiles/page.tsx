@@ -33,7 +33,8 @@ function validateProfileForm(values: ProfileFormState): FormErrors {
   }
 
   if (values.login.trim() && !/^[a-z0-9-]+$/i.test(values.login.trim())) {
-    errors.login = "Use only letters, numbers or hyphens for the optional login.";
+    errors.login =
+      "Use only letters, numbers or hyphens for the optional login.";
   }
 
   return errors;
@@ -66,12 +67,18 @@ function normalizeNextPath(value: string | null) {
 export default function ProfilesPage() {
   const { refreshSession, session } = useAuth();
   const [tracks, setTracks] = useState<TrackItem[]>([]);
-  const [profilesState, setProfilesState] = useState<ProfilesState | null>(null);
+  const [profilesState, setProfilesState] = useState<ProfilesState | null>(
+    null,
+  );
   const [form, setForm] = useState<ProfileFormState>(INITIAL_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [loadingState, setLoadingState] = useState<"loading" | "ready" | "error">("loading");
+  const [loadingState, setLoadingState] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [feedbackTone, setFeedbackTone] = useState<"success" | "error">("success");
+  const [feedbackTone, setFeedbackTone] = useState<"success" | "error">(
+    "success",
+  );
   const [isCreating, setIsCreating] = useState(false);
   const [switchingId, setSwitchingId] = useState<string | null>(null);
   const [searchState, setSearchState] = useState({
@@ -84,7 +91,10 @@ export default function ProfilesPage() {
     setLoadingState("loading");
 
     try {
-      const [dashboard, profiles] = await Promise.all([getDashboardData(), listProfiles()]);
+      const [dashboard, profiles] = await Promise.all([
+        getDashboardData(),
+        listProfiles(),
+      ]);
       if (cancelledRef?.current) {
         return;
       }
@@ -167,7 +177,11 @@ export default function ProfilesPage() {
       );
     } catch (error) {
       setFeedbackTone("error");
-      setFeedback(error instanceof Error ? error.message : "Unable to create a new profile.");
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Unable to create a new profile.",
+      );
     } finally {
       setIsCreating(false);
     }
@@ -188,7 +202,11 @@ export default function ProfilesPage() {
       );
     } catch (error) {
       setFeedbackTone("error");
-      setFeedback(error instanceof Error ? error.message : "Unable to switch the active profile.");
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Unable to switch the active profile.",
+      );
     } finally {
       setSwitchingId(null);
     }
@@ -205,7 +223,8 @@ export default function ProfilesPage() {
             Loading profile workspace...
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--shell-muted)]">
-            Preparing the available tracks and the current active learner context.
+            Preparing the available tracks and the current active learner
+            context.
           </p>
         </section>
       </main>
@@ -216,12 +235,15 @@ export default function ProfilesPage() {
     return (
       <main className="grid gap-6">
         <section className="border border-[var(--shell-border)] bg-[var(--shell-panel)] p-6 lg:p-8">
-          <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[var(--shell-success)]">Profiles</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
+            Profiles
+          </p>
           <h1 className="mt-3 font-mono text-3xl uppercase tracking-[0.08em] text-[var(--shell-ink)]">
             Profile management is temporarily unavailable.
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--shell-muted)]">
-            The UI could not load the profile catalog. Refresh the page or return to the dashboard.
+            The UI could not load the profile catalog. Refresh the page or
+            return to the dashboard.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <button
@@ -260,34 +282,50 @@ export default function ProfilesPage() {
       <section className="grid gap-6 border border-[var(--shell-border)] bg-[var(--shell-panel)] p-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)] lg:p-8">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-[var(--shell-success)]">
-            {onboardingComplete ? "Onboarding complete" : isOnboarding ? "First-run onboarding" : "Profiles"}
+            {onboardingComplete
+              ? "Onboarding complete"
+              : isOnboarding
+                ? "First-run onboarding"
+                : "Profiles"}
           </p>
           <h1 className="mt-3 font-mono text-3xl uppercase tracking-[0.08em] text-[var(--shell-ink)]">
             {heroTitle}
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--shell-muted)]">{heroLead}</p>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--shell-muted)]">
+            {heroLead}
+          </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">Connected user</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">
+                Connected user
+              </p>
               <p className="mt-2 break-all font-mono text-xs uppercase tracking-[0.12em] text-[var(--shell-ink)]">
                 {sessionEmail}
               </p>
             </div>
             <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">Active profile</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">
+                Active profile
+              </p>
               <p className="mt-2 font-mono text-xs uppercase tracking-[0.12em] text-[var(--shell-ink)]">
-                {activeProfile ? formatTrackTitle(activeProfile.track, tracks) : "Not selected yet"}
+                {activeProfile
+                  ? formatTrackTitle(activeProfile.track, tracks)
+                  : "Not selected yet"}
               </p>
             </div>
             <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">Profiles linked</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">
+                Profiles linked
+              </p>
               <p className="mt-2 font-mono text-xs uppercase tracking-[0.12em] text-[var(--shell-ink)]">
                 {profilesState.profiles.length}
               </p>
             </div>
             <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">Data source</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-muted)]">
+                Data source
+              </p>
               <p className="mt-2 font-mono text-xs uppercase tracking-[0.12em] text-[var(--shell-ink)]">
                 {profilesState.mocked ? "Demo mode" : "API live state"}
               </p>
@@ -300,7 +338,7 @@ export default function ProfilesPage() {
                 "mt-6 border px-4 py-4 font-mono text-[11px] leading-6",
                 feedbackTone === "success"
                   ? "border-[var(--shell-success)]/35 bg-[var(--shell-success)]/10 text-[var(--shell-ink)]"
-                  : "border-[#ff7a7a]/35 bg-[#ff7a7a]/10 text-[#ffd0d0]",
+                  : "border-[var(--shell-danger)]/35 bg-[var(--shell-danger)]/10 text-[var(--shell-danger)]",
               ].join(" ")}
               aria-live="polite"
             >
@@ -329,7 +367,8 @@ export default function ProfilesPage() {
                 2. Confirm the active context
               </p>
               <p className="mt-2">
-                The active profile becomes the learner scope used by modules, review, mentor and defense.
+                The active profile becomes the learner scope used by modules,
+                review, mentor and defense.
               </p>
             </div>
             <div className="border border-[var(--shell-border)] px-4 py-3">
@@ -366,7 +405,8 @@ export default function ProfilesPage() {
                 Active learner context
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--shell-muted)]">
-                Switch between existing profiles when you want to move from one track to another without mixing progression.
+                Switch between existing profiles when you want to move from one
+                track to another without mixing progression.
               </p>
             </div>
             <Link
@@ -379,7 +419,8 @@ export default function ProfilesPage() {
 
           {profilesState.profiles.length === 0 ? (
             <div className="mt-6 border border-dashed border-[var(--shell-border)] px-5 py-6 text-sm leading-7 text-[var(--shell-muted)]">
-              No learner profile exists yet. Create one in the right panel to unlock the guided learning flow.
+              No learner profile exists yet. Create one in the right panel to
+              unlock the guided learning flow.
             </div>
           ) : (
             <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -407,10 +448,16 @@ export default function ProfilesPage() {
                     <h3 className="mt-3 font-mono text-lg uppercase tracking-[0.08em] text-[var(--shell-ink)]">
                       {formatTrackTitle(profile.track, tracks)}
                     </h3>
-                    <p className="mt-3 text-sm text-[var(--shell-muted)]">Login handle: {profile.login}</p>
+                    <p className="mt-3 text-sm text-[var(--shell-muted)]">
+                      Login handle: {profile.login}
+                    </p>
                     <div className="mt-4 space-y-2 text-sm text-[var(--shell-muted)]">
                       <p>Started {formatDateLabel(profile.startedAt)}</p>
-                      <p>{profile.currentModule ? `Current module: ${profile.currentModule}` : "No module selected yet"}</p>
+                      <p>
+                        {profile.currentModule
+                          ? `Current module: ${profile.currentModule}`
+                          : "No module selected yet"}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -423,7 +470,11 @@ export default function ProfilesPage() {
                       onClick={() => void handleSwitchProfile(profile)}
                       disabled={isActive || switchingId === profile.id}
                     >
-                      {isActive ? "Active profile" : switchingId === profile.id ? "Switching..." : "Set active"}
+                      {isActive
+                        ? "Active profile"
+                        : switchingId === profile.id
+                          ? "Switching..."
+                          : "Set active"}
                     </button>
                   </article>
                 );
@@ -441,13 +492,20 @@ export default function ProfilesPage() {
               Add a track profile
             </h2>
             <p className="mt-3 text-sm leading-7 text-[var(--shell-muted)]">
-              One profile per track. Use the optional login field if you want a custom handle instead of the generated one.
+              One profile per track. Use the optional login field if you want a
+              custom handle instead of the generated one.
             </p>
           </div>
 
-          <form className="profiles-form mt-6 flex flex-col gap-5" noValidate onSubmit={handleCreateProfile}>
+          <form
+            className="profiles-form mt-6 flex flex-col gap-5"
+            noValidate
+            onSubmit={handleCreateProfile}
+          >
             <label className="flex flex-col gap-3">
-              <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--shell-muted)]">Track</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--shell-muted)]">
+                Track
+              </span>
               <select
                 className="h-12 rounded-none border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 font-mono text-[12px] uppercase tracking-[0.16em] text-[var(--shell-ink)] outline-none focus:border-[var(--shell-success)]"
                 value={form.track}
@@ -461,7 +519,11 @@ export default function ProfilesPage() {
                   </option>
                 ))}
               </select>
-              {errors.track ? <small className="font-mono text-[11px] text-[#ff7a7a]">{errors.track}</small> : null}
+              {errors.track ? (
+                <small className="font-mono text-[11px] text-[var(--shell-danger)]">
+                  {errors.track}
+                </small>
+              ) : null}
             </label>
 
             <label className="flex flex-col gap-3">
@@ -477,7 +539,11 @@ export default function ProfilesPage() {
                 onChange={(event) => updateField("login", event.target.value)}
                 aria-invalid={Boolean(errors.login)}
               />
-              {errors.login ? <small className="font-mono text-[11px] text-[#ff7a7a]">{errors.login}</small> : null}
+              {errors.login ? (
+                <small className="font-mono text-[11px] text-[var(--shell-danger)]">
+                  {errors.login}
+                </small>
+              ) : null}
             </label>
 
             <button
@@ -494,8 +560,9 @@ export default function ProfilesPage() {
               Current integration state
             </strong>
             <p className="mt-2">
-              This page uses the authenticated session cookie and the live <code>/api/v1/profiles</code> endpoints.
-              Browser-backed mock data is available only when explicit demo mode is enabled.
+              This page uses the authenticated session cookie and the live{" "}
+              <code>/api/v1/profiles</code> endpoints. Browser-backed mock data
+              is available only when explicit demo mode is enabled.
             </p>
           </div>
         </aside>

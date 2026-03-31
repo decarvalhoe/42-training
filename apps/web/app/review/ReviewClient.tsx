@@ -78,7 +78,9 @@ function validateForm(values: FormState): FormErrors {
   }
   if (
     values.score &&
-    (Number.isNaN(Number(values.score)) || Number(values.score) < 0 || Number(values.score) > 100)
+    (Number.isNaN(Number(values.score)) ||
+      Number(values.score) < 0 ||
+      Number(values.score) > 100)
   ) {
     errors.score = "Score must stay between 0 and 100.";
   }
@@ -100,7 +102,10 @@ function formatTimestamp(value: string) {
   }).format(new Date(value));
 }
 
-function buildArtifacts(notes: string, selectedLenses: string[]): EvidenceArtifact[] {
+function buildArtifacts(
+  notes: string,
+  selectedLenses: string[],
+): EvidenceArtifact[] {
   const lines = notes
     .split("\n")
     .map((line) => line.trim())
@@ -127,15 +132,25 @@ function buildArtifacts(notes: string, selectedLenses: string[]): EvidenceArtifa
 }
 
 export default function ReviewClient({ modules }: Props) {
-  const [form, setForm] = useState<FormState>({ ...INITIAL_FORM, moduleId: modules[0]?.id ?? "" });
+  const [form, setForm] = useState<FormState>({
+    ...INITIAL_FORM,
+    moduleId: modules[0]?.id ?? "",
+  });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [selectedLenses, setSelectedLenses] = useState<string[]>([REVIEW_LENSES[0], REVIEW_LENSES[4]]);
+  const [selectedLenses, setSelectedLenses] = useState<string[]>([
+    REVIEW_LENSES[0],
+    REVIEW_LENSES[4],
+  ]);
   const [items, setItems] = useState<ReviewAttemptRecord[]>([]);
-  const [loadingState, setLoadingState] = useState<"loading" | "ready" | "error">("loading");
+  const [loadingState, setLoadingState] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   const [sourceMode, setSourceMode] = useState<"live" | "mocked">("live");
   const [submitState, setSubmitState] = useState<"idle" | "submitting">("idle");
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [feedbackTone, setFeedbackTone] = useState<"success" | "error">("success");
+  const [feedbackTone, setFeedbackTone] = useState<"success" | "error">(
+    "success",
+  );
 
   const loadItems = useCallback(async (cancelledRef?: { current: boolean }) => {
     setLoadingState("loading");
@@ -192,7 +207,9 @@ export default function ReviewClient({ modules }: Props) {
 
   function toggleLens(value: string) {
     setSelectedLenses((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value],
     );
     setFeedback(null);
   }
@@ -223,7 +240,9 @@ export default function ReviewClient({ modules }: Props) {
       setItems((current) => [result.item, ...current]);
       setSourceMode(result.mocked ? "mocked" : "live");
       setFeedbackTone("success");
-      setFeedback(`Review submitted for ${moduleLabel(form.moduleId, modules)}.`);
+      setFeedback(
+        `Review submitted for ${moduleLabel(form.moduleId, modules)}.`,
+      );
       setForm((current) => ({
         ...current,
         score: "",
@@ -233,14 +252,21 @@ export default function ReviewClient({ modules }: Props) {
       }));
     } catch (error) {
       setFeedbackTone("error");
-      setFeedback(error instanceof Error ? error.message : "Unable to submit the review.");
+      setFeedback(
+        error instanceof Error ? error.message : "Unable to submit the review.",
+      );
     } finally {
       setSubmitState("idle");
     }
   }
 
   if (loadingState === "loading") {
-    return <GuidedEmptyState title="Loading review workspace..." body="The guided review workspace is bootstrapping recent attempts and evidence prompts." />;
+    return (
+      <GuidedEmptyState
+        title="Loading review workspace..."
+        body="The guided review workspace is bootstrapping recent attempts and evidence prompts."
+      />
+    );
   }
 
   if (loadingState === "error") {
@@ -270,8 +296,9 @@ export default function ReviewClient({ modules }: Props) {
                 Submit a guided review
               </h1>
               <p className="mt-4 text-sm leading-7 text-[var(--shell-muted)]">
-                Prepare a peer-style evaluation before the real defense pressure hits. Frame the review lenses, attach evidence
-                and leave a trace of the exact questions another learner should challenge.
+                Prepare a peer-style evaluation before the real defense pressure
+                hits. Frame the review lenses, attach evidence and leave a trace
+                of the exact questions another learner should challenge.
               </p>
             </div>
             <GuidedBadge tone={sourceMode === "live" ? "success" : "warning"}>
@@ -281,10 +308,19 @@ export default function ReviewClient({ modules }: Props) {
         </GuidedPanel>
 
         <GuidedPanel className="px-6 py-6">
-          <form className="review-form grid gap-6" noValidate onSubmit={handleSubmit}>
+          <form
+            className="review-form grid gap-6"
+            noValidate
+            onSubmit={handleSubmit}
+          >
             <div className="grid gap-4 lg:grid-cols-2">
               <GuidedField label="Module">
-                <GuidedSelect value={form.moduleId} onChange={(event) => updateField("moduleId", event.target.value)}>
+                <GuidedSelect
+                  value={form.moduleId}
+                  onChange={(event) =>
+                    updateField("moduleId", event.target.value)
+                  }
+                >
                   {modules.map((module) => (
                     <option key={module.id} value={module.id}>
                       {module.trackTitle} — {module.title}
@@ -302,7 +338,9 @@ export default function ReviewClient({ modules }: Props) {
                 <input
                   className="min-h-11 border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-2 font-mono text-sm text-[var(--shell-ink)] outline-none transition-colors focus:border-[var(--shell-success)]"
                   value={form.reviewerId}
-                  onChange={(event) => updateField("reviewerId", event.target.value)}
+                  onChange={(event) =>
+                    updateField("reviewerId", event.target.value)
+                  }
                 />
                 {errors.reviewerId ? (
                   <small className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-danger)]">
@@ -315,7 +353,9 @@ export default function ReviewClient({ modules }: Props) {
                 <input
                   className="min-h-11 border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-2 font-mono text-sm text-[var(--shell-ink)] outline-none transition-colors focus:border-[var(--shell-success)]"
                   value={form.learnerId}
-                  onChange={(event) => updateField("learnerId", event.target.value)}
+                  onChange={(event) =>
+                    updateField("learnerId", event.target.value)
+                  }
                 />
               </GuidedField>
 
@@ -344,12 +384,19 @@ export default function ReviewClient({ modules }: Props) {
                     key={lens}
                     className={`flex cursor-pointer items-start gap-3 border px-4 py-3 transition-colors ${
                       active
-                        ? "border-[var(--shell-success)] bg-[rgba(0,224,110,0.08)]"
+                        ? "border-[var(--shell-success)] bg-[var(--shell-success)]/8"
                         : "border-[var(--shell-border)] bg-[var(--shell-canvas)]"
                     }`}
                   >
-                    <input type="checkbox" checked={active} onChange={() => toggleLens(lens)} className="mt-1" />
-                    <span className="text-sm leading-6 text-[var(--shell-ink)]">{lens}</span>
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      onChange={() => toggleLens(lens)}
+                      className="mt-1"
+                    />
+                    <span className="text-sm leading-6 text-[var(--shell-ink)]">
+                      {lens}
+                    </span>
                   </label>
                 );
               })}
@@ -358,7 +405,9 @@ export default function ReviewClient({ modules }: Props) {
             <GuidedField label="Code or command snippet">
               <GuidedTextarea
                 value={form.codeSnippet}
-                onChange={(event) => updateField("codeSnippet", event.target.value)}
+                onChange={(event) =>
+                  updateField("codeSnippet", event.target.value)
+                }
                 placeholder="Paste the function, command sequence or excerpt you want reviewed."
               />
               {errors.codeSnippet ? (
@@ -371,7 +420,9 @@ export default function ReviewClient({ modules }: Props) {
             <GuidedField label="Review notes">
               <GuidedTextarea
                 value={form.feedback}
-                onChange={(event) => updateField("feedback", event.target.value)}
+                onChange={(event) =>
+                  updateField("feedback", event.target.value)
+                }
                 placeholder="Describe what a peer should challenge, confirm or re-explain."
               />
               {errors.feedback ? (
@@ -384,14 +435,21 @@ export default function ReviewClient({ modules }: Props) {
             <GuidedField label="Evidence notes">
               <GuidedTextarea
                 value={form.evidenceNotes}
-                onChange={(event) => updateField("evidenceNotes", event.target.value)}
+                onChange={(event) =>
+                  updateField("evidenceNotes", event.target.value)
+                }
                 placeholder="One line per artifact: command output, self-note, checklist item, warning..."
               />
             </GuidedField>
 
             <div className="flex flex-wrap gap-3">
-              <GuidedActionButton type="submit" disabled={submitState === "submitting"}>
-                {submitState === "submitting" ? "Submitting..." : "Submit review"}
+              <GuidedActionButton
+                type="submit"
+                disabled={submitState === "submitting"}
+              >
+                {submitState === "submitting"
+                  ? "Submitting..."
+                  : "Submit review"}
               </GuidedActionButton>
             </div>
 
@@ -399,8 +457,8 @@ export default function ReviewClient({ modules }: Props) {
               <div
                 className={`border px-4 py-3 font-mono text-[10px] uppercase tracking-[0.24em] ${
                   feedbackTone === "success"
-                    ? "border-[rgba(0,224,110,0.35)] text-[var(--shell-success)]"
-                    : "border-[rgba(255,65,65,0.35)] text-[var(--shell-danger)]"
+                    ? "border-[var(--shell-success)]/35 text-[var(--shell-success)]"
+                    : "border-[var(--shell-danger)]/35 text-[var(--shell-danger)]"
                 }`}
               >
                 {feedback}
@@ -436,14 +494,20 @@ export default function ReviewClient({ modules }: Props) {
             <div className="space-y-3">
               {items.length === 0 ? (
                 <p className="text-sm leading-6 text-[var(--shell-muted)]">
-                  No review has been captured yet. The first submission will appear here.
+                  No review has been captured yet. The first submission will
+                  appear here.
                 </p>
               ) : (
                 items.map((item) => (
-                  <article key={item.id} className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
+                  <article
+                    key={item.id}
+                    className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4"
+                  >
                     <div className="flex items-start justify-between gap-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-dim)]">
                       <span>{formatTimestamp(item.createdAt)}</span>
-                      <span>{item.score !== null ? `${item.score}/100` : "no score"}</span>
+                      <span>
+                        {item.score !== null ? `${item.score}/100` : "no score"}
+                      </span>
                     </div>
                     <p className="mt-3 font-mono text-sm font-semibold uppercase tracking-[0.12em] text-[var(--shell-ink)]">
                       {item.reviewerId}
@@ -451,9 +515,13 @@ export default function ReviewClient({ modules }: Props) {
                     <p className="mt-2 text-sm leading-6 text-[var(--shell-muted)]">
                       {moduleLabel(item.moduleId, modules)}
                     </p>
-                    <p className="mt-3 text-sm leading-6 text-[var(--shell-muted)]">{item.feedback}</p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--shell-muted)]">
+                      {item.feedback}
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <GuidedBadge>{item.evidenceArtifacts.length} artifacts</GuidedBadge>
+                      <GuidedBadge>
+                        {item.evidenceArtifacts.length} artifacts
+                      </GuidedBadge>
                     </div>
                   </article>
                 ))
