@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { DataSourceBadge } from "@/app/components/DataSourceBadge";
+import { DashboardSidebar } from "@/app/dashboard/DashboardSidebar";
 import { getAnalyticsData, getDashboardData, getTmuxSessions } from "@/lib/api";
 import { countSkills, deriveModuleState, getLearningContext, getTrackTheme, summarizeSessions } from "@/lib/learner-progress";
 
@@ -125,60 +126,21 @@ export default async function DashboardPage() {
   const tmuxSummary = summarizeSessions(tmuxData.sessions);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <div className="grid gap-4">
-        <Panel>
-          <StatBlock
-            label="Modules"
-            value={`${completedModules}/${totalModules}`}
-            detail={`${analytics.summary.module_completions} completion events recorded in analytics`}
-          />
-          <StatBlock
-            label="Success rate"
-            value={`${analytics.summary.checkpoint_success_rate}%`}
-            detail="Checkpoint reliability across evaluated learner attempts"
-          />
-          <StatBlock
-            label="Defense"
-            value={`${analytics.summary.defenses_started}`}
-            detail="Defense sessions started from the guided learner workflow"
-          />
-          <StatBlock
-            label="Mentor queries"
-            value={`${analytics.summary.mentor_queries}`}
-            detail="AI mentor interactions preserved in the pedagogical event stream"
-          />
-          <StatBlock
-            label="Skill coverage"
-            value={`${totalSkills}`}
-            detail={`${curriculum.tracks.length} tracks visible in the competency map`}
-          />
-        </Panel>
-
-        <Panel className="px-5 py-5">
-          <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Session health</p>
-          <div className="mt-4 grid gap-3">
-            <div className="flex items-center justify-between border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.24em]">
-              <span className="text-[var(--shell-muted)]">Live panes</span>
-              <span className="text-[var(--shell-success)]">{tmuxSummary.active}</span>
-            </div>
-            <div className="flex items-center justify-between border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.24em]">
-              <span className="text-[var(--shell-muted)]">Idle panes</span>
-              <span className="text-[var(--shell-ink)]">{tmuxSummary.idle}</span>
-            </div>
-            <div className="border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-4 py-4">
-              <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">Current focus</p>
-              <p className="mt-3 font-mono text-sm text-[var(--shell-ink)]">
-                {progression.progress?.current_exercise ?? "No active exercise"}
-              </p>
-              <p className="mt-2 font-mono text-[10px] leading-5 text-[var(--shell-muted)]">
-                {progression.progress?.current_step ?? progression.next_command ?? "No current step visible in the learner session."}
-              </p>
-            </div>
-          </div>
-        </Panel>
-      </div>
-
+    <>
+      <DashboardSidebar
+        completedModules={completedModules}
+        totalModules={totalModules}
+        completionEvents={analytics.summary.module_completions}
+        successRate={analytics.summary.checkpoint_success_rate}
+        defensesStarted={analytics.summary.defenses_started}
+        mentorQueries={analytics.summary.mentor_queries}
+        totalSkills={totalSkills}
+        trackCount={curriculum.tracks.length}
+        activePanes={tmuxSummary.active}
+        idlePanes={tmuxSummary.idle}
+        currentExercise={progression.progress?.current_exercise ?? null}
+        currentStep={progression.progress?.current_step ?? progression.next_command ?? null}
+      />
       <div className="grid gap-4">
         <Panel className="px-6 py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -286,6 +248,6 @@ export default async function DashboardPage() {
           </div>
         </Panel>
       </div>
-    </div>
+    </>
   );
 }

@@ -12,6 +12,7 @@ import {
   GuidedStatusBar,
   GuidedTextarea,
 } from "@/app/components/GuidedSurface";
+import { SidebarContent } from "@/app/components/SidebarSlotProvider";
 import { SourcePolicyBadge } from "@/app/components/SourcePolicyBadge";
 import { TerminalPane } from "@/app/components/TerminalPane";
 
@@ -262,12 +263,8 @@ export default function MentorClient({
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
-        <GuidedPanel className="flex flex-col gap-5 px-4 py-4">
-          <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.28em] text-[var(--shell-dim)]">
-            ◂ collapse
-          </p>
-
+      <SidebarContent>
+        <div className="flex flex-col gap-5">
           <GuidedSidebarSection label="Source policy">
             <div className="space-y-1 font-mono text-[9px] leading-5 text-[var(--shell-success)]">
               {sourcePolicy.map((item) => (
@@ -327,9 +324,10 @@ export default function MentorClient({
               <p>intent: {sessionStats.intent}</p>
             </div>
           </GuidedSidebarSection>
-        </GuidedPanel>
+        </div>
+      </SidebarContent>
 
-        <div className="grid gap-4">
+      <div className="grid gap-4">
           <GuidedPanel className="flex min-h-10 items-center justify-between gap-4 px-5 py-3">
             <div>
               <p className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--shell-success)]">
@@ -490,8 +488,6 @@ export default function MentorClient({
             </div>
           </GuidedPanel>
         </div>
-      </div>
-
       <GuidedStatusBar
         left={`mentor:${messages.length === 0 ? "idle" : "active"} // queries:${sessionStats.queries} // refusals:${sessionStats.refusals}`}
         right={`42-training v1.0 // ${sourceMode === "live" ? "jwt:active" : "demo"} // terminal:${showTerminal && activeSession ? "injected" : "standby"}`}
