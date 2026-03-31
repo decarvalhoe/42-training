@@ -238,7 +238,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sessionHandle = getSessionHandle(session?.user.email ?? null);
   const trackLabel = session?.learnerProfile?.track ?? "shell";
   const routeLabel = buildRouteLabel(pathname);
-  const contentPadding = density === "compact" ? "px-4 py-4 lg:px-6 lg:py-5" : "px-4 py-5 lg:px-6 lg:py-6";
+  const contentPadding = density === "compact" ? "px-4 py-4 pb-10 lg:px-6 lg:py-5 lg:pb-10" : "px-4 py-5 pb-12 lg:px-6 lg:py-6 lg:pb-12";
 
   async function handleLogout() {
     await logout();
@@ -315,7 +315,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                   no contextual data
                 </p>
               )
-            ) : null}
+            ) : (
+              /* Collapsed rail icon indicators per Figma canonical spec */
+              <div className="flex flex-col items-center gap-3">
+                <span className="text-[14px] text-[var(--shell-muted)]" title="Context">◈</span>
+                <span className="text-[14px] text-[var(--shell-muted)]" title="Stats">▤</span>
+              </div>
+            )}
           </div>
 
           <div className="mt-auto border-t border-[var(--shell-border)] px-2 py-3">
@@ -421,6 +427,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Status bar — canonical Figma spec, fixed bottom */}
+      <footer
+        className="fixed inset-x-0 bottom-0 z-20 flex h-7 items-center justify-between border-t border-[var(--shell-border)] bg-[var(--shell-panel)] px-4 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--shell-dim)]"
+        style={{ marginLeft: `${contentOffset}px` }}
+        aria-label="Status bar"
+      >
+        <span>{routeLabel}</span>
+        <span>
+          42-training v1.0 // {status === "authenticated" ? "jwt:active" : "jwt:none"} // sync:2s
+        </span>
+      </footer>
     </div>
   );
 }
