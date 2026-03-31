@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { useAuth } from "@/app/components/AuthProvider";
 import { useUiPreferences } from "@/app/components/UiPreferencesProvider";
+import { useSidebarSlot } from "@/app/components/SidebarSlotProvider";
 
 type NavItem = {
   href: string;
@@ -185,41 +186,12 @@ function railButtonClass(variant: RailAction["variant"], expanded: boolean) {
   return `${base} ${sizing} border-[var(--shell-border-strong)] bg-[var(--shell-panel)] text-[var(--shell-ink)] hover:border-[var(--shell-muted)] hover:text-[var(--shell-success)]`;
 }
 
-function SidebarLink({
-  expanded,
-  item,
-  pathname,
-}: {
-  expanded: boolean;
-  item: NavItem;
-  pathname: string;
-}) {
-  const active = item.isActive(pathname);
-
-  return (
-    <Link
-      href={item.href}
-      className={[
-        "flex items-center gap-3 border border-transparent px-3 py-2 text-[10px] font-medium uppercase tracking-[0.24em]",
-        active
-          ? "border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-success)]"
-          : "text-[var(--shell-muted)] transition-colors hover:text-[var(--shell-ink)]",
-      ].join(" ")}
-      aria-current={active ? "page" : undefined}
-    >
-      <span className="inline-flex min-w-6 justify-center text-[11px] text-[var(--shell-success)]">
-        {item.shortLabel}
-      </span>
-      {expanded ? <span>{item.label}</span> : null}
-    </Link>
-  );
-}
-
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const { density } = useUiPreferences();
   const { logout, session, status } = useAuth();
+  const { content: sidebarSlotContent } = useSidebarSlot();
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
   const [desktopExpanded, setDesktopExpanded] = useState(true);
   const [overlayExpanded, setOverlayExpanded] = useState(false);
@@ -266,7 +238,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sessionHandle = getSessionHandle(session?.user.email ?? null);
   const trackLabel = session?.learnerProfile?.track ?? "shell";
   const routeLabel = buildRouteLabel(pathname);
-  const contentPadding = density === "compact" ? "px-4 py-4 lg:px-6 lg:py-5" : "px-4 py-5 lg:px-6 lg:py-6";
+  const contentPadding = density === "compact" ? "px-4 py-4 pb-10 lg:px-6 lg:py-5 lg:pb-10" : "px-4 py-5 pb-12 lg:px-6 lg:py-6 lg:pb-12";
 
   async function handleLogout() {
     await logout();
@@ -335,34 +307,21 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </div>
 
+          {/* Contextual rail content — injected by pages via <SidebarContent> */}
           <div className="flex-1 overflow-y-auto px-2 py-3">
-            <div className="space-y-5">
-              <section className="space-y-2">
-                {isExpanded ? (
-                  <p className="px-1 font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">
-                    Primary
-                  </p>
-                ) : null}
-                <nav className="grid gap-1" aria-label="Primary workspace navigation">
-                  {PRIMARY_NAV.map((item) => (
-                    <SidebarLink key={item.href} expanded={isExpanded} item={item} pathname={pathname} />
-                  ))}
-                </nav>
-              </section>
-
-              <section className="space-y-2">
-                {isExpanded ? (
-                  <p className="px-1 font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">
-                    Workspace
-                  </p>
-                ) : null}
-                <nav className="grid gap-1" aria-label="Secondary workspace navigation">
-                  {UTILITY_NAV.map((item) => (
-                    <SidebarLink key={item.href} expanded={isExpanded} item={item} pathname={pathname} />
-                  ))}
-                </nav>
-              </section>
-            </div>
+            {isExpanded ? (
+              sidebarSlotContent ?? (
+                <p className="px-1 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--shell-dim)]">
+                  no contextual data
+                </p>
+              )
+            ) : (
+              /* Collapsed rail icon indicators per Figma canonical spec */
+              <div className="flex flex-col items-center gap-3">
+                <span className="text-[14px] text-[var(--shell-muted)]" title="Context">◈</span>
+                <span className="text-[14px] text-[var(--shell-muted)]" title="Stats">▤</span>
+              </div>
+            )}
           </div>
 
           <div className="mt-auto border-t border-[var(--shell-border)] px-2 py-3">
@@ -423,6 +382,20 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </Link>
                 );
               })}
+              <span className="text-[var(--shell-border-strong)]">//</span>
+              {UTILITY_NAV.map((item) => {
+                const active = item.isActive(pathname);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={navItemClass(active)}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {item.shortLabel}
+                  </Link>
+                );
+              })}
             </nav>
 
             <div className="ml-auto flex items-center gap-3 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--shell-muted)]">
@@ -454,6 +427,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Status bar — canonical Figma spec, fixed bottom */}
+      <footer
+        className="fixed inset-x-0 bottom-0 z-20 flex h-7 items-center justify-between border-t border-[var(--shell-border)] bg-[var(--shell-panel)] px-4 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--shell-dim)]"
+        style={{ marginLeft: `${contentOffset}px` }}
+        aria-label="Status bar"
+      >
+        <span>{routeLabel}</span>
+        <span>
+          42-training v1.0 // {status === "authenticated" ? "jwt:active" : "jwt:none"} // sync:2s
+        </span>
+      </footer>
     </div>
   );
 }

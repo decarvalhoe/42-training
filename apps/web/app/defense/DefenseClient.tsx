@@ -12,6 +12,7 @@ import {
   GuidedTextarea,
   GuidedSidebarSection,
 } from "@/app/components/GuidedSurface";
+import { SidebarContent } from "@/app/components/SidebarSlotProvider";
 import { TerminalPane } from "@/app/components/TerminalPane";
 
 type DefenseQuestion = {
@@ -353,12 +354,8 @@ export default function DefenseClient({
     setHistory([]);
   }
 
-  const sidebar = (
-    <GuidedPanel className="flex flex-col gap-5 px-4 py-4">
-      <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.28em] text-[var(--shell-dim)]">
-        ◂ collapse
-      </p>
-
+  const sidebarContent = (
+    <div className="flex flex-col gap-5">
       <GuidedSidebarSection label="Running score">
         <div className="space-y-1">
           <p className="font-mono text-4xl font-bold text-[var(--shell-warning)]">
@@ -410,15 +407,14 @@ export default function DefenseClient({
           <p>answers: {history.length}</p>
         </div>
       </GuidedSidebarSection>
-    </GuidedPanel>
+    </div>
   );
 
   if (phase === "setup") {
     return (
       <div className="grid gap-4">
-        <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
-          {sidebar}
-
+        <SidebarContent>{sidebarContent}</SidebarContent>
+        <div className="grid gap-4">
           <div className="grid gap-4">
             <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[rgba(255,65,65,0.3)] bg-[rgba(255,65,65,0.05)] px-6 py-3">
               <div>
@@ -523,9 +519,8 @@ export default function DefenseClient({
 
     return (
       <div className="grid gap-4">
-        <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
-          {sidebar}
-
+        <SidebarContent>{sidebarContent}</SidebarContent>
+        <div className="grid gap-4">
           <div className="grid gap-4">
             <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[rgba(255,65,65,0.3)] bg-[rgba(255,65,65,0.05)] px-6 py-3">
               <p className="font-mono text-[13px] font-bold uppercase tracking-[0.22em] text-[var(--shell-danger)]">
@@ -628,9 +623,8 @@ export default function DefenseClient({
   if (phase === "results" && results !== null) {
     return (
       <div className="grid gap-4">
-        <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
-          {sidebar}
-
+        <SidebarContent>{sidebarContent}</SidebarContent>
+        <div className="grid gap-4">
           <div className="grid gap-4">
             <GuidedPanel className="flex min-h-12 items-center justify-between gap-4 border-[rgba(255,65,65,0.3)] bg-[rgba(255,65,65,0.05)] px-6 py-3">
               <p className="font-mono text-[13px] font-bold uppercase tracking-[0.22em] text-[var(--shell-danger)]">
