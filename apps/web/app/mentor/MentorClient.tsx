@@ -12,7 +12,6 @@ import {
   GuidedStatusBar,
   GuidedTextarea,
 } from "@/app/components/GuidedSurface";
-import { SourcePolicyBadge } from "@/app/components/SourcePolicyBadge";
 import { TerminalPane } from "@/app/components/TerminalPane";
 
 type Module = {
@@ -395,27 +394,9 @@ export default function MentorClient({
                     </div>
 
                     {message.response && message.response.sources_used.length > 0 ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        {message.response.sources_used.map((source, index) => (
-                          <span key={`${message.id}-${index}`} className="inline-flex items-center gap-2">
-                            <SourcePolicyBadge tier={source.tier} />
-                            {source.url ? (
-                              <a
-                                href={source.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-dim)] underline-offset-4 hover:text-[var(--shell-success)] hover:underline"
-                              >
-                                {source.label}
-                              </a>
-                            ) : (
-                              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--shell-dim)]">
-                                {source.label}
-                              </span>
-                            )}
-                          </span>
-                        ))}
-                      </div>
+                      <p className="font-mono text-[9px] text-[var(--shell-dim)]">
+                        {`source: ${message.response.sources_used.map((s) => s.label).join(", ")} (${message.response.sources_used[0]?.tier ?? "unknown"}) // ${message.response.confidence_level}`}
+                      </p>
                     ) : null}
 
                     <div className="flex flex-wrap items-center gap-2">

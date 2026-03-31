@@ -9,7 +9,6 @@ import {
   GuidedPanel,
   GuidedSelect,
   GuidedStatusBar,
-  GuidedTextarea,
   GuidedSidebarSection,
 } from "@/app/components/GuidedSurface";
 import { TerminalPane } from "@/app/components/TerminalPane";
@@ -555,15 +554,24 @@ export default function DefenseClient({
               ) : null}
 
               <div className="space-y-5">
-                <p className="font-mono text-[14px] font-bold leading-9 text-[var(--shell-success)]">
+                <p className="font-mono text-[14px] font-bold leading-9 whitespace-pre-wrap text-[var(--shell-success)]">
                   examiner&gt; {currentQuestion.text}
                 </p>
-                <GuidedTextarea
-                  value={answer}
-                  onChange={(event) => setAnswer(event.target.value)}
-                  placeholder="learner > explain how you reason about this question..."
-                  disabled={submitting || lastFeedback !== null}
-                />
+                <div className="border border-[rgba(0,224,110,0.4)] bg-[var(--shell-canvas)] px-4 py-3">
+                  <textarea
+                    value={answer}
+                    onChange={(event) => setAnswer(event.target.value)}
+                    placeholder="learner > type your answer..."
+                    disabled={submitting || lastFeedback !== null}
+                    className="min-h-[110px] w-full resize-none bg-transparent font-mono text-[13px] leading-[22px] text-[var(--shell-ink)] outline-none placeholder:text-[var(--shell-dim)]"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey && answer.trim().length > 0 && !submitting && lastFeedback === null) {
+                        event.preventDefault();
+                        void handleSubmitAnswer(answer.trim());
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               {lastFeedback ? (
