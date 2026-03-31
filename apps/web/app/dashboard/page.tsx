@@ -20,24 +20,6 @@ function Panel({
   );
 }
 
-function StatBlock({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="border-b border-[var(--shell-border)] px-4 py-4 last:border-b-0">
-      <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--shell-dim)]">{label}</p>
-      <p className="mt-3 font-mono text-2xl font-semibold text-[var(--shell-ink)]">{value}</p>
-      <p className="mt-2 font-mono text-[10px] leading-5 text-[var(--shell-muted)]">{detail}</p>
-    </div>
-  );
-}
-
 function ModuleNode({
   href,
   title,
